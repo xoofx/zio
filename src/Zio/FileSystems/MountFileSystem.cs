@@ -8,6 +8,9 @@ using System.IO;
 
 namespace Zio.FileSystems
 {
+    /// <summary>
+    /// A <see cref="IFileSystem"/> that can (auto-)mount other filesystems on a specified path.
+    /// </summary>
     public class MountFileSystem : FileSystemBase
     {
         protected override void CreateDirectoryImpl(PathInfo path)

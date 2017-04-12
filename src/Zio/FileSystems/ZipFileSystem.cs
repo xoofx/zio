@@ -10,6 +10,9 @@ using System.IO.Compression;
 
 namespace Zio.FileSystems
 {
+    /// <summary>
+    /// Provides a FileSystem on top of a <see cref="ZipArchive"/>.
+    /// </summary>
     public class ZipFileSystem : FileSystemBase
     {
         private readonly ZipArchive _zipArchive;

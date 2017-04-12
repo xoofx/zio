@@ -27,16 +27,19 @@ namespace Zio.FileSystems
         // Directory API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override void CreateDirectoryImpl(PathInfo path)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
@@ -46,26 +49,31 @@ namespace Zio.FileSystems
         // File API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override void DeleteFileImpl(PathInfo path)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             if (mode != FileMode.Open)
@@ -80,21 +88,25 @@ namespace Zio.FileSystems
         // Metadata API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
         }
 
+        /// <inheritdoc />
         protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
         {
             throw new InvalidOperationException(FileSystemIsReadOnly);
@@ -104,12 +116,14 @@ namespace Zio.FileSystems
         // Path
         // ----------------------------------------------
 
-        protected override PathInfo ConvertPathToDelegate(PathInfo path, string name)
+        /// <inheritdoc />
+        protected override PathInfo ConvertPathToDelegate(PathInfo path)
         {
             // A readonly filesystem doesn't change the path to the delegated filesystem
             return path;
         }
 
+        /// <inheritdoc />
         protected override PathInfo ConvertPathFromDelegate(PathInfo path)
         {
             // A readonly filesystem doesn't change the path from the delegated filesystem

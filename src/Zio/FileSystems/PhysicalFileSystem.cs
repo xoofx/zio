@@ -10,6 +10,9 @@ using System.Runtime.InteropServices;
 
 namespace Zio.FileSystems
 {
+    /// <summary>
+    /// Provides a <see cref="IFileSystem"/> for the physical filesystem.
+    /// </summary>
     public class PhysicalFileSystem : FileSystemBase
     {
         private const string DrivePrefixOnWindows = "/drive/";

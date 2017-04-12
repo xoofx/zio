@@ -8,6 +8,9 @@ using System.IO;
 
 namespace Zio.FileSystems
 {
+    /// <summary>
+    /// Provides an in-memory <see cref="IFileSystem"/>
+    /// </summary>
     public class MemoryFileSystem : FileSystemBase
     {
         private readonly DirectoryNode _rootDirectory;

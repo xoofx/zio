@@ -8,6 +8,9 @@ using System.IO;
 
 namespace Zio.FileSystems
 {
+    /// <summary>
+    /// Provides an merged readonly view filesystem over multiple filesystems (overriding files/directory in order)
+    /// </summary>
     public class AggregateFileSystem : FileSystemBase
     {
         protected override void CreateDirectoryImpl(PathInfo path)

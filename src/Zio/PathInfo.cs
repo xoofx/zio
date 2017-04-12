@@ -1,10 +1,17 @@
-﻿using System;
+﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// This file is licensed under the BSD-Clause 2 license. 
+// See the license.txt file in the project root for more information.
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
 namespace Zio
 {
+    /// <summary>
+    /// Uniform and secure path wrapper.
+    /// </summary>
+    /// <seealso cref="PathInfo" />
     public struct PathInfo : IEquatable<PathInfo>
     {
         [ThreadStatic] private static InternalHelper _internalHelperTls;
@@ -17,6 +24,10 @@ namespace Zio
 
         private static InternalHelper InternalHelperTls => _internalHelperTls ?? (_internalHelperTls = new InternalHelper());
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PathInfo"/> struct.
+        /// </summary>
+        /// <param name="path">The path that will be normalized.</param>
         public PathInfo(string path) : this(path, false)
         {
         }

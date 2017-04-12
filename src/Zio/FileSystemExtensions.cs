@@ -7,6 +7,9 @@ using System.IO;
 
 namespace Zio
 {
+    /// <summary>
+    /// Extension methods for <see cref="IFileSystem"/>
+    /// </summary>
     public static class FileSystemExtensions
     {
         public static Stream CreateFile(this IFileSystem fileSystem, PathInfo path)

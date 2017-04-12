@@ -8,6 +8,9 @@ using System.Text.RegularExpressions;
 
 namespace Zio
 {
+    /// <summary>
+    /// Search pattern compiler used for custom <see cref="IFileSystem.EnumeratePaths"/> implementations.
+    /// </summary>
     public struct SearchPattern
     {
         private static readonly char[] SpecialChars = {'?', '*'};

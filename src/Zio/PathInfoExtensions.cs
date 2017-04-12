@@ -7,6 +7,9 @@ using System.IO;
 
 namespace Zio
 {
+    /// <summary>
+    /// Extension methods for <see cref="PathInfo"/>
+    /// </summary>
     public static class PathInfoExtensions
     {
         public static PathInfo ToRelative(this PathInfo path)

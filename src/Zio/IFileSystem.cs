@@ -8,6 +8,9 @@ using System.IO;
 
 namespace Zio
 {
+    /// <summary>
+    /// Base interface of a FileSystem.
+    /// </summary>
     public interface IFileSystem
     {
         // ----------------------------------------------
