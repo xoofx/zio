@@ -2,32 +2,33 @@
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 using System;
+using System.IO;
 
 namespace Zio.FileSystems
 {
     /// <summary>
-    /// Provides a secure view on a sub folder of another <see cref="IFileSystem"/>
+    /// Provides a secure view on a sub folder of another delegate <see cref="IFileSystem"/>
     /// </summary>
     public class SubFileSystem : DelegateFileSystem
     {
-        public SubFileSystem(IFileSystem fileSystem, string subSystemPath) : base(fileSystem)
-        {
-            SubPath = fileSystem.ConvertFromSystem(subSystemPath);
-            if (!fileSystem.DirectoryExists(SubPath))
-            {
-                throw new ArgumentException($"The directory `{SubPath}` does not exist in the delegated FileSystem", nameof(subSystemPath));
-            }
-        }
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SubFileSystem"/> class.
+        /// </summary>
+        /// <param name="fileSystem">The file system to create a view from.</param>
+        /// <param name="subPath">The sub path view to create filesystem.</param>
+        /// <exception cref="DirectoryNotFoundException">If the directory subPath does not exist in the delegate FileSystem</exception>
         public SubFileSystem(IFileSystem fileSystem, PathInfo subPath) : base(fileSystem)
         {
             SubPath = subPath.AssertAbsolute(nameof(subPath));
             if (!fileSystem.DirectoryExists(SubPath))
             {
-                throw new ArgumentException($"The directory `{SubPath}` does not exist in the delegated FileSystem", nameof(subPath));
+                throw new DirectoryNotFoundException($"The directory `{SubPath}` does not exist in the delegated FileSystem");
             }
         }
 
+        /// <summary>
+        /// Gets the sub path relative to the delegate <see cref="DelegateFileSystem.NextFileSystem"/>
+        /// </summary>
         public PathInfo SubPath { get; }
 
         protected override PathInfo ConvertPathToDelegate(PathInfo path)
@@ -41,7 +42,9 @@ namespace Zio.FileSystems
             var fullPath = path.FullName;
             if (!fullPath.StartsWith(SubPath.FullName) || fullPath.Length <= SubPath.FullName.Length || fullPath[SubPath.FullName.Length] != PathInfo.DirectorySeparator)
             {
-                throw new InvalidOperationException($"The path `{path}` is not rooted to `{SubPath}`");
+                // More a safe guard, as it should never happen, but if a delegate filesystem doesn't respect its root path
+                // we are throwing an exception here
+                throw new InvalidOperationException($"The path `{path}` returned by the delegate filesystem is not rooted to the subpath `{SubPath}`");
             }
 
             return new PathInfo(fullPath.Substring(SubPath.FullName.Length), true);
