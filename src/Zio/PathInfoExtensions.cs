@@ -3,6 +3,7 @@
 // See the license.txt file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Zio
@@ -27,8 +28,48 @@ namespace Zio
         public static PathInfo GetDirectory(this PathInfo path)
         {
             path.AssertNotNull();
-            var dirName = Path.GetDirectoryName(path.FullName) ?? string.Empty;
-            return new PathInfo(dirName);
+
+            var fullname = path.FullName;
+
+            if (fullname == "/")
+            {
+                return new PathInfo();
+            }
+
+            var lastIndex = fullname.LastIndexOf(PathInfo.DirectorySeparator);
+            if (lastIndex > 0)
+            {
+                return fullname.Substring(0, lastIndex);
+            }
+            return lastIndex == 0 ? PathInfo.Root : PathInfo.Empty;
+        }
+
+        public static IEnumerable<string> Split(this PathInfo path)
+        {
+            path.AssertNotNull();
+
+            var fullname = path.FullName;
+            if (fullname == string.Empty)
+            {
+                yield break;
+            }
+
+            int previousIndex = 0;
+            int index = 0;
+            while ((index = fullname.IndexOf(PathInfo.DirectorySeparator, previousIndex)) >= 0)
+            {
+                if (index != 0)
+                {
+                    yield return fullname.Substring(previousIndex, index - previousIndex + 1);
+                }
+
+                previousIndex = index + 1;
+            }
+
+            if (index < fullname.Length)
+            {
+                yield return fullname.Substring(previousIndex, fullname.Length - previousIndex);
+            }
         }
 
         public static string GetName(this PathInfo path)

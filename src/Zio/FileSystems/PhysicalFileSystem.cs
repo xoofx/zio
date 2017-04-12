@@ -560,7 +560,6 @@ namespace Zio.FileSystems
             return path == PathDrivePrefixOnWindows ||
                    path == PathInfo.Root ||
                    parentDirectory == PathDrivePrefixOnWindows ||
-                   parentDirectory == PathInfo.Empty ||
                    parentDirectory == PathInfo.Root;
         }
 
