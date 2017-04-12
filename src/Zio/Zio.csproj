@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard1.3</TargetFramework>
+    <!--<TargetFrameworks>net35;net40;net45;netstandard1.3</TargetFrameworks>-->
+  </PropertyGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3'">
+    <PackageReference Include="System.IO.FileSystem.DriveInfo" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45'">
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+  
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.3'">
+    <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45'">
+    <DefineConstants>$(AdditionalConstants);NET45;HAS_ZIPARCHIVE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net40'">
+    <DefineConstants>$(AdditionalConstants);NET40</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net35'">
+    <DefineConstants>$(AdditionalConstants);NET35</DefineConstants>
+  </PropertyGroup>
+</Project>
