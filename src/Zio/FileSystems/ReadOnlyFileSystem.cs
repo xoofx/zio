@@ -88,6 +88,12 @@ namespace Zio.FileSystems
         // Metadata API
         // ----------------------------------------------
 
+        protected override FileAttributes GetAttributesImpl(PathInfo path)
+        {
+            // All paths are readonly
+            return base.GetAttributesImpl(path) | FileAttributes.ReadOnly;
+        }
+
         /// <inheritdoc />
         protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
         {
