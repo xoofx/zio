@@ -19,33 +19,28 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void CreateDirectory(PathInfo path)
         {
-            path.AssertAbsolute();
-            CreateDirectoryImpl(path);
+            CreateDirectoryImpl(ValidatePath(path));
         }
         protected abstract void CreateDirectoryImpl(PathInfo path);
 
         /// <inheritdoc />
         public bool DirectoryExists(PathInfo path)
         {
-            path.AssertAbsolute();
-            return DirectoryExistsImpl(path);
+            return DirectoryExistsImpl(ValidatePath(path));
         }
         protected abstract bool DirectoryExistsImpl(PathInfo path);
 
         /// <inheritdoc />
         public void MoveDirectory(PathInfo srcPath, PathInfo destPath)
         {
-            srcPath.AssertAbsolute(nameof(srcPath));
-            destPath.AssertAbsolute(nameof(destPath));
-            MoveDirectoryImpl(srcPath, destPath);
+            MoveDirectoryImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
         protected abstract void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath);
 
         /// <inheritdoc />
         public void DeleteDirectory(PathInfo path, bool isRecursive)
         {
-            path.AssertAbsolute();
-            DeleteDirectoryImpl(path, isRecursive);
+            DeleteDirectoryImpl(ValidatePath(path), isRecursive);
         }
         protected abstract void DeleteDirectoryImpl(PathInfo path, bool isRecursive);
 
@@ -56,60 +51,49 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void CopyFile(PathInfo srcPath, PathInfo destPath, bool overwrite)
         {
-            srcPath.AssertAbsolute(nameof(srcPath));
-            destPath.AssertAbsolute(nameof(destPath));
-            CopyFileImpl(srcPath, destPath, overwrite);
+            CopyFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), overwrite);
         }
         protected abstract void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite);
 
         /// <inheritdoc />
         public void ReplaceFile(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
         {
-            srcPath.AssertAbsolute(nameof(srcPath));
-            destPath.AssertAbsolute(nameof(destPath));
-            destBackupPath.AssertAbsolute(nameof(destBackupPath));
-            ReplaceFileImpl(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
+            ReplaceFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), ValidatePath(destBackupPath, nameof(destBackupPath)), ignoreMetadataErrors);
         }
         protected abstract void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors);
 
         /// <inheritdoc />
         public long GetFileLength(PathInfo path)
         {
-            path.AssertAbsolute();
-            return GetFileLengthImpl(path);
+            return GetFileLengthImpl(ValidatePath(path));
         }
         protected abstract long GetFileLengthImpl(PathInfo path);
 
         /// <inheritdoc />
         public bool FileExists(PathInfo path)
         {
-            path.AssertAbsolute();
-            return FileExistsImpl(path);
+            return FileExistsImpl(ValidatePath(path));
         }
         protected abstract bool FileExistsImpl(PathInfo path);
 
         /// <inheritdoc />
         public void MoveFile(PathInfo srcPath, PathInfo destPath)
         {
-            srcPath.AssertAbsolute(nameof(srcPath));
-            destPath.AssertAbsolute(nameof(destPath));
-            MoveFileImpl(srcPath, destPath);
+            MoveFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
         protected abstract void MoveFileImpl(PathInfo srcPath, PathInfo destPath);
 
         /// <inheritdoc />
         public void DeleteFile(PathInfo path)
         {
-            path.AssertAbsolute();
-            DeleteFileImpl(path);
+            DeleteFileImpl(ValidatePath(path));
         }
         protected abstract void DeleteFileImpl(PathInfo path);
 
         /// <inheritdoc />
         public Stream OpenFile(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
-            path.AssertAbsolute();
-            return OpenFileImpl(path, mode, access, share);
+            return OpenFileImpl(ValidatePath(path), mode, access, share);
         }
         protected abstract Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None);
 
@@ -120,8 +104,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public FileAttributes GetAttributes(PathInfo path)
         {
-            path.AssertAbsolute();
-            return GetAttributesImpl(path);
+            return GetAttributesImpl(ValidatePath(path));
         }
 
         protected abstract FileAttributes GetAttributesImpl(PathInfo path);
@@ -129,16 +112,14 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void SetAttributes(PathInfo path, FileAttributes attributes)
         {
-            path.AssertAbsolute();
-            SetAttributesImpl(path, attributes);
+            SetAttributesImpl(ValidatePath(path), attributes);
         }
         protected abstract void SetAttributesImpl(PathInfo path, FileAttributes attributes);
 
         /// <inheritdoc />
         public DateTime GetCreationTime(PathInfo path)
         {
-            path.AssertAbsolute();
-            return GetCreationTimeImpl(path);
+            return GetCreationTimeImpl(ValidatePath(path));
         }
 
         protected abstract DateTime GetCreationTimeImpl(PathInfo path);
@@ -146,40 +127,35 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void SetCreationTime(PathInfo path, DateTime time)
         {
-            path.AssertAbsolute();
-            SetCreationTimeImpl(path, time);
+            SetCreationTimeImpl(ValidatePath(path), time);
         }
         protected abstract void SetCreationTimeImpl(PathInfo path, DateTime time);
 
         /// <inheritdoc />
         public DateTime GetLastAccessTime(PathInfo path)
         {
-            path.AssertAbsolute();
-            return GetLastAccessTimeImpl(path);
+            return GetLastAccessTimeImpl(ValidatePath(path));
         }
         protected abstract DateTime GetLastAccessTimeImpl(PathInfo path);
 
         /// <inheritdoc />
         public void SetLastAccessTime(PathInfo path, DateTime time)
         {
-            path.AssertAbsolute();
-            SetLastAccessTimeImpl(path, time);
+            SetLastAccessTimeImpl(ValidatePath(path), time);
         }
         protected abstract void SetLastAccessTimeImpl(PathInfo path, DateTime time);
 
         /// <inheritdoc />
         public DateTime GetLastWriteTime(PathInfo path)
         {
-            path.AssertAbsolute();
-            return GetLastWriteTimeImpl(path);
+            return GetLastWriteTimeImpl(ValidatePath(path));
         }
         protected abstract DateTime GetLastWriteTimeImpl(PathInfo path);
 
         /// <inheritdoc />
         public void SetLastWriteTime(PathInfo path, DateTime time)
         {
-            path.AssertAbsolute();
-            SetLastWriteTimeImpl(path, time);
+            SetLastWriteTimeImpl(ValidatePath(path), time);
         }
         protected abstract void SetLastWriteTimeImpl(PathInfo path, DateTime time);
 
@@ -191,8 +167,7 @@ namespace Zio.FileSystems
         public IEnumerable<PathInfo> EnumeratePaths(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
-            path.AssertAbsolute();
-            return EnumeratePathsImpl(path, searchPattern, searchOption, searchTarget);
+            return EnumeratePathsImpl(ValidatePath(path), searchPattern, searchOption, searchTarget);
         }
 
         protected abstract IEnumerable<PathInfo> EnumeratePathsImpl(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
@@ -204,18 +179,27 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public string ConvertToSystem(PathInfo path)
         {
-            path.AssertAbsolute();
-            return ConvertToSystemImpl(path);
+            return ConvertToSystemImpl(ValidatePath(path));
         }
         protected abstract string ConvertToSystemImpl(PathInfo path);
-
 
         /// <inheritdoc />
         public PathInfo ConvertFromSystem(string systemPath)
         {
             if (systemPath == null) throw new ArgumentNullException(nameof(systemPath));
-            return ConvertFromSystemImpl(systemPath);
+            return ValidatePath(ConvertFromSystemImpl(systemPath));
         }
         protected abstract PathInfo ConvertFromSystemImpl(string systemPath);
+
+        protected virtual void ValidatePathImpl(PathInfo path, string name = "path")
+        {
+        }
+
+        protected PathInfo ValidatePath(PathInfo path, string name = "path")
+        {
+            path.AssertAbsolute(name);
+            ValidatePathImpl(path, name);
+            return path;
+        }
     }
 }
