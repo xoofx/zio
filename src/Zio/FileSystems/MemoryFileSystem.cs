@@ -61,7 +61,7 @@ namespace Zio.FileSystems
                 throw new IOException($"The source and destination path are the same `{srcPath}`");
             }
 
-            var srcDirectory = FindDirectoryNode(srcPath, false);
+            var srcDirectory = FindDirectoryNode(srcPath, false) as DirectoryNode;
             if (srcDirectory == null)
             {
                 throw new DirectoryNotFoundException($"The source directory `{srcPath}` was not found");
@@ -69,7 +69,7 @@ namespace Zio.FileSystems
 
             string destDirectoryName;
             DirectoryNode parentDestDirectory;
-            if (TryFindDirectoryAndCreateParent(destPath, out parentDestDirectory, out destDirectoryName))
+            if (FindNode(destPath, false, false, out parentDestDirectory, out destDirectoryName) != null)
             {
                 throw new IOException($"The destination directory `{destPath}` already exists");
             }
@@ -148,7 +148,7 @@ namespace Zio.FileSystems
             // The dest file may exist
             DirectoryNode destDirectory;
             string destFileName;
-            var destNode = FindNode(destPath, out destDirectory, out destFileName);
+            var destNode = FindNode(destPath, true, false, out destDirectory, out destFileName);
 
             if (srcNode is DirectoryNode)
             {
@@ -281,7 +281,7 @@ namespace Zio.FileSystems
         {
             DirectoryNode parentDirectory;
             string filename;
-            var srcNode = FindNode(path, out parentDirectory, out filename);
+            var srcNode = FindNode(path, true, false, out parentDirectory, out filename);
             if (srcNode is DirectoryNode)
             {
                 throw new IOException($"Cannot `{mode}` the path `{path}` is a directory");
@@ -412,238 +412,79 @@ namespace Zio.FileSystems
 
         protected override FileAttributes GetAttributesImpl(PathInfo path)
         {
-            var node = FindNode(path);
-            if (node == null)
+            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: false))
             {
-                throw new FileNotFoundException($"The path `{path}` does not exist"); 
-            }
-
-            if (node is DirectoryNode)
-            {
-                node.EnterWrite();
-            }
-            else
-            {
-                node.TryEnterWrite();
-            }
-
-            try
-            {
-                return node.Attributes;
-            }
-            finally
-            {
-                node.ExitRead();
+                return locker.Node.Attributes;
             }
         }
 
         protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
         {
-            var node = FindNode(path);
-            if (node == null)
+            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: true))
             {
-                throw new FileNotFoundException($"The path `{path}` does not exist");
-            }
-
-            if (node is DirectoryNode)
-            {
-                if ((attributes & FileAttributes.Directory) == 0)
+                if (locker.Node is DirectoryNode)
                 {
-                    throw new UnauthorizedAccessException($"The path `{path}` cannot have attributes `{attributes}`");
+                    if ((attributes & FileAttributes.Directory) == 0)
+                    {
+                        throw new UnauthorizedAccessException($"The path `{path}` cannot have attributes `{attributes}`");
+                    }
                 }
-                node.EnterWrite();
-            }
-            else
-            {
-                if ((attributes & FileAttributes.Directory) != 0)
+                else
                 {
-                    throw new UnauthorizedAccessException($"The path `{path}` cannot have attributes `{attributes}`");
+                    if ((attributes & FileAttributes.Directory) != 0)
+                    {
+                        throw new UnauthorizedAccessException($"The path `{path}` cannot have attributes `{attributes}`");
+                    }
                 }
-                if (!node.TryEnterWrite())
-                {
-                    throw new UnauthorizedAccessException($"The file `{path}` is already used by another thread");
-                }
-            }
-
-            try
-            {
-                node.Attributes = attributes;
-            }
-            finally
-            {
-                node.ExitWrite();
+                locker.Node.Attributes = attributes;
             }
         }
 
         protected override DateTime GetCreationTimeImpl(PathInfo path)
         {
-            var node = FindNode(path);
-            if (node == null)
+            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: false))
             {
-                throw new FileNotFoundException($"The path `{path}` does not exist");
-            }
-
-            if (node is DirectoryNode)
-            {
-                node.EnterWrite();
-            }
-            else
-            {
-                node.TryEnterWrite();
-            }
-
-            try
-            {
-                return node.CreationTime;
-            }
-            finally
-            {
-                node.ExitRead();
+                return locker.Node.CreationTime;
             }
         }
 
         protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
         {
-            var node = FindNode(path);
-            if (node == null)
+            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: true))
             {
-                throw new FileNotFoundException($"The path `{path}` does not exist");
-            }
-
-            if (node is DirectoryNode)
-            {
-                node.EnterWrite();
-            }
-            else
-            {
-                if (!node.TryEnterWrite())
-                {
-                    throw new UnauthorizedAccessException($"The file `{path}` is already used by another thread");
-                }
-            }
-
-            try
-            {
-                node.CreationTime = time;
-            }
-            finally
-            {
-                node.ExitWrite();
+                locker.Node.CreationTime = time;
             }
         }
 
         protected override DateTime GetLastAccessTimeImpl(PathInfo path)
         {
-            var node = FindNode(path);
-            if (node == null)
+            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: false))
             {
-                throw new FileNotFoundException($"The path `{path}` does not exist");
-            }
-
-            if (node is DirectoryNode)
-            {
-                node.EnterWrite();
-            }
-            else
-            {
-                node.TryEnterWrite();
-            }
-
-            try
-            {
-                return node.LastAccessTime;
-            }
-            finally
-            {
-                node.ExitRead();
+                return locker.Node.LastAccessTime;
             }
         }
 
         protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
         {
-            var node = FindNode(path);
-            if (node == null)
+            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: true))
             {
-                throw new FileNotFoundException($"The path `{path}` does not exist");
+                locker.Node.LastAccessTime = time;
             }
-
-            if (node is DirectoryNode)
-            {
-                node.EnterWrite();
-            }
-            else
-            {
-                if (!node.TryEnterWrite())
-                {
-                    throw new UnauthorizedAccessException($"The file `{path}` is already used by another thread");
-                }
-            }
-
-            try
-            {
-                node.LastAccessTime = time;
-            }
-            finally
-            {
-                node.ExitWrite();
-            }
-
         }
 
         protected override DateTime GetLastWriteTimeImpl(PathInfo path)
         {
-            var node = FindNode(path);
-            if (node == null)
+            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: false))
             {
-                throw new FileNotFoundException($"The path `{path}` does not exist");
-            }
-
-            if (node is DirectoryNode)
-            {
-                node.EnterWrite();
-            }
-            else
-            {
-                node.TryEnterWrite();
-            }
-
-            try
-            {
-                return node.LastWriteTime;
-            }
-            finally
-            {
-                node.ExitRead();
+                return locker.Node.LastWriteTime;
             }
         }
 
         protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
         {
-            var node = FindNode(path);
-            if (node == null)
+            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: true))
             {
-                throw new FileNotFoundException($"The path `{path}` does not exist");
-            }
-
-            if (node is DirectoryNode)
-            {
-                node.EnterWrite();
-            }
-            else
-            {
-                if (!node.TryEnterWrite())
-                {
-                    throw new UnauthorizedAccessException($"The file `{path}` is already used by another thread");
-                }
-            }
-
-            try
-            {
-                node.LastWriteTime = time;
-            }
-            finally
-            {
-                node.ExitWrite();
+                locker.Node.LastWriteTime = time;
             }
         }
 
@@ -687,83 +528,96 @@ namespace Zio.FileSystems
             }
         }
 
-        private DirectoryNode FindDirectoryNode(PathInfo path, bool createIfNotExist)
+        private FileSystemNodeLocker GetLocker(PathInfo path, bool expectFileOnly, bool isWriting)
         {
-            if (path == PathInfo.Root)
+            // The source file must exist
+            var node = FindNode(path);
+            if (node == null)
             {
-                return _rootDirectory;
+                var expect = expectFileOnly ? "file" : "file or directory";
+                throw new FileNotFoundException($"The {expect} `{path}` was not found");
             }
-
-            var currentDirectory = _rootDirectory;
-            foreach (var subPath in path.Split())
+            if (node is DirectoryNode)
             {
-                var nextDirectory = currentDirectory.GetFolder(subPath, createIfNotExist);
-                if (nextDirectory == null)
+                if (expectFileOnly)
                 {
-                    return null;
+                    throw new IOException($"Unexpected directory `{path}` not supported for the operation");
                 }
-                currentDirectory = nextDirectory;
+
+                if (isWriting)
+                {
+                    node.EnterWrite();                    
+                }
+                else
+                {
+                    node.EnterRead();
+                }
             }
-
-            return currentDirectory;
-        }
-
-        private bool TryFindDirectoryAndCreateParent(PathInfo path, out DirectoryNode parentDirectory, out string destDirectoryName)
-        {
-            parentDirectory = _rootDirectory;
-            destDirectoryName = null;
-            if (path == PathInfo.Root)
+            else
             {
-                return true;
+                // We don't try to enter, as we always want to be able to get the length
+                if (isWriting)
+                {
+                    if (!node.TryEnterWrite())
+                    {
+                        throw new IOException($"Cannot write to the file `{path}` as it is being used by another thread");
+                    }
+                }
+                else if (!node.TryEnterRead())
+                {
+                    throw new IOException($"Cannot read the file `{path}` as it is being used by another thread");
+                }
             }
-
-            var pathElements = path.Split().ToList();
-            for (var i = 0; i < pathElements.Count - 1; i++)
-            {
-                var subPath = pathElements[i];
-                var nextDirectory = parentDirectory.GetFolder(subPath, true);
-                parentDirectory = nextDirectory;
-            }
-            destDirectoryName = pathElements[pathElements.Count - 1];
-
-            return parentDirectory.GetFolder(destDirectoryName, false) != null;
+            return new FileSystemNodeLocker(node, isWriting);
         }
 
         private FileSystemNode FindNode(PathInfo path)
         {
             DirectoryNode parentNode = null;
             string filename;
-            return FindNode(path, out parentNode, out filename);
+            return FindNode(path, false, false, out parentNode, out filename);
         }
 
-        private FileSystemNode FindNode(PathInfo path, out DirectoryNode parentNode, out string filename)
+        private FileSystemNode FindDirectoryNode(PathInfo path, bool createIfNotExist)
+        {
+            DirectoryNode parentNode = null;
+            string filename;
+            return FindNode(path, false, createIfNotExist, out parentNode, out filename);
+        }
+
+        private FileSystemNode FindNode(PathInfo path, bool expectFile, bool createIfNotExist, out DirectoryNode parentNode, out string filename)
         {
             filename = null;
+            parentNode = null;
             if (path == PathInfo.Root)
             {
-                throw new IOException($"The path `{path}` is not a file");
+                return _rootDirectory;
             }
 
-            var currentDirectory = _rootDirectory;
+            parentNode = _rootDirectory;
             var names = path.Split().ToList();
             filename = names[names.Count - 1];
             for (var i = 0; i < names.Count - 1; i++)
             {
                 var subPath = names[i];
-                var nextDirectory = currentDirectory.GetFolder(subPath, false);
+                var nextDirectory = parentNode.GetFolder(subPath, createIfNotExist);
                 if (nextDirectory == null)
                 {
-                    parentNode = null;
                     return null;
                 }
-                currentDirectory = nextDirectory;
+                parentNode = nextDirectory;
             }
 
-            parentNode = currentDirectory;
-            currentDirectory.EnterRead();
+            // If we don't expect a file and we are looking to create the folder, we can create the last part as a folder
+            if (!expectFile && createIfNotExist)
+            {
+                return parentNode.GetFolder(filename, true);
+            }
+
+            parentNode.EnterRead();
             FileSystemNode node;
-            currentDirectory.Children.TryGetValue(filename, out node);
-            currentDirectory.ExitRead();
+            parentNode.Children.TryGetValue(filename, out node);
+            parentNode.ExitRead();
 
             return node;
         }
@@ -787,7 +641,7 @@ namespace Zio.FileSystems
             }
         }
 
-        // Based on https://www.kernel.org/doc/Documentation/filesystems/directory-locking
+        // Locking strategy is based on https://www.kernel.org/doc/Documentation/filesystems/directory-locking
 
         private abstract class FileSystemNode : IDisposable
         {
@@ -1089,6 +943,50 @@ namespace Zio.FileSystems
                     node.ExitWrite();
                 }
                 Clear();
+            }
+        }
+
+        private struct FileSystemNodeLocker : IDisposable
+        {
+            private readonly FileSystemNode _fileNode;
+            private readonly bool _isWriting;
+
+            public FileSystemNodeLocker(FileSystemNode fileNode, bool isWriting)
+            {
+                _fileNode = fileNode;
+                _isWriting = isWriting;
+            }
+
+            public FileSystemNode Node => _fileNode;
+
+            public FileNode File
+            {
+                get
+                {
+                    Debug.Assert(_fileNode is FileNode);
+                    return (FileNode) _fileNode;
+                }
+            }
+
+            public DirectoryNode Directory
+            {
+                get
+                {
+                    Debug.Assert(_fileNode is DirectoryNode);
+                    return (DirectoryNode)_fileNode;
+                }
+            }
+
+            public void Dispose()
+            {
+                if (_isWriting)
+                {
+                    _fileNode.ExitWrite();
+                }
+                else
+                {
+                    _fileNode.ExitRead();
+                }
             }
         }
 
