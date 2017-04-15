@@ -58,7 +58,8 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void ReplaceFile(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
         {
-            ReplaceFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), ValidatePath(destBackupPath, nameof(destBackupPath)), ignoreMetadataErrors);
+            // Note: destBackupPath can be null
+            ReplaceFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), ValidatePath(destPath, nameof(destPath), true), ignoreMetadataErrors);
         }
         protected abstract void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors);
 
@@ -195,8 +196,12 @@ namespace Zio.FileSystems
         {
         }
 
-        protected PathInfo ValidatePath(PathInfo path, string name = "path")
+        protected PathInfo ValidatePath(PathInfo path, string name = "path", bool allowNull = false)
         {
+            if (allowNull && path.IsNull)
+            {
+                return path;
+            }
             path.AssertAbsolute(name);
             ValidatePathImpl(path, name);
             return path;

@@ -131,7 +131,7 @@ namespace Zio.FileSystems
             {
                 throw new UnauthorizedAccessException($"The access to `{destPath}` is denied");
             }
-            if (IsWithinSpecialDirectory(destBackupPath))
+            if (!destBackupPath.IsNull && IsWithinSpecialDirectory(destBackupPath))
             {
                 throw new UnauthorizedAccessException($"The access to `{destBackupPath}` is denied");
             }
@@ -146,7 +146,10 @@ namespace Zio.FileSystems
                 throw new FileNotFoundException($"Unable to find the source file `{destPath}`");
             }
 
-            CopyFileImpl(destPath, destBackupPath, true);
+            if (!destBackupPath.IsNull)
+            {
+                CopyFileImpl(destPath, destBackupPath, true);
+            }
             CopyFileImpl(srcPath, destPath, true);
             DeleteFileImpl(srcPath);
 

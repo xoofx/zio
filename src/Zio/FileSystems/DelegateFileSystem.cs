@@ -69,7 +69,7 @@ namespace Zio.FileSystems
         protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath,
             bool ignoreMetadataErrors)
         {
-            NextFileSystem.ReplaceFile(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath), ConvertPathToDelegate(destBackupPath), ignoreMetadataErrors);
+            NextFileSystem.ReplaceFile(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath), destBackupPath.IsNull ? destBackupPath : ConvertPathToDelegate(destPath), ignoreMetadataErrors);
         }
 
         /// <inheritdoc />
