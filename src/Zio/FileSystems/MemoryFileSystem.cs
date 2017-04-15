@@ -26,6 +26,11 @@ namespace Zio.FileSystems
             _rootDirectory = new DirectoryNode(null, null);
         }
 
+        ~MemoryFileSystem()
+        {
+            _rootDirectory.Dispose();
+        }
+
         // ----------------------------------------------
         // Directory API
         // ----------------------------------------------
@@ -112,7 +117,7 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException("Cannot delete root directory `/`");
             }
 
-            var directory = FindDirectoryNode(path, false);
+            var directory = FindDirectoryNode(path, false) as DirectoryNode;
             if (directory == null)
             {
                 throw new DirectoryNotFoundException($"The directory `{path}` was not found");
@@ -122,7 +127,8 @@ namespace Zio.FileSystems
             {
                 directory.TryLockWrite(locks, true, isRecursive);
 
-                for (var i = locks.Count - 1; i >= 0; i--)
+                // We remove up to the parent but not the parent
+                for (var i = locks.Count - 1; i >= 1; i--)
                 {
                     var node = locks[i];
                     locks.RemoveAt(i);
@@ -224,30 +230,143 @@ namespace Zio.FileSystems
 
         protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
         {
-            throw new NotImplementedException();
+            if (srcPath == destPath)
+            {
+                throw new IOException($"The source and destination path are the same `{srcPath}`");
+            }
+            if (destBackupPath == destPath || destBackupPath == srcPath)
+            {
+                throw new IOException($"The backup is the same as the source or destination path `{destBackupPath}`");
+            }
+
+            var srcNode = FindNode(srcPath) as FileNode;
+            if (srcNode == null)
+            {
+                throw new FileNotFoundException($"The file `{srcPath}` was not found");
+            }
+
+            DirectoryNode destDirectory;
+            string destfileName;
+            var destNode = FindNode(destPath, true, false, out destDirectory, out destfileName);
+            if (destDirectory == null)
+            {
+                throw new DirectoryNotFoundException($"The destination directory `{destPath.GetDirectory()}` does not exist");
+            }
+            if (destNode == null)
+            {
+                throw new FileNotFoundException($"The file `{destPath}` was not found");
+            }
+
+            DirectoryNode destBackupDirectory = null;
+            string destBackupfileName = null;
+
+            if (!destBackupPath.IsNull)
+            {
+                destBackupPath.AssertAbsolute(nameof(destBackupPath));
+                var destBackupNode = FindNode(destBackupPath, true, false, out destBackupDirectory, out destBackupfileName);
+                if (destBackupDirectory == null)
+                {
+                    throw new DirectoryNotFoundException($"The destination directory `{destBackupPath.GetDirectory()}` does not exist");
+                }
+                if (destBackupNode != null)
+                {
+                    throw new IOException($"The destination path `{destBackupPath}` already exist");
+                }               
+            }
+
+            if (!srcNode.TryEnterRead())
+            {
+                throw new IOException($"The file `{srcPath}` is already used by another thread");
+            }
+            var parentFolder = srcNode.Parent;
+            srcNode.ExitRead();
+
+            parentFolder.EnterWrite();
+            try
+            {
+                if (!srcNode.TryEnterWrite())
+                {
+                    throw new IOException($"The file `{srcPath}` is already used by another thread");
+                }
+                destDirectory.EnterWrite();
+                try
+                {
+                    if (destBackupDirectory != null)
+                    {
+                        Debug.Assert(destBackupfileName != null);
+                        destBackupDirectory.EnterWrite();
+                    }
+                    try
+                    {
+                        // TODO: Check what is the behavior of File.Replace when the destination file does not exist?
+                        if (!destDirectory.Children.TryGetValue(destfileName, out destNode))
+                        {
+                            throw new FileNotFoundException($"The destination file `{destPath}` was not found");
+                        }
+                        if (destNode is DirectoryNode)
+                        {
+                            throw new DirectoryNotFoundException($"The destination path `{destPath}` is a directory");
+                        }
+
+                        if (!destNode.TryEnterWrite())
+                        {
+                            throw new IOException($"The file `{destPath}` is already used by another thread");
+                        }
+                        try
+                        {
+                            // Remove the dest and attach it to the backup if necessary
+                            var destNodeName = destNode.Name;
+                            if (destBackupDirectory != null)
+                            {
+                                if (destBackupDirectory.Children.ContainsKey(destBackupfileName))
+                                {
+                                    throw new IOException($"The destination backup file `{destBackupPath}` already exist");
+                                }
+                                destNode.DetachFromParent();
+                                destNode.Name = destBackupfileName;
+                                destNode.AttachToParent(destBackupDirectory);
+                            }
+                            else
+                            {
+                                destNode.DetachFromParent();
+                            }
+
+                            // Move file from src to dest
+                            srcNode.DetachFromParent();
+                            srcNode.Name = destNodeName;
+                            srcNode.AttachToParent(destDirectory);
+                        }
+                        finally
+                        {
+                            destNode.ExitWrite();
+                        }
+                    }
+                    finally
+                    {
+                        if (destBackupDirectory != null)
+                        {
+                            destBackupDirectory.ExitWrite();
+                        }
+                    }
+                }
+                finally
+                {
+                    destDirectory.ExitWrite();
+                    srcNode.ExitWrite();
+                }
+            }
+            finally
+            {
+                parentFolder.ExitWrite();
+            }
+
         }
 
         protected override long GetFileLengthImpl(PathInfo path)
         {
-            // The source file must exist
-            var srcNode = FindNode(path) as FileNode;
-            if (srcNode == null)
+            using (var locker = GetLocker(path, expectFileOnly: true, isWriting: false))
             {
-                throw new FileNotFoundException($"The file `{path}` was not found");
-            }
-
-            // We don't try to enter, as we always want to be able to get the length
-            if (!srcNode.TryEnterRead())
-            {
-                throw new IOException($"Cannot read the file `{path}` as it is being used by another thread");
-            }
-            try
-            {
-                return srcNode.Content.Length;
-            }
-            finally
-            {
-                srcNode.ExitRead();
+                return locker.File.Content.Length;
             }
         }
 
@@ -259,7 +378,48 @@ namespace Zio.FileSystems
 
         protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
         {
-            throw new NotImplementedException();
+            var srcNode = FindNode(srcPath) as FileNode;
+            if (srcNode == null)
+            {
+                throw new FileNotFoundException($"The file `{srcPath}` was not found");
+            }
+
+            DirectoryNode destDirectory;
+            string destfileName;
+            var node = FindNode(destPath, true, false, out destDirectory, out destfileName);
+            if (destDirectory == null)
+            {
+                throw new DirectoryNotFoundException($"The destination directory `{destPath.GetDirectory()}` does not exist");
+            }
+            if (node != null)
+            {
+                throw new IOException($"The destination path `{destPath}` already exist");
+            }
+
+
+            srcNode.EnterRead();
+            var parentFolder = srcNode.Parent;
+            srcNode.ExitRead();
+
+            parentFolder.EnterWrite();
+            srcNode.EnterWrite();
+            destDirectory.EnterWrite();
+            try
+            {
+                if (destDirectory.Children.ContainsKey(destfileName))
+                {
+                    throw new IOException($"The destination path `{destPath}` already exist");
+                }
+
+                srcNode.DetachFromParent();
+                srcNode.AttachToParent(destDirectory);
+            }
+            finally
+            {
+                destDirectory.ExitWrite();
+                srcNode.ExitWrite();
+                parentFolder.ExitWrite();
+            }
         }
 
         protected override void DeleteFileImpl(PathInfo path)
@@ -494,7 +654,64 @@ namespace Zio.FileSystems
 
         protected override IEnumerable<PathInfo> EnumeratePathsImpl(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
-            throw new NotImplementedException();
+            var search = SearchPattern.Parse(ref path, ref searchPattern);
+
+            var node = FindDirectoryNode(path, false);
+            if (node == null)
+            {
+                throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+            }
+
+            var directory = node as DirectoryNode;
+            if (directory == null)
+            {
+                throw new IOException($"The path `{path}` is a file and not a folder");
+            }
+
+            var foldersToProcess = new Queue<DirectoryNode>();
+            foldersToProcess.Enqueue(directory);
+
+            var entries = new List<KeyValuePair<string, FileSystemNode>>();
+
+            while (foldersToProcess.Count > 0)
+            {
+                directory = foldersToProcess.Dequeue();
+
+                // If the directory seems to not be attached anymore, don't try to list it
+                if (!directory.Exists)
+                {
+                    continue;
+                }
+
+                // Preread all entries by locking very shortly the folder
+                // We optimistically expect that the folder won't change while we are iterating it
+                directory.EnterRead();
+                entries.Clear();
+                entries.AddRange(directory.Children);
+                directory.ExitRead();
+
+                foreach (var nodePair in entries)
+                {
+                    if (nodePair.Value is DirectoryNode && searchTarget == SearchTarget.File)
+                    {
+                        continue;
+                    }
+                    if (nodePair.Value is FileNode && searchTarget == SearchTarget.Directory)
+                    {
+                        continue;
+                    }
+
+                    if (search.Match(nodePair.Key))
+                    {
+                        var fullPath = directory.GetFullPath() / nodePair.Key;
+                        yield return fullPath;
+                        if (searchOption == SearchOption.AllDirectories && nodePair.Value is DirectoryNode)
+                        {
+                            foldersToProcess.Enqueue((DirectoryNode)nodePair.Value);
+                        }
+                    }
+                }
+            }
         }
 
         // ----------------------------------------------
@@ -519,6 +736,10 @@ namespace Zio.FileSystems
                 throw new NotSupportedException($"The path `{path}` cannot contain the `:` character");
             }
         }
+
+        // ----------------------------------------------
+        // Internals
+        // ----------------------------------------------
 
         private void EnsureNotReadOnly(PathInfo path)
         {
@@ -575,7 +796,7 @@ namespace Zio.FileSystems
         {
             DirectoryNode parentNode = null;
             string filename;
-            return FindNode(path, false, false, out parentNode, out filename);
+            return FindNode(path, true, false, out parentNode, out filename);
         }
 
         private FileSystemNode FindDirectoryNode(PathInfo path, bool createIfNotExist)
@@ -585,7 +806,7 @@ namespace Zio.FileSystems
             return FindNode(path, false, createIfNotExist, out parentNode, out filename);
         }
 
-        private FileSystemNode FindNode(PathInfo path, bool expectFile, bool createIfNotExist, out DirectoryNode parentNode, out string filename)
+        private FileSystemNode FindNode(PathInfo path, bool pathCanBeAFile, bool createIfNotExist, out DirectoryNode parentNode, out string filename)
         {
             filename = null;
             parentNode = null;
@@ -603,13 +824,14 @@ namespace Zio.FileSystems
                 var nextDirectory = parentNode.GetFolder(subPath, createIfNotExist);
                 if (nextDirectory == null)
                 {
+                    parentNode = null;
                     return null;
                 }
                 parentNode = nextDirectory;
             }
 
             // If we don't expect a file and we are looking to create the folder, we can create the last part as a folder
-            if (!expectFile && createIfNotExist)
+            if (!pathCanBeAFile && createIfNotExist)
             {
                 return parentNode.GetFolder(filename, true);
             }
@@ -645,9 +867,9 @@ namespace Zio.FileSystems
 
         private abstract class FileSystemNode : IDisposable
         {
-            private DirectoryNode _parent;
+            protected DirectoryNode _parent;
             private string _name;
-            private FileAttributes _attributes;
+            protected FileAttributes _attributes;
             private DateTime _creationTime;
             private DateTime _lastWriteTime;
             private DateTime _lastAccessTime;
@@ -656,10 +878,11 @@ namespace Zio.FileSystems
             {
                 if (parent != null && name == null) throw new ArgumentNullException(nameof(name));
                 Locker = new ReaderWriterLockSlim();
-                CreationTime = copyNode?.CreationTime ?? DateTime.Now;
-                LastWriteTime = copyNode?.LastWriteTime ?? CreationTime;
-                LastAccessTime = copyNode?.LastAccessTime ?? CreationTime;
-                Name = name;
+                _parent = parent;
+                _creationTime = copyNode?.CreationTime ?? DateTime.Now;
+                _lastWriteTime = copyNode?.LastWriteTime ?? _creationTime;
+                _lastAccessTime = copyNode?.LastAccessTime ?? _creationTime;
+                _name = name;
             }
 
             public ReaderWriterLockSlim Locker { get; }
@@ -805,11 +1028,12 @@ namespace Zio.FileSystems
 
             public PathInfo GetFullPath()
             {
-                if (Parent == null)
+                var parent = _parent;
+                if (parent == null)
                 {
                     return PathInfo.Root;
                 }
-                return Parent.GetFullPath() / Name;
+                return parent.GetFullPath() / Name;
             }
 
             public bool IsDisposed { get; private set; }
@@ -817,14 +1041,15 @@ namespace Zio.FileSystems
             public void DetachFromParent()
             {
                 AssertLockWrite();
-                if (Parent == null)
+                var parent = _parent;
+                if (parent == null)
                 {
                     return;
                 }
-                Parent.AssertLockWrite();
+                parent.AssertLockWrite();
 
-                Parent.Children.Remove(Name);
-                Parent = null;
+                parent.Children.Remove(Name);
+                _parent = null;
             }
 
             public void AttachToParent(DirectoryNode parentNode)
@@ -896,6 +1121,7 @@ namespace Zio.FileSystems
                 // In order to issue a Dispose, we need to have control on this node
                 AssertLockWrite();
                 IsDisposed = true;
+                Locker.ExitWriteLock();
                 Locker.Dispose();
             }
 
@@ -996,8 +1222,19 @@ namespace Zio.FileSystems
 
             public DirectoryNode(DirectoryNode parent, string name) : base(parent, null, name)
             {
+                IsRoot = parent == null;
                 _children = new Dictionary<string, FileSystemNode>();
-                Attributes = FileAttributes.Directory;
+                _attributes = FileAttributes.Directory;
+            }
+
+            public bool IsRoot { get; }
+
+            public bool Exists
+            {
+                get
+                {
+                    return IsRoot || _parent != null;
+                }
             }
 
             public Dictionary<string, FileSystemNode> Children

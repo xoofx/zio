@@ -26,6 +26,13 @@ namespace Zio
             return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
         }
 
+        public bool Match(string name)
+        {
+            if (name == null) throw new ArgumentNullException(nameof(name));
+            // if _execMatch is null and _regexMatch is null, we have a * match
+            return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
+        }
+
         public static SearchPattern Parse(ref PathInfo path, ref string searchPattern)
         {
             return new SearchPattern(ref path, ref searchPattern);
