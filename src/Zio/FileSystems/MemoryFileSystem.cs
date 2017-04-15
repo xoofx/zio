@@ -1266,9 +1266,12 @@ namespace Zio.FileSystems
                 try
                 {
                     FileSystemNode node;
-                    if (Children.TryGetValue(subFolder, out node) && node is FileNode)
+                    if (Children.TryGetValue(subFolder, out node))
                     {
-                        throw new IOException($"Can't create the directory `{GetFullPath()}/{subFolder}` as it is already a file");
+                        if (node is FileNode)
+                        {
+                            throw new IOException($"Can't create the directory `{GetFullPath()}/{subFolder}` as it is already a file");
+                        }
                     }
                     else if (createIfNotExist)
                     {
