@@ -54,19 +54,19 @@ namespace Zio
                 yield break;
             }
 
-            int previousIndex = 0;
-            int index = 0;
-            while ((index = fullname.IndexOf(PathInfo.DirectorySeparator, previousIndex)) >= 0)
+            int previousIndex = path.IsAbsolute ? 1 : 0;
+            int nextIndex = 0;
+            while ((nextIndex = fullname.IndexOf(PathInfo.DirectorySeparator, previousIndex)) >= 0)
             {
-                if (index != 0)
+                if (nextIndex != 0)
                 {
-                    yield return fullname.Substring(previousIndex, index - previousIndex + 1);
+                    yield return fullname.Substring(previousIndex, nextIndex - previousIndex);
                 }
 
-                previousIndex = index + 1;
+                previousIndex = nextIndex + 1;
             }
 
-            if (index < fullname.Length)
+            if (previousIndex < fullname.Length)
             {
                 yield return fullname.Substring(previousIndex, fullname.Length - previousIndex);
             }
