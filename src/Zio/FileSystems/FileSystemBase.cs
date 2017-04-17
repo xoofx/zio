@@ -59,7 +59,7 @@ namespace Zio.FileSystems
         public void ReplaceFile(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
         {
             // Note: destBackupPath can be null
-            ReplaceFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), ValidatePath(destPath, nameof(destPath), true), ignoreMetadataErrors);
+            ReplaceFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), ValidatePath(destBackupPath, nameof(destBackupPath), true), ignoreMetadataErrors);
         }
         protected abstract void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors);
 
