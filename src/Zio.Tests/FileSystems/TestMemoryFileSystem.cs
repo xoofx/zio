@@ -35,12 +35,27 @@ namespace Zio.Tests.FileSystems
             Assert.True(fs.DirectoryExists("/test/test1"));
             Assert.True(fs.DirectoryExists("/test"));
 
+            // Test MoveDirectory
+            fs.MoveDirectory("/test", "/test2");
+            Assert.True(fs.DirectoryExists("/test2/test1/test2"));
+            Assert.True(fs.DirectoryExists("/test2/test1"));
+            Assert.True(fs.DirectoryExists("/test2"));
+
+            // Test MoveDirectory
+            fs.CreateDirectory("/testsub");
+            Assert.True(fs.DirectoryExists("/testsub"));
+            fs.MoveDirectory("/test2", "/testsub/testx");
+            Assert.False(fs.DirectoryExists("/test2"));
+            Assert.True(fs.DirectoryExists("/testsub/testx/test1/test2"));
+            Assert.True(fs.DirectoryExists("/testsub/testx/test1"));
+            Assert.True(fs.DirectoryExists("/testsub/testx"));
+
             // Test DeleteDirectory - recursive
-            fs.DeleteDirectory("/test", true);
-            Assert.False(fs.DirectoryExists("/test/test1/test2/test3"));
-            Assert.False(fs.DirectoryExists("/test/test1/test2"));
-            Assert.False(fs.DirectoryExists("/test/test1"));
-            Assert.False(fs.DirectoryExists("/test"));
+            fs.DeleteDirectory("/testsub", true);
+            Assert.False(fs.DirectoryExists("/testsub/testx/test1/test2"));
+            Assert.False(fs.DirectoryExists("/testsub/testx/test1"));
+            Assert.False(fs.DirectoryExists("/testsub/testx"));
+            Assert.False(fs.DirectoryExists("/testsub"));
         }
     }
 }

@@ -19,6 +19,11 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void CreateDirectory(PathInfo path)
         {
+            if (path == PathInfo.Root)
+            {
+                throw new UnauthorizedAccessException("Cannot create root directory `/`");
+            }
+
             CreateDirectoryImpl(ValidatePath(path));
         }
         protected abstract void CreateDirectoryImpl(PathInfo path);
@@ -33,6 +38,20 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void MoveDirectory(PathInfo srcPath, PathInfo destPath)
         {
+            if (srcPath == PathInfo.Root)
+            {
+                throw new UnauthorizedAccessException("Cannot move from the source root directory `/`");
+            }
+            if (destPath == PathInfo.Root)
+            {
+                throw new UnauthorizedAccessException("Cannot move to the root directory `/`");
+            }
+
+            if (srcPath == destPath)
+            {
+                throw new IOException($"The source and destination path are the same `{srcPath}`");
+            }
+
             MoveDirectoryImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
         protected abstract void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath);
@@ -40,6 +59,11 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void DeleteDirectory(PathInfo path, bool isRecursive)
         {
+            if (path == PathInfo.Root)
+            {
+                throw new UnauthorizedAccessException("Cannot delete root directory `/`");
+            }
+
             DeleteDirectoryImpl(ValidatePath(path), isRecursive);
         }
         protected abstract void DeleteDirectoryImpl(PathInfo path, bool isRecursive);

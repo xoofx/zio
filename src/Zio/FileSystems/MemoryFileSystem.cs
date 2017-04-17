@@ -52,20 +52,6 @@ namespace Zio.FileSystems
 
         protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
         {
-            if (srcPath == PathInfo.Root)
-            {
-                throw new UnauthorizedAccessException("Cannot move from the source root directory `/`");
-            }
-            if (destPath == PathInfo.Root)
-            {
-                throw new UnauthorizedAccessException("Cannot move to the root directory `/`");
-            }
-
-            if (srcPath == destPath)
-            {
-                throw new IOException($"The source and destination path are the same `{srcPath}`");
-            }
-
             var srcDirectory = FindDirectoryNode(srcPath, false) as DirectoryNode;
             if (srcDirectory == null)
             {
@@ -86,7 +72,7 @@ namespace Zio.FileSystems
             {
                 using (var locks = new ListFileSystemNodes())
                 {
-                    srcDirectory.TryLockWrite(locks, true, true);
+                    srcDirectory.TryLockWrite(locks, srcDirectory.ParentUnsafe != parentDestDirectory, true);
 
                     FileSystemNode node;
                     if (parentDestDirectory.Children.TryGetValue(destDirectoryName, out node))
@@ -101,7 +87,7 @@ namespace Zio.FileSystems
                     srcDirectory.DetachFromParent();
                     // Change the directory name
                     srcDirectory.Name = destDirectoryName;
-                    srcDirectory.AttachToParent(srcDirectory);
+                    srcDirectory.AttachToParent(parentDestDirectory);
                 }
             }
             finally
@@ -112,11 +98,6 @@ namespace Zio.FileSystems
 
         protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
         {
-            if (path == PathInfo.Root)
-            {
-                throw new UnauthorizedAccessException("Cannot delete root directory `/`");
-            }
-
             var directory = FindDirectoryNode(path, false) as DirectoryNode;
             if (directory == null)
             {
@@ -900,6 +881,8 @@ namespace Zio.FileSystems
                     _parent = value;
                 }
             }
+
+            public DirectoryNode ParentUnsafe => _parent;
 
             public string Name
             {
