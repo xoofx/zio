@@ -81,6 +81,11 @@ namespace Zio.FileSystems
                 throw new InvalidOperationException(FileSystemIsReadOnly);
             }
 
+            if ((access & FileAccess.Write) != 0)
+            {
+                throw new InvalidOperationException(FileSystemIsReadOnly);
+            }
+
             return base.OpenFileImpl(path, mode, access, share);
         }
 
