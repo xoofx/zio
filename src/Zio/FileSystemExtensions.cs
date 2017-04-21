@@ -2,8 +2,10 @@
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace Zio
 {
@@ -12,6 +14,26 @@ namespace Zio
     /// </summary>
     public static class FileSystemExtensions
     {
+        public static string ReadAllText(this IFileSystem fs, PathInfo path)
+        {
+            using (var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read))
+            {
+                var reader = new StreamReader(stream);
+                return reader.ReadToEnd();
+            }
+        }
+
+        public static void WriteAllText(this IFileSystem fs, PathInfo path, string content, Encoding encoding = null)
+        {
+            if (content == null) throw new ArgumentNullException(nameof(content));
+            using (var stream = fs.OpenFile(path, FileMode.OpenOrCreate, FileAccess.Write))
+            {
+                var writer = new StreamWriter(stream, encoding ?? Encoding.UTF8);
+                writer.Write(content);
+                writer.Flush();
+            }
+        }
+
         public static Stream CreateFile(this IFileSystem fileSystem, PathInfo path)
         {
             path.AssertAbsolute();
