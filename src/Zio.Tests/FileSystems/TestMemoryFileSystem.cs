@@ -222,6 +222,35 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
+        public void TestOpenFileAppend()
+        {
+            var fs = new MemoryFileSystem();
+
+            fs.AppendAllText("/toto.txt", "content");
+            Assert.True(fs.FileExists("/toto.txt"));
+            Assert.Equal("content", fs.ReadAllText("/toto.txt"));
+
+            fs.AppendAllText("/toto.txt", "content");
+            Assert.True(fs.FileExists("/toto.txt"));
+            Assert.Equal("contentcontent", fs.ReadAllText("/toto.txt"));
+        }
+
+        [Fact]
+        public void TestOpenFileTruncate()
+        {
+            var fs = new MemoryFileSystem();
+
+            fs.WriteAllText("/toto.txt", "content");
+            Assert.True(fs.FileExists("/toto.txt"));
+            Assert.Equal("content", fs.ReadAllText("/toto.txt"));
+
+            var stream = fs.OpenFile("/toto.txt", FileMode.Truncate, FileAccess.Write);
+            stream.Dispose();
+            Assert.Equal(0, fs.GetFileLength("/toto.txt"));
+            Assert.Equal("", fs.ReadAllText("/toto.txt"));
+        }
+
+        [Fact]
         public void TestFileExceptions()
         {
             var fs = new MemoryFileSystem();
@@ -234,6 +263,7 @@ namespace Zio.Tests.FileSystems
             Assert.Throws<FileNotFoundException>(() => fs.MoveFile("/toto.txt", "/titi.txt"));
             Assert.Throws<FileNotFoundException>(() => fs.DeleteFile("/toto.txt"));
             Assert.Throws<FileNotFoundException>(() => fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read));
+            Assert.Throws<FileNotFoundException>(() => fs.OpenFile("/toto.txt", FileMode.Truncate, FileAccess.Write));
 
             Assert.Throws<FileNotFoundException>(() => fs.GetFileLength("/dir1/toto.txt"));
             Assert.Throws<FileNotFoundException>(() => fs.CopyFile("/dir1/toto.txt", "/toto.bak.txt", true));
@@ -291,7 +321,20 @@ namespace Zio.Tests.FileSystems
             fs.DeleteDirectory("/dir", true);
 
             var entries = fs.EnumeratePaths("/").ToList();
-            Assert.Equal(1, entries.Count);
+            Assert.Equal(0, entries.Count);
+        }
+
+        [Fact]
+        public void Tester()
+        {
+            File.AppendAllText("toto.txt", "Yes");
+            var attributes = File.GetAttributes("toto.txt");
+
+            File.SetAttributes("toto.txt", attributes | FileAttributes.Normal);
+            attributes = File.GetAttributes("toto.txt");
+            File.SetAttributes("toto.txt", FileAttributes.Normal);
+            attributes = File.GetAttributes("toto.txt");
+
         }
     }
 }

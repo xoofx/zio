@@ -26,11 +26,6 @@ namespace Zio.FileSystems
             _rootDirectory = new DirectoryNode(null, null);
         }
 
-        ~MemoryFileSystem()
-        {
-            _rootDirectory.Dispose();
-        }
-
         // ----------------------------------------------
         // Directory API
         // ----------------------------------------------
@@ -510,6 +505,19 @@ namespace Zio.FileSystems
                 }
             }
 
+            if (mode == FileMode.Truncate)
+            {
+                if (fileNode != null)
+                {
+                    mode = FileMode.Open;
+                    shouldTruncate = true;
+                }
+                else
+                {
+                    throw new FileNotFoundException($"The file `{path}` was not found");
+                }
+            }
+
             // Here we should only have Open or CreateNew
             Debug.Assert(mode == FileMode.Open || mode == FileMode.CreateNew);
 
@@ -743,11 +751,11 @@ namespace Zio.FileSystems
             return node;
         }
 
-        private FileSystemNodeLocker GetNodeWriter(PathInfo path, bool expectFileOnly)
+        private FileSystemNodeWriter GetNodeWriter(PathInfo path, bool expectFileOnly)
         {
             var node = FindNodeSafe(path, expectFileOnly);
             node.EnterWrite();
-            return new FileSystemNodeLocker(node, true);
+            return new FileSystemNodeWriter(node);
         }
 
         private FileSystemNode FindNode(PathInfo path)
@@ -856,7 +864,7 @@ namespace Zio.FileSystems
             public void EnterRead()
             {
                 CheckAlive();
-                var result = Locker.IsReadLockHeld || Locker.TryEnterReadLock(0);
+                var result = !Locker.IsWriteLockHeld && !Locker.IsReadLockHeld && Locker.TryEnterReadLock(0);
                 if (result)
                 {
                     CheckAlive();
@@ -876,7 +884,7 @@ namespace Zio.FileSystems
             public void EnterWrite()
             {
                 CheckAlive();
-                var result = Locker.IsWriteLockHeld || Locker.TryEnterWriteLock(0);
+                var result = !Locker.IsWriteLockHeld && !Locker.IsReadLockHeld && Locker.TryEnterWriteLock(0);
                 if (result)
                 {
                     CheckAlive();
@@ -1021,47 +1029,20 @@ namespace Zio.FileSystems
             }
         }
 
-        private struct FileSystemNodeLocker : IDisposable
+        private struct FileSystemNodeWriter : IDisposable
         {
             private readonly FileSystemNode _fileNode;
-            private readonly bool _isWriting;
 
-            public FileSystemNodeLocker(FileSystemNode fileNode, bool isWriting)
+            public FileSystemNodeWriter(FileSystemNode fileNode)
             {
                 _fileNode = fileNode;
-                _isWriting = isWriting;
             }
 
             public FileSystemNode Node => _fileNode;
 
-            public FileNode File
-            {
-                get
-                {
-                    Debug.Assert(_fileNode is FileNode);
-                    return (FileNode) _fileNode;
-                }
-            }
-
-            public DirectoryNode Directory
-            {
-                get
-                {
-                    Debug.Assert(_fileNode is DirectoryNode);
-                    return (DirectoryNode)_fileNode;
-                }
-            }
-
             public void Dispose()
             {
-                if (_isWriting)
-                {
-                    _fileNode.ExitWrite();
-                }
-                else
-                {
-                    _fileNode.ExitRead();
-                }
+                _fileNode.ExitWrite();
             }
         }
 

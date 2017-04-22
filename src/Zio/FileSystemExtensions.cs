@@ -34,6 +34,17 @@ namespace Zio
             }
         }
 
+        public static void AppendAllText(this IFileSystem fs, PathInfo path, string content, Encoding encoding = null)
+        {
+            if (content == null) throw new ArgumentNullException(nameof(content));
+            using (var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write))
+            {
+                var writer = new StreamWriter(stream, encoding ?? Encoding.UTF8);
+                writer.Write(content);
+                writer.Flush();
+            }
+        }
+
         public static Stream CreateFile(this IFileSystem fileSystem, PathInfo path)
         {
             path.AssertAbsolute();
