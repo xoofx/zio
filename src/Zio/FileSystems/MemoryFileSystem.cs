@@ -37,11 +37,6 @@ namespace Zio.FileSystems
 
         protected override void CreateDirectoryImpl(PathInfo path)
         {
-            if (path == PathInfo.Root)
-            {
-                throw new UnauthorizedAccessException("Cannot create the root folder `/` that already exists");
-            }
-
             CreateDirectoryNode(path);
         }
 
@@ -52,7 +47,11 @@ namespace Zio.FileSystems
 
         protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
         {
-            var srcDirectory = FindDirectoryNode(srcPath) as DirectoryNode;
+            var srcDirectory = FindDirectoryNode(srcPath);
+            if (srcDirectory is FileNode)
+            {
+                throw new IOException($"The source directory `{srcPath}` is a file");
+            }
             if (srcDirectory == null)
             {
                 throw new DirectoryNotFoundException($"The source directory `{srcPath}` was not found");
@@ -72,7 +71,7 @@ namespace Zio.FileSystems
             {
                 using (var locks = new ListFileSystemNodes())
                 {
-                    srcDirectory.TryLockWrite(locks, srcDirectory.ParentSafe != parentDestDirectory, true);
+                    srcDirectory.TryLockWrite(locks, srcDirectory.Parent != parentDestDirectory, true);
 
                     FileSystemNode node;
                     if (parentDestDirectory.Children.TryGetValue(destDirectoryName, out node))
@@ -98,7 +97,11 @@ namespace Zio.FileSystems
 
         protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
         {
-            var directory = FindDirectoryNode(path) as DirectoryNode;
+            var directory = FindDirectoryNode(path);
+            if (directory is FileNode)
+            {
+                throw new IOException($"The path `{path}` is a file");
+            }
             if (directory == null)
             {
                 throw new DirectoryNotFoundException($"The directory `{path}` was not found");
@@ -127,6 +130,10 @@ namespace Zio.FileSystems
         {
             // The source file must exist
             var srcNode = FindNode(srcPath);
+            if (srcNode is DirectoryNode)
+            {
+                throw new ArgumentException($"Cannot copy file. The path `{srcPath}` is a directory", nameof(srcPath));
+            }
             if (srcNode == null)
             {
                 throw new FileNotFoundException($"The file `{srcPath}` was not found");
@@ -136,17 +143,14 @@ namespace Zio.FileSystems
             DirectoryNode destDirectory;
             string destFileName;
             var destNode = FindNode(destPath, true, false, out destDirectory, out destFileName);
-
-            if (srcNode is DirectoryNode)
+            if (destDirectory == null)
             {
-                throw new ArgumentException($"Cannot copy file. The path `{srcPath}` is a directory", nameof(srcPath));
+                throw new DirectoryNotFoundException($"The directory from the path `{destPath}` was not found");
             }
-
             if (destNode is DirectoryNode)
             {
                 throw new ArgumentException($"Cannot copy file. The path `{destPath}` is a directory", nameof(destPath));
             }
-
 
             // This whole region is reading <srcPath>
             srcNode.EnterRead();
@@ -257,10 +261,14 @@ namespace Zio.FileSystems
             try
             {
                 srcNode.EnterWrite();
-                destDirectory.EnterWrite();
+                if (destDirectory != parentFolder)
+                {
+                    destDirectory.EnterWrite();
+                }
                 try
                 {
-                    if (destBackupDirectory != null)
+                    var isDestBackupLocked = destBackupDirectory != null && destBackupDirectory != destDirectory && destBackupDirectory != parentFolder;
+                    if (isDestBackupLocked)
                     {
                         Debug.Assert(destBackupfileName != null);
                         destBackupDirectory.EnterWrite();
@@ -281,7 +289,6 @@ namespace Zio.FileSystems
                         try
                         {
                             // Remove the dest and attach it to the backup if necessary
-                            var destNodeName = destNode.Name;
                             if (destBackupDirectory != null)
                             {
                                 if (destBackupDirectory.Children.ContainsKey(destBackupfileName))
@@ -299,7 +306,7 @@ namespace Zio.FileSystems
 
                             // Move file from src to dest
                             srcNode.DetachFromParent();
-                            srcNode.Name = destNodeName;
+                            srcNode.Name = destfileName;
                             srcNode.AttachToParent(destDirectory);
                         }
                         finally
@@ -309,7 +316,7 @@ namespace Zio.FileSystems
                     }
                     finally
                     {
-                        if (destBackupDirectory != null)
+                        if (isDestBackupLocked)
                         {
                             destBackupDirectory.ExitWrite();
                         }
@@ -317,7 +324,10 @@ namespace Zio.FileSystems
                 }
                 finally
                 {
-                    destDirectory.ExitWrite();
+                    if (parentFolder != destDirectory)
+                    {
+                        destDirectory.ExitWrite();
+                    }
                     srcNode.ExitWrite();
                 }
             }
@@ -330,14 +340,12 @@ namespace Zio.FileSystems
 
         protected override long GetFileLengthImpl(PathInfo path)
         {
-            using (var locker = GetLocker(path, expectFileOnly: true, isWriting: false))
-            {
-                return locker.File.Content.Length;
-            }
+            return ((FileNode)FindNodeSafe(path, true)).Content.Length;
         }
 
         protected override bool FileExistsImpl(PathInfo path)
         {
+
             var srcNode = FindNode(path) as FileNode;
             return srcNode != null;
         }
@@ -397,10 +405,14 @@ namespace Zio.FileSystems
 
         protected override void DeleteFileImpl(PathInfo path)
         {
-            var srcNode = FindNode(path) as FileNode;
+            var srcNode = FindNode(path);
             if (srcNode == null)
             {
                 throw new FileNotFoundException($"The file `{path}` was not found");
+            }
+            if (srcNode is DirectoryNode)
+            {
+                throw new IOException($"The path `{path}` is a directory");
             }
 
             using (var locks = new ListFileSystemNodes())
@@ -412,19 +424,23 @@ namespace Zio.FileSystems
 
         protected override Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
+            if (share != FileShare.None)
+            {
+                throw new NotSupportedException($"The share `{share}` is not supported. Only none is supported");
+            }
+
             DirectoryNode parentDirectory;
             string filename;
             var srcNode = FindNode(path, true, false, out parentDirectory, out filename);
             if (srcNode is DirectoryNode)
             {
-                throw new IOException($"Cannot `{mode}` the path `{path}` is a directory");
+                throw new IOException($"The path `{path}` is a directory");
+            }
+            if (parentDirectory == null)
+            {
+                throw new DirectoryNotFoundException($"The directory from the path `{path}` was not found");
             }
             var fileNode = (FileNode) srcNode;
-
-            if (share != FileShare.None)
-            {
-                throw new NotSupportedException($"The share `{share}` is not supported. Only none is supported");
-            }
 
             // Append: Opens the file if it exists and seeks to the end of the file, or creates a new file. 
             //         This requires FileIOPermissionAccess.Append permission. FileMode.Append can be used only in 
@@ -522,7 +538,10 @@ namespace Zio.FileSystems
             }
             else
             {
-                Debug.Assert(fileNode != null);
+                if (fileNode == null)
+                {
+                    throw new FileNotFoundException($"The file `{path}` was not found");
+                }
                 OpenFile(fileNode, access);
             }
 
@@ -545,15 +564,12 @@ namespace Zio.FileSystems
 
         protected override FileAttributes GetAttributesImpl(PathInfo path)
         {
-            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: false))
-            {
-                return locker.Node.Attributes;
-            }
+            return FindNodeSafe(path, false).Attributes;
         }
 
         protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
         {
-            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: true))
+            using (var locker = GetNodeWriter(path, expectFileOnly: false))
             {
                 if (locker.Node is DirectoryNode)
                 {
@@ -575,15 +591,12 @@ namespace Zio.FileSystems
 
         protected override DateTime GetCreationTimeImpl(PathInfo path)
         {
-            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: false))
-            {
-                return locker.Node.CreationTime;
-            }
+            return FindNodeSafe(path, false).CreationTime;
         }
 
         protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
         {
-            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: true))
+            using (var locker = GetNodeWriter(path, expectFileOnly: false))
             {
                 locker.Node.CreationTime = time;
             }
@@ -591,15 +604,12 @@ namespace Zio.FileSystems
 
         protected override DateTime GetLastAccessTimeImpl(PathInfo path)
         {
-            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: false))
-            {
-                return locker.Node.LastAccessTime;
-            }
+            return FindNodeSafe(path, false).LastAccessTime;
         }
 
         protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
         {
-            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: true))
+            using (var locker = GetNodeWriter(path, expectFileOnly: false))
             {
                 locker.Node.LastAccessTime = time;
             }
@@ -607,15 +617,12 @@ namespace Zio.FileSystems
 
         protected override DateTime GetLastWriteTimeImpl(PathInfo path)
         {
-            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: false))
-            {
-                return locker.Node.LastWriteTime;
-            }
+            return FindNodeSafe(path, false).LastWriteTime;
         }
 
         protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
         {
-            using (var locker = GetLocker(path, expectFileOnly: false, isWriting: true))
+            using (var locker = GetNodeWriter(path, expectFileOnly: false))
             {
                 locker.Node.LastWriteTime = time;
             }
@@ -714,21 +721,17 @@ namespace Zio.FileSystems
         // Internals
         // ----------------------------------------------
 
-        private void EnsureNotReadOnly(PathInfo path)
-        {
-            if ((GetAttributesImpl(path) & FileAttributes.ReadOnly) != 0)
-            {
-                throw new IOException($"The file `{path}` is readonly");
-            }
-        }
 
-        private FileSystemNodeLocker GetLocker(PathInfo path, bool expectFileOnly, bool isWriting)
+        private FileSystemNode FindNodeSafe(PathInfo path, bool expectFileOnly)
         {
             var node = FindNode(path);
             if (node == null)
             {
-                var expect = expectFileOnly ? "file" : "file or directory";
-                throw new FileNotFoundException($"The {expect} `{path}` was not found");
+                if (expectFileOnly)
+                {
+                    throw new FileNotFoundException($"The file `{path}` was not found");
+                }
+                throw new IOException($"The file or directory `{path}` was not found");
             }
             if (node is DirectoryNode)
             {
@@ -737,21 +740,19 @@ namespace Zio.FileSystems
                     throw new IOException($"Unexpected directory `{path}` not supported for the operation");
                 }
             }
+            return node;
+        }
 
-            if (isWriting)
-            {
-                node.EnterWrite();
-            }
-            else
-            {
-                node.EnterRead();
-            }
-            return new FileSystemNodeLocker(node, isWriting);
+        private FileSystemNodeLocker GetNodeWriter(PathInfo path, bool expectFileOnly)
+        {
+            var node = FindNodeSafe(path, expectFileOnly);
+            node.EnterWrite();
+            return new FileSystemNodeLocker(node, true);
         }
 
         private FileSystemNode FindNode(PathInfo path)
         {
-            DirectoryNode parentNode = null;
+            DirectoryNode parentNode;
             string filename;
             return FindNode(path, true, false, out parentNode, out filename);
         }
@@ -768,7 +769,7 @@ namespace Zio.FileSystems
 
         private FileSystemNode FindOrCreateDirectoryNode(PathInfo path, bool createIfNotExist)
         {
-            DirectoryNode parentNode = null;
+            DirectoryNode parentNode;
             string filename;
             return FindNode(path, false, createIfNotExist, out parentNode, out filename);
         }
@@ -813,7 +814,6 @@ namespace Zio.FileSystems
 
         private void OpenFile(FileNode fileNode, FileAccess access)
         {
-            if (fileNode == null) throw new ArgumentNullException(nameof(fileNode));
             if ((access & FileAccess.Write) != 0)
             {
                 fileNode.EnterWrite();
@@ -828,131 +828,35 @@ namespace Zio.FileSystems
 
         private abstract class FileSystemNode : IDisposable
         {
-            protected DirectoryNode _parent;
-            private string _name;
-            protected FileAttributes _attributes;
-            private DateTime _creationTime;
-            private DateTime _lastWriteTime;
-            private DateTime _lastAccessTime;
-
             protected FileSystemNode(DirectoryNode parent, FileSystemNode copyNode, string name)
             {
                 if (parent != null && name == null) throw new ArgumentNullException(nameof(name));
                 Locker = new ReaderWriterLockSlim();
-                _parent = parent;
-                _creationTime = copyNode?.CreationTime ?? DateTime.Now;
-                _lastWriteTime = copyNode?.LastWriteTime ?? _creationTime;
-                _lastAccessTime = copyNode?.LastAccessTime ?? _creationTime;
-                _name = name;
+                Parent = parent;
+                CreationTime = copyNode?.CreationTime ?? DateTime.Now;
+                LastWriteTime = copyNode?.LastWriteTime ?? CreationTime;
+                LastAccessTime = copyNode?.LastAccessTime ?? CreationTime;
+                Name = name;
             }
 
             public ReaderWriterLockSlim Locker { get; }
 
-            public DirectoryNode Parent
-            {
-                get
-                {
-                    AssertLockReadOrWrite();
-                    return _parent;
-                }
-                set
-                {
-                    AssertLockWrite();
-                    _parent = value;
-                }
-            }
+            public DirectoryNode Parent { get; private set; }
 
-            public DirectoryNode ParentSafe
-            {
-                get
-                {
-                    EnterRead();
-                    try
-                    {
-                        return _parent;
-                    }
-                    finally
-                    {
-                        ExitRead();
-                    }
-                }
-            }
+            public string Name { get; set; }
 
-            public string Name
-            {
-                get
-                {
-                    AssertLockReadOrWrite();
-                    return _name;
-                }
-                set
-                {
-                    AssertLockWrite();
-                    _name = value;
-                }
-            }
+            public FileAttributes Attributes { get; set; }
 
-            public FileAttributes Attributes
-            {
-                get
-                {
-                    AssertLockReadOrWrite();
-                    return _attributes;
-                }
-                set
-                {
-                    AssertLockWrite();
-                    _attributes = value;
-                }
-            }
+            public DateTime CreationTime { get; set; }
 
-            public DateTime CreationTime
-            {
-                get
-                {
-                    AssertLockReadOrWrite();
-                    return _creationTime;
-                }
-                set
-                {
-                    AssertLockWrite();
-                    _creationTime = value;
-                }
-            }
+            public DateTime LastWriteTime { get; set; }
 
-            public DateTime LastWriteTime
-            {
-                get
-                {
-                    AssertLockReadOrWrite();
-                    return _lastWriteTime;
-                }
-                set
-                {
-                    AssertLockWrite();
-                    _lastWriteTime = value;
-                }
-            }
-
-            public DateTime LastAccessTime
-            {
-                get
-                {
-                    AssertLockReadOrWrite();
-                    return _lastAccessTime;
-                }
-                set
-                {
-                    AssertLockWrite();
-                    _lastAccessTime = value;
-                }
-            }
+            public DateTime LastAccessTime { get; set; }
 
             public void EnterRead()
             {
                 CheckAlive();
-                AssertNoLock();
-                var result = Locker.TryEnterReadLock(0);
+                var result = Locker.IsReadLockHeld || Locker.TryEnterReadLock(0);
                 if (result)
                 {
                     CheckAlive();
@@ -972,8 +876,7 @@ namespace Zio.FileSystems
             public void EnterWrite()
             {
                 CheckAlive();
-                AssertNoLock();
-                var result = Locker.TryEnterWriteLock(0);
+                var result = Locker.IsWriteLockHeld || Locker.TryEnterWriteLock(0);
                 if (result)
                 {
                     CheckAlive();
@@ -996,7 +899,7 @@ namespace Zio.FileSystems
 
             public PathInfo GetFullPath()
             {
-                var parent = _parent;
+                var parent = Parent;
                 if (parent == null)
                 {
                     return PathInfo.Root;
@@ -1004,12 +907,12 @@ namespace Zio.FileSystems
                 return parent.GetFullPath() / Name;
             }
 
-            public bool IsDisposed { get; private set; }
+            private bool IsDisposed { get; set; }
 
             public void DetachFromParent()
             {
                 AssertLockWrite();
-                var parent = _parent;
+                var parent = Parent;
                 if (parent == null)
                 {
                     return;
@@ -1017,7 +920,7 @@ namespace Zio.FileSystems
                 parent.AssertLockWrite();
 
                 parent.Children.Remove(Name);
-                _parent = null;
+                Parent = null;
             }
 
             public void AttachToParent(DirectoryNode parentNode)
@@ -1034,18 +937,7 @@ namespace Zio.FileSystems
             public void TryLockWrite(ListFileSystemNodes locks, bool lockParent, bool recursive)
             {
                 if (locks == null) throw new ArgumentNullException(nameof(locks));
-                AssertNoLock();
-
-                EnterRead();
-                DirectoryNode parent = null;
-                try
-                {
-                    parent = Parent;
-                }
-                finally
-                {
-                    ExitRead();
-                }
+                DirectoryNode parent = Parent;
 
                 // We read the parent, take a lock
                 if (lockParent && parent != null)
@@ -1181,18 +1073,12 @@ namespace Zio.FileSystems
             {
                 IsRoot = parent == null;
                 _children = new Dictionary<string, FileSystemNode>();
-                _attributes = FileAttributes.Directory;
+                Attributes = FileAttributes.Directory;
             }
 
             public bool IsRoot { get; }
 
-            public bool Exists
-            {
-                get
-                {
-                    return IsRoot || _parent != null;
-                }
-            }
+            public bool Exists => IsRoot || Parent != null;
 
             public Dictionary<string, FileSystemNode> Children
             {
@@ -1205,10 +1091,6 @@ namespace Zio.FileSystems
 
             public DirectoryNode GetFolder(string subFolder, bool createIfNotExist)
             {
-                if (string.IsNullOrWhiteSpace(subFolder))
-                {
-                    throw new ArgumentException($"Cannot create a sub folder with only whitespace for the name `{GetFullPath()}/{subFolder}`");
-                }
                 AssertNoLock();
 
                 if (createIfNotExist)
@@ -1270,14 +1152,10 @@ namespace Zio.FileSystems
 
             public FileContent Content
             {
-                get
-                {
-                    AssertLockReadOrWrite();
-                    return _content;
-                }
+                get => _content;
                 set
                 {
-                    AssertLockWrite();
+                    Debug.Assert(value != null);
                     _content = value;
                 }
             }
@@ -1292,7 +1170,6 @@ namespace Zio.FileSystems
 
             public FileContent(FileContent copy)
             {
-                if (copy == null) throw new ArgumentNullException(nameof(copy));
                 Buffer = (byte[])copy.Buffer.Clone();
                 Length = copy.Length;
             }
@@ -1352,9 +1229,9 @@ namespace Zio.FileSystems
 
             protected override void Dispose(bool disposing)
             {
+                _fileNode.LastAccessTime = DateTime.Now;
                 if (_canWrite)
                 {
-                    _fileNode.LastAccessTime = DateTime.Now;
                     _fileNode.LastWriteTime = DateTime.Now;
                     _fileNode.Content.Buffer = _stream.ToArray();
                     _fileNode.Content.Length = this.Length;
@@ -1371,6 +1248,15 @@ namespace Zio.FileSystems
             public override void Flush()
             {
                 _stream.Flush();
+
+                // If we flush on a writeable stream, update the node
+                if (_canWrite)
+                {
+                    _fileNode.LastAccessTime = DateTime.Now;
+                    _fileNode.LastWriteTime = DateTime.Now;
+                    _fileNode.Content.Buffer = _stream.ToArray();
+                    _fileNode.Content.Length = this.Length;
+                }
             }
 
             public override int Read(byte[] buffer, int offset, int count)
@@ -1386,6 +1272,11 @@ namespace Zio.FileSystems
             public override void SetLength(long value)
             {
                 _stream.SetLength(value);
+
+                _fileNode.LastAccessTime = DateTime.Now;
+                _fileNode.LastWriteTime = DateTime.Now;
+                _fileNode.Content.Buffer = _stream.ToArray();
+                _fileNode.Content.Length = this.Length;
             }
 
             public override void Write(byte[] buffer, int offset, int count)
