@@ -1254,6 +1254,10 @@ namespace Zio.FileSystems
             protected FileSystemNode(DirectoryNode parent, FileSystemNode copyNode)
             {
                 Parent = parent;
+                if (copyNode != null && copyNode.Attributes != 0)
+                {
+                    Attributes = copyNode.Attributes;
+                }
                 CreationTime = copyNode?.CreationTime ?? DateTime.Now;
                 LastWriteTime = copyNode?.LastWriteTime ?? CreationTime;
                 LastAccessTime = copyNode?.LastAccessTime ?? CreationTime;
@@ -1338,7 +1342,6 @@ namespace Zio.FileSystems
             {
                 IsRoot = parent == null;
                 _children = new Dictionary<string, FileSystemNode>();
-                Attributes = FileAttributes.Directory;
             }
 
             public bool IsRoot { get; }
@@ -1362,6 +1365,7 @@ namespace Zio.FileSystems
             public FileNode(DirectoryNode parent) : base(parent, null)
             {
                 _content = new FileContent();
+                Attributes = FileAttributes.Archive;
             }
 
             public FileNode(DirectoryNode parent, FileNode copyNode) : base(parent, copyNode)
