@@ -12,7 +12,7 @@ namespace Zio
     /// Uniform and secure path wrapper.
     /// </summary>
     /// <seealso cref="PathInfo" />
-    public struct PathInfo : IEquatable<PathInfo>
+    public struct PathInfo : IEquatable<PathInfo>, IComparable<PathInfo>
     {
         [ThreadStatic] private static InternalHelper _internalHelperTls;
 
@@ -369,6 +369,11 @@ namespace Zio
             public readonly int End;
 
             public int Length => End - Start + 1;
+        }
+
+        public int CompareTo(PathInfo other)
+        {
+            return string.Compare(FullName, other.FullName, StringComparison.Ordinal);
         }
     }
 }
