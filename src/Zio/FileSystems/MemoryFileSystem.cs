@@ -16,7 +16,10 @@ namespace Zio.FileSystems
     /// </summary>
     public class MemoryFileSystem : FileSystemBase
     {
+        // The locking strategy is based on https://www.kernel.org/doc/Documentation/filesystems/directory-locking
+
         private readonly DirectoryNode _rootDirectory;
+        private readonly FileSystemNodeReadWriteLock _globalLock;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MemoryFileSystem"/> class.
@@ -24,6 +27,7 @@ namespace Zio.FileSystems
         public MemoryFileSystem()
         {
             _rootDirectory = new DirectoryNode(null);
+            _globalLock = new FileSystemNodeReadWriteLock();
         }
 
         // ----------------------------------------------
@@ -32,86 +36,107 @@ namespace Zio.FileSystems
 
         protected override void CreateDirectoryImpl(PathInfo path)
         {
-            CreateDirectoryNode(path);
+            EnterFileSystemShared();
+            try
+            {
+                CreateDirectoryNode(path);
+            }
+            finally
+            {
+                ExitFileSystemShared();
+            }
         }
 
         protected override bool DirectoryExistsImpl(PathInfo path)
         {
-            return FindDirectoryNode(path) != null;
-        }
-
-        protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
-        {
-            var srcDirectory = FindDirectoryNode(srcPath);
-            if (srcDirectory is FileNode)
+            if (path == PathInfo.Root)
             {
-                throw new IOException($"The source directory `{srcPath}` is a file");
-            }
-            if (srcDirectory == null)
-            {
-                throw new DirectoryNotFoundException($"The source directory `{srcPath}` was not found");
+                return true;
             }
 
-            string destDirectoryName;
-            DirectoryNode parentDestDirectory;
-            if (FindNode(destPath, false, false, out parentDestDirectory, out destDirectoryName) != null)
-            {
-                throw new IOException($"The destination directory `{destPath}` already exists");
-            }
-
-            // We are going to move the source directory
-            // so we need to lock its parent and then the directory itself
-            parentDestDirectory.EnterWrite(destPath);
+            EnterFileSystemShared();
             try
             {
-                using (var locks = new ListFileSystemNodes())
+                var result = EnterFindNode(path, FindNodeFlags.None);
+                try
                 {
-                    srcDirectory.TryLockWrite(locks, srcDirectory.Parent != parentDestDirectory, true, srcPath);
-
-                    FileSystemNode node;
-                    if (parentDestDirectory.Children.TryGetValue(destDirectoryName, out node))
-                    {
-                        if (node is DirectoryNode)
-                        {
-                            throw new IOException($"The destination directory `{destPath}` already exists");
-                        }
-                        throw new IOException($"The destination path `{destPath}` is a file");
-                    }
-
-                    srcDirectory.DetachFromParent(srcPath.GetName());
-                    srcDirectory.AttachToParent(parentDestDirectory, destDirectoryName);
+                    return result.Node is DirectoryNode;
+                }
+                finally
+                {
+                    ExitFindNode(result);
                 }
             }
             finally
             {
-                parentDestDirectory.ExitWrite();
+                ExitFileSystemShared();
             }
+        }
+
+        protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
+        {
+            MoveFileOrDirectory(srcPath, destPath, true);
         }
 
         protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
         {
-            var directory = FindDirectoryNode(path);
-            if (directory is FileNode)
+            EnterFileSystemShared();
+            try
             {
-                throw new IOException($"The path `{path}` is a file");
-            }
-            if (directory == null)
-            {
-                throw new DirectoryNotFoundException($"The directory `{path}` was not found");
-            }
+                var result = EnterFindNode(path, FindNodeFlags.KeepParentNodeWrite | FindNodeFlags.NodeWrite);
 
-            using (var locks = new ListFileSystemNodes())
-            {
-                directory.TryLockWrite(locks, true, isRecursive, path);
-
-                // We remove up to the parent but not the parent
-                for (var i = locks.Count - 1; i >= 1; i--)
+                bool deleteRootDirectory = false;
+                try
                 {
-                    var node = locks[i];
-                    locks.RemoveAt(i);
-                    node.Value.DetachFromParent(node.Key);
-                    node.Value.Dispose();
+                    AssertDirectory(result.Node, path);
+
+                    if ((result.Node.Attributes & FileAttributes.ReadOnly) != 0)
+                    {
+                        throw new IOException($"The path `{path}` is readonly and cannot be deleted");
+                    }
+
+                    using (var locks = new ListFileSystemNodes(this))
+                    {
+                        TryLockWrite(result.Node, locks, isRecursive, path);
+
+                        // Check that files are not readonly
+                        foreach (var lockFile in locks)
+                        {
+                            var node = lockFile.Value;
+
+                            if ((node.Attributes & FileAttributes.ReadOnly) != 0)
+                            {
+                                throw new IOException($"The path `{path}` contains readonly elements and cannot be deleted");
+                            }
+                        }
+
+                        // We remove all elements
+                        for (var i = locks.Count - 1; i >= 0; i--)
+                        {
+                            var node = locks[i];
+                            locks.RemoveAt(i);
+                            node.Value.DetachFromParent(node.Key);
+                            node.Value.Dispose();
+
+                            ExitWrite(node.Value);
+                        }
+                    }
+                    deleteRootDirectory = true;
                 }
+                finally
+                {
+                    if (deleteRootDirectory)
+                    {
+                        result.Node.DetachFromParent(result.Name);
+                        result.Node.Dispose();
+                    }
+
+                    ExitFindNode(result);
+                }
+            }
+            finally
+            {
+                ExitFileSystemShared();
             }
         }
 
@@ -121,82 +146,76 @@ namespace Zio.FileSystems
 
         protected override void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite)
         {
-            // The source file must exist
-            var srcNode = FindNode(srcPath);
-            if (srcNode is DirectoryNode)
-            {
-                throw new ArgumentException($"Cannot copy file. The path `{srcPath}` is a directory", nameof(srcPath));
-            }
-            if (srcNode == null)
-            {
-                throw new FileNotFoundException($"The file `{srcPath}` was not found");
-            }
-
-            // The dest file may exist
-            DirectoryNode destDirectory;
-            string destFileName;
-            var destNode = FindNode(destPath, true, false, out destDirectory, out destFileName);
-            if (destDirectory == null)
-            {
-                throw new DirectoryNotFoundException($"The directory from the path `{destPath}` was not found");
-            }
-            if (destNode is DirectoryNode)
-            {
-                throw new ArgumentException($"Cannot copy file. The path `{destPath}` is a directory", nameof(destPath));
-            }
-
-            // This whole region is reading <srcPath>
-            srcNode.EnterRead(srcPath);
+            EnterFileSystemShared();
             try
             {
-                // If the destination is empty, we need to create it
-                if (destNode == null)
+                var srcResult = EnterFindNode(srcPath, FindNodeFlags.None);
+                try
                 {
-                    destDirectory.EnterWrite(destPath);
+                    // The source file must exist
+                    var srcNode = srcResult.Node;
+                    if (srcNode is DirectoryNode)
+                    {
+                        throw new ArgumentException($"Cannot copy file. The path `{srcPath}` is a directory", nameof(srcPath));
+                    }
+                    if (srcNode == null)
+                    {
+                        throw new FileNotFoundException($"The file `{srcPath}` was not found");
+                    }
+
+                    var destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeWrite | FindNodeFlags.NodeWrite);
+                    var destFileName = destResult.Name;
+                    var destDirectory = destResult.Directory;
+                    var destNode = destResult.Node;
                     try
                     {
-                        // After entering in write mode, we need to make sure that the file was not added in the meantime
-                        if (destDirectory.Children.TryGetValue(destFileName, out destNode))
+                        // The dest file may exist
+                        if (destDirectory == null)
                         {
-                            if (destNode is DirectoryNode)
-                            {
-                                throw new ArgumentException($"Cannot copy file. The path `{destPath}` is a directory", nameof(destPath));
-                            }
+                            throw new DirectoryNotFoundException($"The directory from the path `{destPath}` was not found");
+                        }
+                        if (destNode is DirectoryNode)
+                        {
+                            throw new ArgumentException($"Cannot copy file. The path `{destPath}` is a directory", nameof(destPath));
+                        }
+
+                        // If the destination is empty, we need to create it
+                        if (destNode == null)
+                        {
+                            var newFileNode = new FileNode(destDirectory, (FileNode) srcNode);
+                            destDirectory.Children.Add(destFileName, newFileNode);
+                        }
+                        else if (overwrite)
+                        {
+                            var destFileNode = (FileNode) destNode;
+                            destFileNode.Content = new FileContent(((FileNode) srcNode).Content);
                         }
                         else
                         {
-                            destNode = new FileNode(destDirectory, (FileNode) srcNode);
-                            destDirectory.Children.Add(destFileName, destNode);
-                            return;
+                            throw new IOException($"The destination file path `{destPath}` already exist and overwrite is false");
                         }
                     }
                     finally
                     {
-                        destDirectory.ExitWrite();
-                    }
-                }
+                        if (destNode != null)
+                        {
+                            ExitWrite(destNode);
+                        }
 
-                if (overwrite)
-                {
-                    var destFileNode = (FileNode) destNode;
-                    destFileNode.EnterWrite(destPath);
-                    try
-                    {
-                        destFileNode.Content = new FileContent(((FileNode) srcNode).Content);
-                    }
-                    finally
-                    {
-                        destFileNode.ExitWrite();
+                        if (destDirectory != null)
+                        {
+                            ExitWrite(destDirectory);
+                        }
                     }
                 }
-                else
+                finally
                 {
-                    throw new IOException($"The destination file path `{destPath}` already exist and overwrite is false");
+                    ExitFindNode(srcResult);
                 }
             }
             finally
             {
-                srcNode.ExitRead();
+                ExitFileSystemShared();
             }
         }
 
@@ -211,204 +230,172 @@ namespace Zio.FileSystems
                 throw new IOException($"The backup is the same as the source or destination path `{destBackupPath}`");
             }
 
-            var srcNode = FindNode(srcPath) as FileNode;
-            if (srcNode == null)
-            {
-                throw new FileNotFoundException($"The file `{srcPath}` was not found");
-            }
+            // Get the directories of src/dest/backup
+            var parentSrcPath = srcPath.GetDirectory();
+            var parentDestPath = destPath.GetDirectory();
+            var parentDestBackupPath = destBackupPath.IsNull ? new PathInfo() : destBackupPath.GetDirectory();
 
-            DirectoryNode destDirectory;
-            string destfileName;
-            var destNode = FindNode(destPath, true, false, out destDirectory, out destfileName);
-            if (destDirectory == null)
-            {
-                throw new DirectoryNotFoundException($"The destination directory `{destPath.GetDirectory()}` does not exist");
-            }
-            if (destNode == null)
-            {
-                throw new FileNotFoundException($"The file `{destPath}` was not found");
-            }
+            // Simple case: src/dest/backup in the same folder
+            var isSameFolder = parentSrcPath == parentDestPath && (destBackupPath.IsNull || (parentDestBackupPath == parentSrcPath));
+            // Else at least one folder is different. This is a rename semantic (as per the locking guidelines)
 
-            DirectoryNode destBackupDirectory = null;
-            string destBackupfileName = null;
-
+            var paths = new List<KeyValuePair<PathInfo, int>>
+            {
+                new KeyValuePair<PathInfo, int>(srcPath, 0),
+                new KeyValuePair<PathInfo, int>(destPath, 1)
+            };
             if (!destBackupPath.IsNull)
             {
-                destBackupPath.AssertAbsolute(nameof(destBackupPath));
-                var destBackupNode = FindNode(destBackupPath, true, false, out destBackupDirectory, out destBackupfileName);
-                if (destBackupDirectory == null)
-                {
-                    throw new DirectoryNotFoundException($"The destination directory `{destBackupPath.GetDirectory()}` does not exist");
-                }
-                if (destBackupNode != null)
-                {
-                    throw new IOException($"The destination path `{destBackupPath}` already exist");
-                }               
+                paths.Add(new KeyValuePair<PathInfo, int>(destBackupPath, 2));
             }
+            paths.Sort((p1, p2) => string.Compare(p1.Key.FullName, p2.Key.FullName, StringComparison.Ordinal));
 
-            srcNode.EnterRead(srcPath);
-            var parentFolder = srcNode.Parent;
-            srcNode.ExitRead();
+            // We need to take the lock on the folders in the correct order to avoid deadlocks
+            // So we sort the srcPath and destPath in alphabetical order
+            // (if srcPath is a subFolder of destPath, we will lock first destPath parent Folder, and then srcFolder)
 
-            parentFolder.EnterWrite(srcPath);
+            if (isSameFolder)
+            {
+                EnterFileSystemShared();
+            }
+            else
+            {
+                EnterFileSystemExclusive();
+            }
+            
             try
             {
-                srcNode.EnterWrite(srcPath);
-                if (destDirectory != parentFolder)
-                {
-                    destDirectory.EnterWrite(destPath);
-                }
+                var results = new NodeResult[destBackupPath.IsNull ? 2 : 3];
                 try
                 {
-                    var isDestBackupLocked = destBackupDirectory != null && destBackupDirectory != destDirectory && destBackupDirectory != parentFolder;
-                    if (isDestBackupLocked)
+                    for (int i = 0; i < paths.Count; i++)
                     {
-                        Debug.Assert(destBackupfileName != null);
-                        destBackupDirectory.EnterWrite(destBackupPath);
-                    }
-                    try
-                    {
-                        // TODO: Check what is the behavior of File.Replace when the destination file does not exist?
-                        if (!destDirectory.Children.TryGetValue(destfileName, out destNode))
+                        var pathPair = paths[i];
+                        var flags = FindNodeFlags.KeepParentNodeWrite;
+                        if (pathPair.Value != 2)
                         {
-                            throw new FileNotFoundException($"The destination file `{destPath}` was not found");
+                            flags |= FindNodeFlags.NodeWrite;
                         }
-                        if (destNode is DirectoryNode)
+                        results[pathPair.Value] = EnterFindNode(pathPair.Key, flags, results);
+                    }
+
+                    var srcResult = results[0];
+                    var destResult = results[1];
+
+                    AssertFile(srcResult.Node, srcPath);
+                    AssertFile(destResult.Node, destPath);
+
+                    if (!destBackupPath.IsNull)
+                    {
+                        var backupResult = results[2];
+                        AssertDirectory(backupResult.Directory, destPath);
+
+                        if (backupResult.Node != null)
                         {
-                            throw new DirectoryNotFoundException($"The destination path `{destPath}` is a directory");
+                            AssertFile(backupResult.Node, destBackupPath);
+                            backupResult.Node.DetachFromParent(backupResult.Name);
+                            backupResult.Node.Dispose();
                         }
 
-                        destNode.EnterWrite(destPath);
-                        try
-                        {
-                            // Remove the dest and attach it to the backup if necessary
-                            if (destBackupDirectory != null)
-                            {
-                                if (destBackupDirectory.Children.ContainsKey(destBackupfileName))
-                                {
-                                    throw new IOException($"The destination backup file `{destBackupPath}` already exist");
-                                }
-                                destNode.DetachFromParent(destPath.GetName());
-                                destNode.AttachToParent(destBackupDirectory, destBackupfileName);
-                            }
-                            else
-                            {
-                                destNode.DetachFromParent(destPath.GetName());
-                            }
-
-                            // Move file from src to dest
-                            srcNode.DetachFromParent(srcPath.GetName());
-                            srcNode.AttachToParent(destDirectory, destfileName);
-                        }
-                        finally
-                        {
-                            destNode.ExitWrite();
-                        }
+                        destResult.Node.DetachFromParent(destResult.Name);
+                        destResult.Node.AttachToParent(backupResult.Directory, backupResult.Name);
                     }
-                    finally
+                    else
                     {
-                        if (isDestBackupLocked)
-                        {
-                            destBackupDirectory.ExitWrite();
-                        }
+                        destResult.Node.DetachFromParent(destResult.Name);
+                        destResult.Node.Dispose();
                     }
+
+                    srcResult.Node.DetachFromParent(srcResult.Name);
+                    srcResult.Node.AttachToParent(destResult.Directory, destResult.Name);
                 }
                 finally
                 {
-                    if (parentFolder != destDirectory)
+                    for (int i = results.Length - 1; i >= 0; i--)
                     {
-                        destDirectory.ExitWrite();
+                        ExitFindNode(results[i]);
                     }
-                    srcNode.ExitWrite();
                 }
             }
             finally
             {
-                parentFolder.ExitWrite();
+                if (isSameFolder)
+                {
+                    ExitFileSystemShared();
+                }
+                else
+                {
+                    ExitFileSystemExclusive();
+                }
             }
-
         }
 
         protected override long GetFileLengthImpl(PathInfo path)
         {
-            return ((FileNode)FindNodeSafe(path, true)).Content.Length;
+            EnterFileSystemShared();
+            try
+            {
+                return ((FileNode) FindNodeSafe(path, true)).Content.Length;
+            }
+            finally
+            {
+                ExitFileSystemShared();
+            }
         }
 
         protected override bool FileExistsImpl(PathInfo path)
         {
-
-            var srcNode = FindNode(path) as FileNode;
-            return srcNode != null;
+            EnterFileSystemShared();
+            try
+            {
+                var result = EnterFindNode(path, FindNodeFlags.None);
+                ExitFindNode(result);
+                return result.Node is FileNode;
+            }
+            finally
+            {
+                ExitFileSystemShared();
+            }
         }
 
         protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
         {
-            var srcNode = FindNode(srcPath) as FileNode;
-            if (srcNode == null)
-            {
-                throw new FileNotFoundException($"The file `{srcPath}` was not found");
-            }
-
-            DirectoryNode destDirectory;
-            string destfileName;
-            var node = FindNode(destPath, true, false, out destDirectory, out destfileName);
-            if (destDirectory == null)
-            {
-                throw new DirectoryNotFoundException($"The destination directory `{destPath.GetDirectory()}` does not exist");
-            }
-            if (node != null)
-            {
-                throw new IOException($"The destination path `{destPath}` already exist");
-            }
-
-
-            srcNode.EnterRead(srcPath);
-            var parentFolder = srcNode.Parent;
-            srcNode.ExitRead();
-
-            parentFolder.EnterWrite(srcPath);
-            srcNode.EnterWrite(srcPath);
-            if (parentFolder != destDirectory)
-            {
-                destDirectory.EnterWrite(destPath);
-            }
-            try
-            {
-                if (destDirectory.Children.ContainsKey(destfileName))
-                {
-                    throw new IOException($"The destination path `{destPath}` already exist");
-                }
-
-                srcNode.DetachFromParent(srcPath.GetName());
-                srcNode.AttachToParent(destDirectory, destfileName);
-            }
-            finally
-            {
-                if (parentFolder != destDirectory)
-                {
-                    destDirectory.ExitWrite();
-                }
-                srcNode.ExitWrite();
-                parentFolder.ExitWrite();
-            }
+            MoveFileOrDirectory(srcPath, destPath, false);
         }
 
         protected override void DeleteFileImpl(PathInfo path)
         {
-            var srcNode = FindNode(path);
-            if (srcNode == null)
+            EnterFileSystemShared();
+            try
             {
-                throw new FileNotFoundException($"The file `{path}` was not found");
-            }
-            if (srcNode is DirectoryNode)
-            {
-                throw new IOException($"The path `{path}` is a directory");
-            }
+                var result = EnterFindNode(path, FindNodeFlags.KeepParentNodeWrite | FindNodeFlags.NodeWrite);
+                try
+                {
+                    var srcNode = result.Node;
+                    if (srcNode == null)
+                    {
+                        throw new FileNotFoundException($"The file `{path}` was not found");
+                    }
+                    if (srcNode is DirectoryNode)
+                    {
+                        throw new IOException($"The path `{path}` is a directory");
+                    }
+                    if ((srcNode.Attributes & FileAttributes.ReadOnly) != 0)
+                    {
+                        throw new IOException($"The path `{path}` is a readonly file");
+                    }
 
-            using (var locks = new ListFileSystemNodes())
+                    srcNode.DetachFromParent(result.Name);
+                    srcNode.Dispose();
+                }
+                finally
+                {
+                    ExitFindNode(result);
+                }
+            }
+            finally
             {
-                srcNode.TryLockWrite(locks, true, false, path);
-                srcNode.DetachFromParent(path.GetName());
+                ExitFileSystemShared();
             }
         }
 
@@ -418,147 +405,183 @@ namespace Zio.FileSystems
             {
                 throw new NotSupportedException($"The share `{share}` is not supported. Only none is supported");
             }
+            var isWriting = (access & FileAccess.Write) != 0;
 
-            DirectoryNode parentDirectory;
-            string filename;
-            var srcNode = FindNode(path, true, false, out parentDirectory, out filename);
-            if (srcNode is DirectoryNode)
+
+            EnterFileSystemShared();
+            DirectoryNode parentDirectory = null;
+            FileNode fileNodeToRelease = null;
+            try
             {
-                throw new IOException($"The path `{path}` is a directory");
-            }
-            if (parentDirectory == null)
-            {
-                throw new DirectoryNotFoundException($"The directory from the path `{path}` was not found");
-            }
-            var fileNode = (FileNode) srcNode;
-
-            // Append: Opens the file if it exists and seeks to the end of the file, or creates a new file. 
-            //         This requires FileIOPermissionAccess.Append permission. FileMode.Append can be used only in 
-            //         conjunction with FileAccess.Write. Trying to seek to a position before the end of the file 
-            //         throws an IOException exception, and any attempt to read fails and throws a 
-            //         NotSupportedException exception.
-            //
-            //
-            // CreateNew: Specifies that the operating system should create a new file.This requires 
-            //            FileIOPermissionAccess.Write permission. If the file already exists, an IOException 
-            //            exception is thrown.
-            //
-            // Open: Specifies that the operating system should open an existing file. The ability to open 
-            //       the file is dependent on the value specified by the FileAccess enumeration. 
-            //       A System.IO.FileNotFoundException exception is thrown if the file does not exist.
-            //
-            // OpenOrCreate: Specifies that the operating system should open a file if it exists; 
-            //               otherwise, a new file should be created. If the file is opened with 
-            //               FileAccess.Read, FileIOPermissionAccess.Read permission is required. 
-            //               If the file access is FileAccess.Write, FileIOPermissionAccess.Write permission 
-            //               is required. If the file is opened with FileAccess.ReadWrite, both 
-            //               FileIOPermissionAccess.Read and FileIOPermissionAccess.Write permissions 
-            //               are required. 
-            //
-            // Truncate: Specifies that the operating system should open an existing file. 
-            //           When the file is opened, it should be truncated so that its size is zero bytes. 
-            //           This requires FileIOPermissionAccess.Write permission. Attempts to read from a file 
-            //           opened with FileMode.Truncate cause an ArgumentException exception.
-
-            // Create: Specifies that the operating system should create a new file.If the file already exists, 
-            //         it will be overwritten.This requires FileIOPermissionAccess.Write permission. 
-            //         FileMode.Create is equivalent to requesting that if the file does not exist, use CreateNew; 
-            //         otherwise, use Truncate. If the file already exists but is a hidden file, 
-            //         an UnauthorizedAccessException exception is thrown.
-
-            bool shouldTruncate = false;
-            bool shouldAppend = false;
-
-            if (mode == FileMode.Create)
-            {
-                if (fileNode != null)
+                var result = EnterFindNode(path, (isWriting ? FindNodeFlags.NodeWrite : FindNodeFlags.None) | FindNodeFlags.KeepParentNodeWrite);
+                if (result.Directory == null)
                 {
-                    mode = FileMode.Open;
-                    shouldTruncate = true;
+                    ExitFindNode(result);
+                    throw new DirectoryNotFoundException($"The directory from the path `{path}` was not found");
                 }
-                else
-                {
-                    mode = FileMode.CreateNew;
-                }
-            }
 
-            if (mode == FileMode.OpenOrCreate)
-            {
-                mode = fileNode != null ? FileMode.Open : FileMode.CreateNew;
-            }
-
-            if (mode == FileMode.Append)
-            {
-                if (fileNode != null)
+                if (result.Node is DirectoryNode)
                 {
-                    mode = FileMode.Open;
-                    shouldAppend = true;
+                    ExitFindNode(result);
+                    throw new IOException($"The path `{path}` is a directory");
                 }
-                else
-                {
-                    mode = FileMode.CreateNew;
-                }
-            }
 
-            if (mode == FileMode.Truncate)
-            {
-                if (fileNode != null)
-                {
-                    mode = FileMode.Open;
-                    shouldTruncate = true;
-                }
-                else
-                {
-                    throw new FileNotFoundException($"The file `{path}` was not found");
-                }
-            }
+                var filename = result.Name;
+                parentDirectory = result.Directory;
+                var srcNode = result.Node;
 
-            // Here we should only have Open or CreateNew
-            Debug.Assert(mode == FileMode.Open || mode == FileMode.CreateNew);
+                var fileNode = (FileNode) srcNode;
 
-            if (mode == FileMode.CreateNew)
-            {
-                parentDirectory.EnterWrite(path);
-                try
+                // Append: Opens the file if it exists and seeks to the end of the file, or creates a new file. 
+                //         This requires FileIOPermissionAccess.Append permission. FileMode.Append can be used only in 
+                //         conjunction with FileAccess.Write. Trying to seek to a position before the end of the file 
+                //         throws an IOException exception, and any attempt to read fails and throws a 
+                //         NotSupportedException exception.
+                //
+                //
+                // CreateNew: Specifies that the operating system should create a new file.This requires 
+                //            FileIOPermissionAccess.Write permission. If the file already exists, an IOException 
+                //            exception is thrown.
+                //
+                // Open: Specifies that the operating system should open an existing file. The ability to open 
+                //       the file is dependent on the value specified by the FileAccess enumeration. 
+                //       A System.IO.FileNotFoundException exception is thrown if the file does not exist.
+                //
+                // OpenOrCreate: Specifies that the operating system should open a file if it exists; 
+                //               otherwise, a new file should be created. If the file is opened with 
+                //               FileAccess.Read, FileIOPermissionAccess.Read permission is required. 
+                //               If the file access is FileAccess.Write, FileIOPermissionAccess.Write permission 
+                //               is required. If the file is opened with FileAccess.ReadWrite, both 
+                //               FileIOPermissionAccess.Read and FileIOPermissionAccess.Write permissions 
+                //               are required. 
+                //
+                // Truncate: Specifies that the operating system should open an existing file. 
+                //           When the file is opened, it should be truncated so that its size is zero bytes. 
+                //           This requires FileIOPermissionAccess.Write permission. Attempts to read from a file 
+                //           opened with FileMode.Truncate cause an ArgumentException exception.
+
+                // Create: Specifies that the operating system should create a new file.If the file already exists, 
+                //         it will be overwritten.This requires FileIOPermissionAccess.Write permission. 
+                //         FileMode.Create is equivalent to requesting that if the file does not exist, use CreateNew; 
+                //         otherwise, use Truncate. If the file already exists but is a hidden file, 
+                //         an UnauthorizedAccessException exception is thrown.
+
+                bool shouldTruncate = false;
+                bool shouldAppend = false;
+
+                if (mode == FileMode.Create)
+                {
+                    if (fileNode != null)
+                    {
+                        mode = FileMode.Open;
+                        shouldTruncate = true;
+                    }
+                    else
+                    {
+                        mode = FileMode.CreateNew;
+                    }
+                }
+
+                if (mode == FileMode.OpenOrCreate)
+                {
+                    mode = fileNode != null ? FileMode.Open : FileMode.CreateNew;
+                }
+
+                if (mode == FileMode.Append)
+                {
+                    if (fileNode != null)
+                    {
+                        mode = FileMode.Open;
+                        shouldAppend = true;
+                    }
+                    else
+                    {
+                        mode = FileMode.CreateNew;
+                    }
+                }
+
+                if (mode == FileMode.Truncate)
+                {
+                    if (fileNode != null)
+                    {
+                        mode = FileMode.Open;
+                        shouldTruncate = true;
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException($"The file `{path}` was not found");
+                    }
+                }
+
+                // Here we should only have Open or CreateNew
+                Debug.Assert(mode == FileMode.Open || mode == FileMode.CreateNew);
+
+                if (mode == FileMode.CreateNew)
                 {
                     // This is not completely accurate to throw an exception (as we have been called with an option to OpenOrCreate)
                     // But we assume that between the beginning of the method and here, the filesystem is not changing, and 
                     // if it is, it is an unfortunate conrurrency
-                    if (parentDirectory.Children.ContainsKey(filename))
+                    if (fileNode != null)
                     {
+                        fileNodeToRelease = fileNode;
                         throw new IOException($"The file `{path}` already exist");
                     }
 
                     fileNode = new FileNode(parentDirectory);
                     parentDirectory.Children.Add(filename, fileNode);
-
-                    OpenFile(fileNode, access, path);
+                    if (isWriting)
+                    {
+                        EnterWrite(fileNode, path);
+                    }
+                    else
+                    {
+                        EnterRead(fileNode, path);
+                    }
                 }
-                finally
+                else
                 {
-                    parentDirectory.ExitWrite();
-                }
-            }
-            else
-            {
-                if (fileNode == null)
-                {
-                    throw new FileNotFoundException($"The file `{path}` was not found");
-                }
-                OpenFile(fileNode, access, path);
-            }
+                    if (fileNode == null)
+                    {
+                        throw new FileNotFoundException($"The file `{path}` was not found");
+                    }
 
-            // Create a memory file stream
-            var stream = new MemoryFileStream(fileNode);
-            if (shouldAppend)
-            {
-                stream.Position = stream.Length;
+                    ExitWrite(parentDirectory);
+                    parentDirectory = null;
+                }
+
+                // TODO: Add checks between mode and access
+
+                // Create a memory file stream
+                var stream = new MemoryFileStream(this, fileNode, isWriting);
+                if (shouldAppend)
+                {
+                    stream.Position = stream.Length;
+                }
+                else if (shouldTruncate)
+                {
+                    stream.SetLength(0);
+                }
+                return stream;
             }
-            else if (shouldTruncate)
+            finally
             {
-                stream.SetLength(0);
+                if (fileNodeToRelease != null)
+                {
+                    if (isWriting)
+                    {
+                        ExitWrite(fileNodeToRelease);
+                    }
+                    else
+                    {
+                        ExitRead(fileNodeToRelease);
+                    }
+                }
+                if (parentDirectory != null)
+                {
+                    ExitWrite(parentDirectory);
+                }
+                ExitFileSystemShared();
             }
-            return stream;
         }
 
         // ----------------------------------------------
@@ -631,62 +654,86 @@ namespace Zio.FileSystems
         {
             var search = SearchPattern.Parse(ref path, ref searchPattern);
 
-            var node = FindDirectoryNode(path);
-            if (node == null)
-            {
-                throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
-            }
+            var foldersToProcess = new Queue<PathInfo>();
+            foldersToProcess.Enqueue(path);
 
-            var directory = node as DirectoryNode;
-            if (directory == null)
-            {
-                throw new IOException($"The path `{path}` is a file and not a folder");
-            }
-
-            var foldersToProcess = new Queue<KeyValuePair<PathInfo, DirectoryNode>>();
-            foldersToProcess.Enqueue(new KeyValuePair<PathInfo, DirectoryNode>(path, directory));
-
-            var entries = new List<KeyValuePair<string, FileSystemNode>>();
-
+            var entries = new List<PathInfo>();
             while (foldersToProcess.Count > 0)
             {
-                var dirPair = foldersToProcess.Dequeue();
-                var dirPath = dirPair.Key;
-                directory = dirPair.Value;
-
-                // If the directory seems to not be attached anymore, don't try to list it
-                if (!directory.Exists)
-                {
-                    continue;
-                }
-
-                // Preread all entries by locking very shortly the folder
-                // We optimistically expect that the folder won't change while we are iterating it
-                directory.EnterRead(dirPath);
+                var directoryPath = foldersToProcess.Dequeue();
                 entries.Clear();
-                entries.AddRange(directory.Children);
-                directory.ExitRead();
 
-                foreach (var nodePair in entries)
+                // This is important that here we don't lock the FileSystemShared
+                // or the visited folder while returning a yield otherwise the finally
+                // may never be executed if the caller of this method decide to not
+                // Dispose the IEnumerable (because the generated IEnumerable
+                // doesn't have a finalizer calling Dispose)
+                // This is why the yield is performed outside this block
+                EnterFileSystemShared();
+                try
                 {
-                    if (nodePair.Value is DirectoryNode && searchTarget == SearchTarget.File)
+                    var result = EnterFindNode(directoryPath, FindNodeFlags.None);
+                    try
                     {
-                        continue;
-                    }
-                    if (nodePair.Value is FileNode && searchTarget == SearchTarget.Directory)
-                    {
-                        continue;
-                    }
-
-                    if (search.Match(nodePair.Key))
-                    {
-                        var fullPath = dirPath / nodePair.Key;
-                        yield return fullPath;
-                        if (searchOption == SearchOption.AllDirectories && nodePair.Value is DirectoryNode)
+                        if (directoryPath == path)
                         {
-                            foldersToProcess.Enqueue(new KeyValuePair<PathInfo, DirectoryNode>(fullPath, (DirectoryNode)nodePair.Value));
+                            // The first folder must be a directory, if it is not, throw an error
+                            AssertDirectory(result.Node, directoryPath);
+                        }
+                        else
+                        {
+                            // Might happen during the time a DirectoryNode is enqueued into foldersToProcess
+                            // and the time we are going to actually visit it, it might have been
+                            // removed in the meantime, so we make sure here that we have a folder
+                            // and we don't throw an error if it is not
+                            if (!(result.Node is DirectoryNode))
+                            {
+                                continue;
+                            }
+                        }
+
+                        var directory = (DirectoryNode) result.Node;
+                        foreach (var nodePair in directory.Children)
+                        {
+                            if (nodePair.Value is FileNode && searchTarget == SearchTarget.Directory)
+                            {
+                                continue;
+                            }
+
+                            var isEntryMatching = search.Match(nodePair.Key);
+
+                            var canFollowFolder = searchOption == SearchOption.AllDirectories && nodePair.Value is DirectoryNode && (searchTarget == SearchTarget.File || isEntryMatching);
+
+                            var addEntry = (nodePair.Value is FileNode && searchTarget != SearchTarget.Directory && isEntryMatching)
+                                           || (nodePair.Value is DirectoryNode && searchTarget != SearchTarget.File && isEntryMatching);
+
+                            var fullPath = directoryPath / nodePair.Key;
+
+                            if (canFollowFolder)
+                            {
+                                foldersToProcess.Enqueue(fullPath);
+                            }
+
+                            if (addEntry)
+                            {
+                                entries.Add(fullPath);
+                            }
                         }
                     }
+                    finally
+                    {
+                        ExitFindNode(result);
+                    }
+                }
+                finally
+                {
+                    ExitFileSystemShared();
+                }
+
+                // We return all the elements of visited directory in one shot, outside the previous lock block
+                foreach (var entry in entries)
+                {
+                    yield return entry;
                 }
             }
         }
@@ -718,106 +765,493 @@ namespace Zio.FileSystems
         // Internals
         // ----------------------------------------------
 
-        private FileSystemNode FindNodeSafe(PathInfo path, bool expectFileOnly)
+        private void MoveFileOrDirectory(PathInfo srcPath, PathInfo destPath, bool expectDirectory)
         {
-            var node = FindNode(path);
-            if (node == null)
+            var parentSrcPath = srcPath.GetDirectory();
+            var parentDestPath = destPath.GetDirectory();
+
+            void CheckDestination(FileSystemNode node)
             {
-                if (expectFileOnly)
+                if (expectDirectory)
                 {
-                    throw new FileNotFoundException($"The file `{path}` was not found");
+                    if (node is FileNode)
+                    {
+                        throw new IOException($"The destination path `{destPath}` is an existing file");
+                    }
                 }
-                throw new IOException($"The file or directory `{path}` was not found");
+                else
+                {
+                    if (node is DirectoryNode)
+                    {
+                        throw new IOException($"The destination path `{destPath}` is an existing directory");
+                    }
+                }
+
+                if (node != null)
+                {
+                    throw new IOException($"The destination path `{destPath}` already exists");
+                }
             }
-            if (node is DirectoryNode)
+
+            // Same directory move
+            var isSamefolder = parentSrcPath == parentDestPath;
+            // Check that Destination folder is not a subfolder of source directory
+            if (!isSamefolder && expectDirectory)
             {
-                if (expectFileOnly)
+                var checkParentDestDirectory = destPath.GetDirectory();
+                while (checkParentDestDirectory != null)
                 {
-                    throw new IOException($"Unexpected directory `{path}` not supported for the operation");
+                    if (checkParentDestDirectory == srcPath)
+                    {
+                        throw new IOException($"Cannot move the source directory `{srcPath}` to a a sub-folder of itself `{destPath}`");
+                    }
+
+                    checkParentDestDirectory = checkParentDestDirectory.GetDirectory();
                 }
             }
-            return node;
+
+            // We need to take the lock on the folders in the correct order to avoid deadlocks
+            // So we sort the srcPath and destPath in alphabetical order
+            // (if srcPath is a subFolder of destPath, we will lock first destPath parent Folder, and then srcFolder)
+
+            bool isLockInverted = !isSamefolder && string.Compare(srcPath.FullName, destPath.FullName, StringComparison.Ordinal) > 0;
+
+            if (isSamefolder)
+            {
+                EnterFileSystemShared();
+            }
+            else
+            {
+                EnterFileSystemExclusive();
+            }
+            try
+            {
+                var srcResult = new NodeResult();
+                var destResult = new NodeResult();
+                try
+                {
+                    if (isLockInverted)
+                    {
+                        destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeWrite);
+                        srcResult = EnterFindNode(srcPath, FindNodeFlags.KeepParentNodeWrite | FindNodeFlags.NodeWrite, destResult);
+                    }
+                    else
+                    {
+                        srcResult = EnterFindNode(srcPath, FindNodeFlags.KeepParentNodeWrite | FindNodeFlags.NodeWrite);
+                        destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeWrite, srcResult);
+                    }
+
+                    if (expectDirectory)
+                    {
+                        AssertDirectory(srcResult.Node, srcPath);
+                    }
+                    else
+                    {
+                        AssertFile(srcResult.Node, srcPath);
+                    }
+                    AssertDirectory(destResult.Directory, destPath);
+
+                    CheckDestination(destResult.Node);
+
+                    srcResult.Node.DetachFromParent(srcResult.Name);
+                    srcResult.Node.AttachToParent(destResult.Directory, destResult.Name);
+                }
+                finally
+                {
+                    if (isLockInverted)
+                    {
+                        ExitFindNode(srcResult);
+                        ExitFindNode(destResult);
+                    }
+                    else
+                    {
+                        ExitFindNode(destResult);
+                        ExitFindNode(srcResult);
+                    }
+                }
+            }
+            finally
+            {
+                if (isSamefolder)
+                {
+                    ExitFileSystemShared();
+                }
+                else
+                {
+                    ExitFileSystemExclusive();
+                }
+            }
         }
 
-        private FileSystemNode FindNode(PathInfo path)
+
+        private void AssertDirectory(FileSystemNode node, PathInfo srcPath)
         {
-            DirectoryNode parentNode;
-            string filename;
-            return FindNode(path, true, false, out parentNode, out filename);
+            if (node is FileNode)
+            {
+                throw new IOException($"The source directory `{srcPath}` is a file");
+            }
+            if (node == null)
+            {
+                throw new DirectoryNotFoundException($"The source directory `{srcPath}` was not found");
+            }
+        }
+
+        private void AssertFile(FileSystemNode node, PathInfo srcPath)
+        {
+            if (node is DirectoryNode)
+            {
+                throw new IOException($"The source file `{srcPath}` is a directory");
+            }
+            if (node == null)
+            {
+                throw new FileNotFoundException($"The source file `{srcPath}` was not found");
+            }
+        }
+
+        private FileSystemNode FindNodeSafe(PathInfo path, bool expectFileOnly)
+        {
+            EnterFileSystemShared();
+            try
+            {
+                var result = EnterFindNode(path, FindNodeFlags.None);
+                try
+                {
+                    var node = result.Node;
+
+                    if (node == null)
+                    {
+                        if (expectFileOnly)
+                        {
+                            throw new FileNotFoundException($"The file `{path}` was not found");
+                        }
+                        throw new IOException($"The file or directory `{path}` was not found");
+                    }
+
+                    if (node is DirectoryNode)
+                    {
+                        if (expectFileOnly)
+                        {
+                            throw new IOException($"Unexpected directory `{path}` not supported for the operation");
+                        }
+                    }
+
+                    return node;
+                }
+                finally
+                {
+                    ExitFindNode(result);
+                }
+            }
+            finally
+            {
+                ExitFileSystemShared();
+            }
         }
 
         private void CreateDirectoryNode(PathInfo path)
         {
-            FindOrCreateDirectoryNode(path, true);
+            ExitFindNode(EnterFindNode(path, FindNodeFlags.CreatePathIfNotExist));
         }
 
-        private FileSystemNode FindDirectoryNode(PathInfo path)
+        private struct NodeResult
         {
-            return FindOrCreateDirectoryNode(path, false);
+            public NodeResult(DirectoryNode directory, FileSystemNode node, string name, FindNodeFlags flags)
+            {
+                Directory = directory;
+                Node = node;
+                Name = name;
+                Flags = flags;
+            }
+
+            public readonly DirectoryNode Directory;
+
+            public readonly FileSystemNode Node;
+
+            public readonly string Name;
+
+            public readonly FindNodeFlags Flags;
         }
 
-        private FileSystemNode FindOrCreateDirectoryNode(PathInfo path, bool createIfNotExist)
+        [Flags]
+        private enum FindNodeFlags
         {
-            DirectoryNode parentNode;
-            string filename;
-            return FindNode(path, false, createIfNotExist, out parentNode, out filename);
+            None = 0,
+
+            CreatePathIfNotExist = 1 << 1,
+
+            NodeWrite = 1 << 2,
+
+            KeepParentNodeWrite = 1 << 3,
+
+            KeepParentNodeRead = 1 << 4,
         }
 
-        private FileSystemNode FindNode(PathInfo path, bool pathCanBeAFile, bool createIfNotExist, out DirectoryNode parentNode, out string filename)
+        private void ExitFindNode(NodeResult nodeResult)
         {
-            filename = null;
-            parentNode = null;
+            var flags = nodeResult.Flags;
+
+            // Unlock first the node
+            if (nodeResult.Node != null)
+            {
+                if ((flags & FindNodeFlags.NodeWrite) != 0)
+                {
+                    ExitWrite(nodeResult.Node);
+                }
+                else
+                {
+                    ExitRead(nodeResult.Node);
+                }
+            }
+
+            if (nodeResult.Directory == null)
+            {
+                return;
+            }
+
+            // Unlock the parent directory if necessary
+            if ((flags & FindNodeFlags.KeepParentNodeWrite) != 0)
+            {
+                ExitWrite(nodeResult.Directory);
+            }
+            else if ((flags & FindNodeFlags.KeepParentNodeRead) != 0)
+            {
+                ExitRead(nodeResult.Directory);
+            }
+        }
+
+        private NodeResult EnterFindNode(PathInfo path, FindNodeFlags flags, params NodeResult[] existingNodes)
+        {
+            var result = new NodeResult();
+
             if (path == PathInfo.Root)
             {
-                return _rootDirectory;
-            }
-
-            parentNode = _rootDirectory;
-            var names = path.Split().ToList();
-            filename = names[names.Count - 1];
-            for (var i = 0; i < names.Count - 1; i++)
-            {
-                var subPath = names[i];
-                var nextDirectory = parentNode.GetFolder(subPath, createIfNotExist, path);
-                if (nextDirectory == null)
+                if ((flags & FindNodeFlags.NodeWrite) != 0)
                 {
-                    parentNode = null;
-                    return null;
+                    EnterWrite(_rootDirectory, path);
                 }
-                parentNode = nextDirectory;
+                else
+                {
+                    EnterRead(_rootDirectory, path);
+                }
+                result = new NodeResult(null, _rootDirectory, null, flags);
+                return result;
             }
 
-            // If we don't expect a file and we are looking to create the folder, we can create the last part as a folder
-            if (!pathCanBeAFile && createIfNotExist)
+            var isParentWriting = (flags & (FindNodeFlags.CreatePathIfNotExist | FindNodeFlags.KeepParentNodeWrite)) != 0;
+
+            var parentNode = _rootDirectory;
+            var names = path.Split().ToList();
+
+            for (var i = 0; i < names.Count && parentNode != null; i++)
             {
-                return parentNode.GetFolder(filename, true, path);
+                var name = names[i];
+                bool isLast = i + 1 == names.Count;
+
+                bool isParentAlreadylocked = false;
+
+                if (existingNodes.Length > 0)
+                {
+                    foreach (var existingNode in existingNodes)
+                    {
+                        if (existingNode.Directory == parentNode || existingNode.Node == parentNode)
+                        {
+                            // The parent is already locked, so clear the flags
+                            if (isLast)
+                            {
+                                flags = flags & ~(FindNodeFlags.KeepParentNodeRead | FindNodeFlags.KeepParentNodeWrite);
+                            }
+                            isParentAlreadylocked = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isParentAlreadylocked)
+                {
+                    // TODO: Make it Read lock until last one instead of write lock on all path
+                    if (isParentWriting)
+                    {
+                        EnterWriteDirectoryOrBlock(parentNode, path);
+                    }
+                    else
+                    {
+                        EnterReadDirectoryOrBlock(parentNode, path);
+                    }
+                }
+
+                FileSystemNode subNode;
+                bool releaseParent = !isParentAlreadylocked;
+                try
+                {
+                    if (!parentNode.Children.TryGetValue(name, out subNode))
+                    {
+                        if ((flags & FindNodeFlags.CreatePathIfNotExist) != 0)
+                        {
+                            subNode = new DirectoryNode(parentNode);
+                            parentNode.Children.Add(name, subNode);
+                        }
+                    }
+                    else
+                    {
+                        if ((flags & FindNodeFlags.CreatePathIfNotExist) != 0 && subNode is FileNode)
+                        {
+                            throw new IOException($"Cannot create directory `{path}` on an existing file");
+                        }
+                    }
+
+                    if (isLast)
+                    {
+                        result = new NodeResult(parentNode, subNode, name, flags);
+                        if (subNode != null)
+                        {
+                            if ((flags & FindNodeFlags.NodeWrite) != 0)
+                            {
+                                EnterWrite(subNode, path);
+                            }
+                            else
+                            {
+                                EnterRead(subNode, path);
+                            }
+                        }
+
+                        if ((flags & (FindNodeFlags.KeepParentNodeWrite | FindNodeFlags.KeepParentNodeRead)) != 0)
+                        {
+                            releaseParent = false;
+                            break;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (releaseParent)
+                    {
+                        if (isParentWriting)
+                        {
+                            ExitWrite(parentNode);
+                        }
+                        else
+                        {
+                            ExitRead(parentNode);
+                        }
+                    }
+                }
+
+                parentNode = subNode as DirectoryNode;
             }
 
-            parentNode.EnterRead(path);
-            FileSystemNode node;
-            parentNode.Children.TryGetValue(filename, out node);
-            parentNode.ExitRead();
-
-            return node;
+            return result;
         }
 
-        private void OpenFile(FileNode fileNode, FileAccess access, PathInfo context)
+        // ----------------------------------------------
+        // Locks internals
+        // ----------------------------------------------
+
+        private void EnterFileSystemShared()
         {
-            if ((access & FileAccess.Write) != 0)
+            _globalLock.EnterShared();
+        }
+
+        private void ExitFileSystemShared()
+        {
+            _globalLock.ExitShared();
+        }
+
+        private void EnterFileSystemExclusive()
+        {
+            _globalLock.EnterExclusive();
+        }
+
+        private void ExitFileSystemExclusive()
+        {
+            _globalLock.ExitExclusive();
+        }
+
+        private void EnterReadDirectoryOrBlock(DirectoryNode node, PathInfo context)
+        {
+            EnterRead(node, context, true);
+        }
+
+        private void EnterWriteDirectoryOrBlock(DirectoryNode node, PathInfo context)
+        {
+            EnterWrite(node, context, true);
+        }
+
+        private void EnterWrite(FileSystemNode node, PathInfo context)
+        {
+            EnterWrite(node, context, node is DirectoryNode);
+        }
+
+        private void EnterRead(FileSystemNode node, PathInfo context)
+        {
+            EnterRead(node, context, node is DirectoryNode);
+        }
+
+        private void EnterRead(FileSystemNode node, PathInfo context, bool block)
+        {
+            if (block)
             {
-                fileNode.EnterWrite(context);
+                node.EnterShared();
             }
-            else
+            else if (!node.TryEnterShared())
             {
-                fileNode.EnterRead(context);
+                var pathType = node is FileNode ? "file" : "directory";
+                throw new IOException($"The {pathType} `{context}` is already used for writing by another thread");
             }
         }
 
-        // Locking strategy is based on https://www.kernel.org/doc/Documentation/filesystems/directory-locking
-
-        private abstract class FileSystemNode : ReaderWriterLockSlim
+        private void ExitRead(FileSystemNode node)
         {
-            protected FileSystemNode(DirectoryNode parent, FileSystemNode copyNode) : base(LockRecursionPolicy.SupportsRecursion)
+            node.ExitShared();
+        }
+
+        private void EnterWrite(FileSystemNode node, PathInfo context, bool block)
+        {
+            if (block)
+            {
+                node.EnterExclusive();
+            }
+            else if(!node.TryEnterExclusive())
+            {
+                var pathType = node is FileNode ? "file" : "directory";
+                throw new IOException($"The {pathType} `{context}` is already used by another thread");
+            }
+        }
+
+        private void ExitWrite(FileSystemNode node)
+        {
+            node.ExitExclusive();
+        }
+
+        private void TryLockWrite(FileSystemNode node, ListFileSystemNodes locks, bool recursive, PathInfo context)
+        {
+            if (locks == null) throw new ArgumentNullException(nameof(locks));
+
+            if (node is DirectoryNode)
+            {
+                var directory = (DirectoryNode)node;
+                if (recursive)
+                {
+                    foreach (var child in directory.Children)
+                    {
+                        EnterWrite(child.Value, context);
+                        locks.Add(new KeyValuePair<string, FileSystemNode>(child.Key, child.Value));
+
+                        TryLockWrite(child.Value, locks, true, context / child.Key);
+                    }
+                }
+                else
+                {
+                    if (directory.Children.Count > 0)
+                    {
+                        throw new IOException($"The directory `{context}` contains is not empty");
+                    }
+                }
+            }
+        }
+
+        private abstract class FileSystemNode : FileSystemNodeReadWriteLock
+        {
+            protected FileSystemNode(DirectoryNode parent, FileSystemNode copyNode)
             {
                 Parent = parent;
                 CreationTime = copyNode?.CreationTime ?? DateTime.Now;
@@ -835,60 +1269,13 @@ namespace Zio.FileSystems
 
             public DateTime LastAccessTime { get; set; }
 
-            public void EnterRead(PathInfo context)
-            {
-                CheckAlive(context);
-                var result = !IsWriteLockHeld && !IsReadLockHeld && TryEnterReadLock(0);
-                if (result)
-                {
-                    CheckAlive(context);
-                }
-                else
-                {
-                    throw new IOException($"Cannot read the file `{context}` as it is being used by another thread");
-                }
-            }
-
-            public void ExitRead()
-            {
-                AssertLockRead();
-                ExitReadLock();
-            }
-
-            public void EnterWrite(PathInfo context)
-            {
-                CheckAlive(context);
-                var result = !IsWriteLockHeld && !IsReadLockHeld && TryEnterWriteLock(0);
-                if (result)
-                {
-                    CheckAlive(context);
-                }
-                else
-                {
-                    throw new IOException($"Cannot write to the path `{context}` as it is already locked by another thread");
-                }
-            }
-
-            public void ExitWrite()
-            {
-                if (!IsDisposed)
-                {
-                    AssertLockWrite();
-                    ExitWriteLock();
-                }
-            }
-
-            private bool IsDisposed { get; set; }
+            public bool IsDisposed { get; set; }
 
             public void DetachFromParent(string name)
             {
-                AssertLockWrite();
+                Debug.Assert(IsLocked);
                 var parent = Parent;
-                if (parent == null)
-                {
-                    return;
-                }
-                parent.AssertLockWrite();
+                Debug.Assert(parent.IsLocked);
 
                 parent.Children.Remove(name);
                 Parent = null;
@@ -897,54 +1284,19 @@ namespace Zio.FileSystems
             public void AttachToParent(DirectoryNode parentNode, string name)
             {
                 if (parentNode == null) throw new ArgumentNullException(nameof(parentNode));
-                parentNode.AssertLockWrite();
-                AssertLockWrite();
+                Debug.Assert(parentNode.IsLocked);
+                Debug.Assert(IsLocked);
                 Debug.Assert(Parent == null);
 
                 Parent = parentNode;
                 Parent.Children.Add(name, this);
             }
 
-            public void TryLockWrite(ListFileSystemNodes locks, bool lockParent, bool recursive, PathInfo context)
+            public void Dispose()
             {
-                if (locks == null) throw new ArgumentNullException(nameof(locks));
-                DirectoryNode parent = Parent;
-
-                // We read the parent, take a lock
-                if (lockParent && parent != null)
-                {
-                    parent.EnterWrite(context);
-                    var parentDir = context.GetDirectory();
-                    var parentDirName = parentDir.IsNull ? null : parentDir.GetName();
-                    locks.Add(new KeyValuePair<string, FileSystemNode>(parentDirName, parent));
-                }
-
-                // If we have a file, we can't wait on the lock (because there is potentially long running locks, like OpenFile)
-                EnterWrite(context);
-                locks.Add(new KeyValuePair<string, FileSystemNode>(context.GetName(), this));
-
-                if ((Attributes & FileAttributes.ReadOnly) != 0)
-                {
-                    throw new IOException($"The path `{context}` is readonly");
-                }
-
-                if (recursive && this is DirectoryNode)
-                {
-                    var directory = (DirectoryNode) this;
-                    foreach (var child in directory.Children)
-                    {
-                        child.Value.TryLockWrite(locks, false, true, context / child.Key);
-                    }
-                }
-            }
-
-            public new void Dispose()
-            {
+                Debug.Assert(IsLocked);
                 // In order to issue a Dispose, we need to have control on this node
-                AssertLockWrite();
                 IsDisposed = true;
-                ExitWriteLock();
-                base.Dispose();
             }
 
             private void CheckAlive(PathInfo context)
@@ -954,36 +1306,25 @@ namespace Zio.FileSystems
                     throw new InvalidOperationException($"The path `{context}` does not exist anymore");
                 }
             }
-
-            protected void AssertLockRead()
-            {
-                Debug.Assert(IsReadLockHeld);
-            }
-
-            protected void AssertLockReadOrWrite()
-            {
-                Debug.Assert(IsReadLockHeld || IsWriteLockHeld);
-            }
-
-            protected void AssertLockWrite()
-            {
-                Debug.Assert(IsWriteLockHeld);
-            }
-
-            protected void AssertNoLock()
-            {
-                Debug.Assert(!IsReadLockHeld && !IsWriteLockHeld);
-            }
         }
 
         private class ListFileSystemNodes : List<KeyValuePair<string, FileSystemNode>>, IDisposable
         {
+            private readonly MemoryFileSystem _fs;
+
+
+            public ListFileSystemNodes(MemoryFileSystem fs)
+            {
+                Debug.Assert(fs != null);
+                _fs = fs;
+            }
+
             public void Dispose()
             {
                 for (var i = this.Count - 1; i >= 0; i--)
                 {
                     var node = this[i];
-                    node.Value.ExitWrite();
+                    _fs.ExitWrite(node.Value);
                 }
                 Clear();
             }
@@ -1008,51 +1349,8 @@ namespace Zio.FileSystems
             {
                 get
                 {
-                    AssertLockReadOrWrite();
+                    Debug.Assert(IsLocked);
                     return _children;
-                }
-            }
-
-            public DirectoryNode GetFolder(string subFolder, bool createIfNotExist, PathInfo context)
-            {
-                AssertNoLock();
-
-                if (createIfNotExist)
-                {
-                    EnterWrite(context);
-                }
-                else
-                {
-                    EnterRead(context);
-                }
-
-                try
-                {
-                    FileSystemNode node;
-                    if (Children.TryGetValue(subFolder, out node))
-                    {
-                        if (node is FileNode)
-                        {
-                            throw new IOException($"Can't create the directory `{context}` as it is already a file");
-                        }
-                    }
-                    else if (createIfNotExist)
-                    {
-                        node = new DirectoryNode(this);
-                        Children.Add(subFolder, node);
-                    }
-                    return (DirectoryNode) node;
-                }
-                finally
-                {
-                    if (createIfNotExist)
-                    {
-                        ExitWrite();
-                    }
-                    else
-                    {
-                        ExitRead();
-                    }
                 }
             }
         }
@@ -1106,17 +1404,20 @@ namespace Zio.FileSystems
 
         private sealed class MemoryFileStream : Stream
         {
+            private readonly MemoryFileSystem _fs;
             private readonly MemoryStream _stream;
             private readonly FileNode _fileNode;
             private readonly bool _canRead;
             private readonly bool _canWrite;
 
-            public MemoryFileStream(FileNode fileNode)
+            public MemoryFileStream(MemoryFileSystem fs, FileNode fileNode, bool canWrite)
             {
                 if (fileNode == null) throw new ArgumentNullException(nameof(fileNode));
-                Debug.Assert(fileNode.IsReadLockHeld || fileNode.IsWriteLockHeld);
+                Debug.Assert(fileNode.IsLocked);
+                Debug.Assert(fs != null);
+                _fs = fs;
                 _fileNode = fileNode;
-                _canWrite = fileNode.IsWriteLockHeld;
+                _canWrite = canWrite;
                 _canRead = true;
                 _stream = _canWrite ? new MemoryStream() : new MemoryStream(fileNode.Content.Buffer, false);
 
@@ -1157,11 +1458,11 @@ namespace Zio.FileSystems
                     _fileNode.Content.Buffer = _stream.ToArray();
                     _fileNode.Content.Length = this.Length;
 
-                    _fileNode.ExitWrite();
+                    _fs.ExitWrite(_fileNode);
                 }
                 else
                 {
-                    _fileNode.ExitRead();
+                    _fs.ExitRead(_fileNode);
                 }
                 base.Dispose(disposing);
             }
@@ -1203,6 +1504,127 @@ namespace Zio.FileSystems
             public override void Write(byte[] buffer, int offset, int count)
             {
                 _stream.Write(buffer, offset, count);
+            }
+        }
+
+        /// <summary>
+        /// Internal class used to synchronize shared-exclusive access to a <see cref="FileSystemNode"/>
+        /// </summary>
+        private class FileSystemNodeReadWriteLock
+        {
+            // _sharedCount  < 0 => This is an exclusive lock (_sharedCount == -1)
+            // _sharedCount == 0 => No lock
+            // _sharedCount  > 0 => This is a shared lock
+            private int _sharedCount;
+
+            internal bool IsLocked => _sharedCount != 0;
+
+            public void EnterShared()
+            {
+                Monitor.Enter(this);
+                try
+                {
+                    while (_sharedCount < 0)
+                    {
+                        Monitor.Wait(this);
+                    }
+                    _sharedCount++;
+                    Monitor.PulseAll(this);
+                }
+                finally
+                {
+                    Monitor.Exit(this);
+                }
+            }
+
+            public void ExitShared()
+            {
+                Monitor.Enter(this);
+                try
+                {
+                    Debug.Assert(_sharedCount > 0);
+                    _sharedCount--;
+                    Monitor.PulseAll(this);
+                }
+                finally
+                {
+                    Monitor.Exit(this);
+                }
+            }
+
+            public void EnterExclusive()
+            {
+                Monitor.Enter(this);
+                try
+                {
+                    while (_sharedCount != 0)
+                    {
+                        Monitor.Wait(this);
+                    }
+                    _sharedCount  = -1;
+                    Monitor.PulseAll(this);
+                }
+                finally
+                {
+                    Monitor.Exit(this);
+                }
+            }
+
+            public bool TryEnterShared()
+            {
+                Monitor.Enter(this);
+                try
+                {
+                    if (_sharedCount < 0)
+                    {
+                        return false;
+                    }
+                    _sharedCount++;
+                    Monitor.PulseAll(this);
+                }
+                finally
+                {
+                    Monitor.Exit(this);
+                }
+                return true;
+            }
+
+            public bool TryEnterExclusive()
+            {
+                Monitor.Enter(this);
+                try
+                {
+                    if (_sharedCount != 0)
+                    {
+                        return false;
+                    }
+                    _sharedCount = -1;
+                    Monitor.PulseAll(this);
+                }
+                finally
+                {
+                    Monitor.Exit(this);
+                }
+                return true;
+            }
+            public void ExitExclusive()
+            {
+                Monitor.Enter(this);
+                try
+                {
+                    Debug.Assert(_sharedCount < 0);
+                    _sharedCount = 0;
+                    Monitor.PulseAll(this);
+                }
+                finally
+                {
+                    Monitor.Exit(this);
+                }
+            }
+
+            public override string ToString()
+            {
+                return _sharedCount < 0 ? "exclusive lock" : _sharedCount > 0 ? $"shared lock ({_sharedCount})" : "no lock";
             }
         }
     }

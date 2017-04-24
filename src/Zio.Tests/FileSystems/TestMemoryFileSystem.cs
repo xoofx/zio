@@ -293,14 +293,15 @@ namespace Zio.Tests.FileSystems
             Assert.Throws<IOException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/1.txt", true));
             Assert.Throws<IOException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/2.txt", true));
             Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/3.txt", true));
-            Assert.Throws<DirectoryNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/dir/2.txt", "/3.txt", true));
+            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/dir/2.txt", "/3.txt", true));
             Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/2.txt", "/3.txt", true));
 
             Assert.Throws<DirectoryNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/titi.txt", "/dir/3.txt", true));
 
             fs.WriteAllText("/tata.txt", "yo3");
             Assert.True(fs.FileExists("/tata.txt"));
-            Assert.Throws<IOException>(() => fs.ReplaceFile("/toto.txt", "/titi.txt", "/tata.txt", true));
+            fs.ReplaceFile("/toto.txt", "/titi.txt", "/tata.txt", true);
+            // TODO: check that tata.txt was correctly removed
         }
 
         [Fact]
@@ -325,16 +326,145 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void Tester()
+        public void TestOpenFileMultipleRead()
         {
-            File.AppendAllText("toto.txt", "Yes");
-            var attributes = File.GetAttributes("toto.txt");
+            var fs = new MemoryFileSystem();
+            fs.WriteAllText("/toto.txt", "content");
 
-            File.SetAttributes("toto.txt", attributes | FileAttributes.Normal);
-            attributes = File.GetAttributes("toto.txt");
-            File.SetAttributes("toto.txt", FileAttributes.Normal);
-            attributes = File.GetAttributes("toto.txt");
+            Assert.True(fs.FileExists("/toto.txt"));
 
+            var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read);
+            var stream2 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read);
+
+            stream1.ReadByte();
+            Assert.Equal(1, stream1.Position);
+
+            stream2.ReadByte();
+            stream2.ReadByte();
+            Assert.Equal(2, stream2.Position);
+
+            stream1.Dispose();
+            stream2.Dispose();
+
+            // We try to write back on the same file after closing
+            fs.WriteAllText("/toto.txt", "content2");
+        }
+
+        [Fact]
+        public void TestOpenFileReadAndWriteFail()
+        {
+            var fs = new MemoryFileSystem();
+            fs.WriteAllText("/toto.txt", "content");
+
+            Assert.True(fs.FileExists("/toto.txt"));
+
+            var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read);
+
+            stream1.ReadByte();
+            Assert.Equal(1, stream1.Position);
+
+            // We try to write back on the same file after closing
+            Assert.Throws<IOException>(() => fs.WriteAllText("/toto.txt", "content2"));
+
+            stream1.Dispose();
+        }
+
+        [Fact]
+        public void TestEnumeratePaths()
+        {
+            var fs = new MemoryFileSystem();
+
+            fs.CreateDirectory("/dir1/a/b");
+            fs.CreateDirectory("/dir1/a1");
+            fs.CreateDirectory("/dir2/c");
+            fs.CreateDirectory("/dir3");
+
+            fs.WriteAllText("/dir1/a/file10.txt", "content10");
+            fs.WriteAllText("/dir1/a1/file11.txt", "content11");
+            fs.WriteAllText("/dir2/file20.txt", "content20");
+
+            fs.WriteAllText("/file01.txt", "content1");
+            fs.WriteAllText("/file02.txt", "content2");
+
+            var entries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList();
+            entries.Sort();
+
+            Assert.Equal(new List<PathInfo>()
+                {
+                    "/dir1",
+                    "/dir1/a",
+                    "/dir1/a/b",
+                    "/dir1/a/file10.txt",
+                    "/dir1/a1",
+                    "/dir1/a1/file11.txt",
+                    "/dir2",
+                    "/dir2/c",
+                    "/dir2/file20.txt",
+                    "/dir3",
+                    "/file01.txt",
+                    "/file02.txt",
+                }
+                , entries);
+
+
+            var folders = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
+            folders.Sort();
+
+            Assert.Equal(new List<PathInfo>()
+                {
+                    "/dir1",
+                    "/dir1/a",
+                    "/dir1/a/b",
+                    "/dir1/a1",
+                    "/dir2",
+                    "/dir2/c",
+                    "/dir3",
+                }
+                , folders);
+
+
+            var files = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File).ToList();
+            files.Sort();
+
+            Assert.Equal(new List<PathInfo>()
+                {
+                    "/dir1/a/file10.txt",
+                    "/dir1/a1/file11.txt",
+                    "/dir2/file20.txt",
+                    "/file01.txt",
+                    "/file02.txt",
+                }
+                , files);
+            
+
+            folders = fs.EnumeratePaths("/dir1", "a", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
+            folders.Sort();
+            Assert.Equal(new List<PathInfo>()
+                {
+                    "/dir1/a",
+                }
+                , folders);
+
+
+            files = fs.EnumeratePaths("/dir1", "file1?.txt", SearchOption.AllDirectories, SearchTarget.File).ToList();
+            files.Sort();
+
+            Assert.Equal(new List<PathInfo>()
+                {
+                    "/dir1/a/file10.txt",
+                    "/dir1/a1/file11.txt",
+                }
+                , files);
+
+            files = fs.EnumeratePaths("/", "file?0.txt", SearchOption.AllDirectories, SearchTarget.File).ToList();
+            files.Sort();
+
+            Assert.Equal(new List<PathInfo>()
+                {
+                    "/dir1/a/file10.txt",
+                    "/dir2/file20.txt",
+                }
+                , files);
         }
     }
 }
