@@ -82,8 +82,26 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void ReplaceFile(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
         {
-            // Note: destBackupPath can be null
-            ReplaceFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), ValidatePath(destBackupPath, nameof(destBackupPath), true), ignoreMetadataErrors);
+            srcPath = ValidatePath(srcPath, nameof(srcPath));
+            destPath = ValidatePath(destPath, nameof(destPath));
+            destBackupPath = ValidatePath(destBackupPath, nameof(destBackupPath), true);
+
+            if (!FileExistsImpl(srcPath))
+            {
+                throw new FileNotFoundException($"Unable to find the source file `{srcPath}`.");
+            }
+
+            if (!FileExistsImpl(destPath))
+            {
+                throw new FileNotFoundException($"Unable to find the source file `{srcPath}`.");
+            }
+
+            if (destBackupPath == srcPath)
+            {
+                throw new IOException($"The source and backup cannot have the same path `{srcPath}`");
+            }
+
+            ReplaceFileImpl(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
         }
         protected abstract void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors);
 
@@ -120,7 +138,7 @@ namespace Zio.FileSystems
         {
             return OpenFileImpl(ValidatePath(path), mode, access, share);
         }
-        protected abstract Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None);
+        protected abstract Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share);
 
         // ----------------------------------------------
         // Metadata API

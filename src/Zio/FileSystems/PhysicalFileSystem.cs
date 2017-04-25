@@ -83,7 +83,17 @@ namespace Zio.FileSystems
                 }
             }
 
-            Directory.Move(ConvertToSystem(srcPath), ConvertToSystem(destPath));
+            var systemSrcPath = ConvertToSystem(srcPath);
+            var systemDestPath = ConvertToSystem(destPath);
+
+            // If the souce path is a file
+            var fileInfo = new FileInfo(systemSrcPath);
+            if (fileInfo.Exists)
+            {
+                throw new IOException($"The source `{srcPath}` is not a directory");
+            }
+
+            Directory.Move(systemSrcPath, systemDestPath);
         }
 
         /// <inheritdoc />
@@ -134,16 +144,6 @@ namespace Zio.FileSystems
             if (!destBackupPath.IsNull && IsWithinSpecialDirectory(destBackupPath))
             {
                 throw new UnauthorizedAccessException($"The access to `{destBackupPath}` is denied");
-            }
-
-            // Non atomic version
-            if (!FileExistsImpl(srcPath))
-            {
-                throw new FileNotFoundException($"Unable to find the source file `{srcPath}`");
-            }
-            if (!FileExistsImpl(destPath))
-            {
-                throw new FileNotFoundException($"Unable to find the source file `{destPath}`");
             }
 
             if (!destBackupPath.IsNull)
