@@ -14,6 +14,53 @@ namespace Zio
     /// </summary>
     public static class FileSystemExtensions
     {
+        /// <summary>
+        /// Copies a file from a source <see cref="IFileSystem"/> to a destination file system
+        /// </summary>
+        /// <param name="fs">The source filesystem</param>
+        /// <param name="destFileSystem">The destination filesystem</param>
+        /// <param name="srcPath">The source path of the file to copy from the source filesystem</param>
+        /// <param name="destPath">The destination path of the file in the destination filesystem</param>
+        /// <param name="overwrite"><c>true</c> to overwrite an existing destination file</param>
+        public static void CopyFileTo(this IFileSystem fs, IFileSystem destFileSystem, PathInfo srcPath, PathInfo destPath, bool overwrite)
+        {
+            if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
+
+            // If this is the same filesystem, don't try to copy it directly
+            if (fs == destFileSystem)
+            {
+                fs.CopyFile(srcPath, destPath, overwrite);
+                return;
+            }
+
+            srcPath.AssertAbsolute(nameof(srcPath));
+            destPath.AssertAbsolute(nameof(destPath));
+
+            if (!fs.FileExists(srcPath))
+            {
+                throw new FileNotFoundException($"The file path `{srcPath}` does not exist");
+            }
+
+            var destDirectory = destPath.GetDirectory();
+            if (!destFileSystem.DirectoryExists(destDirectory))
+            {
+                throw new DirectoryNotFoundException($"The destination directory `{destDirectory}` does not exist");
+            }
+
+            if (destFileSystem.FileExists(destPath) && !overwrite)
+            {
+                throw new IOException($"The destination file path `{destPath}` already exist and overwrite is false");
+            }
+
+            using (var sourceStream = fs.OpenFile(srcPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                using (var destStream = destFileSystem.OpenFile(destPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                {
+                    sourceStream.CopyTo(destStream);
+                }
+            }
+        }
+
         public static string ReadAllText(this IFileSystem fs, PathInfo path)
         {
             var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read);
