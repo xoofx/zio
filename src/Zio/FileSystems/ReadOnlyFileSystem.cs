@@ -30,19 +30,19 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         protected override void CreateDirectoryImpl(PathInfo path)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
         protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
         protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         // ----------------------------------------------
@@ -52,25 +52,25 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         protected override void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
         protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
         protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
         protected override void DeleteFileImpl(PathInfo path)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
@@ -78,12 +78,12 @@ namespace Zio.FileSystems
         {
             if (mode != FileMode.Open)
             {
-                throw new InvalidOperationException(FileSystemIsReadOnly);
+                throw new IOException(FileSystemIsReadOnly);
             }
 
             if ((access & FileAccess.Write) != 0)
             {
-                throw new InvalidOperationException(FileSystemIsReadOnly);
+                throw new IOException(FileSystemIsReadOnly);
             }
 
             return base.OpenFileImpl(path, mode, access, share);
@@ -102,25 +102,25 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
         protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
         protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
         protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
         {
-            throw new InvalidOperationException(FileSystemIsReadOnly);
+            throw new IOException(FileSystemIsReadOnly);
         }
 
         // ----------------------------------------------

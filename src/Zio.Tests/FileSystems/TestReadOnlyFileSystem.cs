@@ -19,20 +19,20 @@ namespace Zio.Tests.FileSystems
 
             Assert.True(rofs.DirectoryExists("/"));
 
-            Assert.Throws<InvalidOperationException>(() => rofs.CreateDirectory("/test"));
-            Assert.Throws<InvalidOperationException>(() => rofs.DeleteDirectory("/test", true));
-            Assert.Throws<InvalidOperationException>(() => rofs.MoveDirectory("/drive", "/drive2"));
+            Assert.Throws<IOException>(() => rofs.CreateDirectory("/test"));
+            Assert.Throws<IOException>(() => rofs.DeleteDirectory("/test", true));
+            Assert.Throws<IOException>(() => rofs.MoveDirectory("/drive", "/drive2"));
 
-            Assert.Throws<InvalidOperationException>(() => rofs.CreateFile("/toto.txt"));
-            Assert.Throws<InvalidOperationException>(() => rofs.CopyFile("/toto.txt", "/dest.txt", true));
-            Assert.Throws<InvalidOperationException>(() => rofs.MoveFile("/drive", "/drive2"));
-            Assert.Throws<InvalidOperationException>(() => rofs.DeleteFile("/toto.txt"));
-            Assert.Throws<InvalidOperationException>(() => rofs.OpenFile("/toto.txt", FileMode.Create, FileAccess.ReadWrite));
+            Assert.Throws<IOException>(() => rofs.CreateFile("/toto.txt"));
+            Assert.Throws<IOException>(() => rofs.CopyFile("/toto.txt", "/dest.txt", true));
+            Assert.Throws<IOException>(() => rofs.MoveFile("/drive", "/drive2"));
+            Assert.Throws<IOException>(() => rofs.DeleteFile("/toto.txt"));
+            Assert.Throws<IOException>(() => rofs.OpenFile("/toto.txt", FileMode.Create, FileAccess.ReadWrite));
 
-            Assert.Throws<InvalidOperationException>(() => rofs.SetAttributes("/toto.txt", FileAttributes.ReadOnly));
-            Assert.Throws<InvalidOperationException>(() => rofs.SetCreationTime("/toto.txt", DateTime.Now));
-            Assert.Throws<InvalidOperationException>(() => rofs.SetLastAccessTime("/toto.txt", DateTime.Now));
-            Assert.Throws<InvalidOperationException>(() => rofs.SetLastWriteTime("/toto.txt", DateTime.Now));
+            Assert.Throws<IOException>(() => rofs.SetAttributes("/toto.txt", FileAttributes.ReadOnly));
+            Assert.Throws<IOException>(() => rofs.SetCreationTime("/toto.txt", DateTime.Now));
+            Assert.Throws<IOException>(() => rofs.SetLastAccessTime("/toto.txt", DateTime.Now));
+            Assert.Throws<IOException>(() => rofs.SetLastWriteTime("/toto.txt", DateTime.Now));
         }
     }
 }
