@@ -2,15 +2,22 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Zio.Tests.FileSystems
 {
-    public abstract class TestFileSystemBase
+    public abstract class TestFileSystemBase : IDisposable
     {
+        private static readonly object Lock = new object();
+
         protected TestFileSystemBase()
         {
             SystemPath = Path.GetDirectoryName(typeof(TestFileSystemBase).GetTypeInfo().Assembly.Location);
             IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+            // Use a static lock to make sure a single process is running
+            // as we may have changed on the disk that may interact with other tests
+            Monitor.Enter(Lock);
         }
 
         public string SystemPath { get; }
@@ -42,6 +49,11 @@ namespace Zio.Tests.FileSystems
             catch (Exception)
             {
             }
+        }
+
+        public virtual void Dispose()
+        {
+            Monitor.Exit(Lock);
         }
     }
 }

@@ -316,8 +316,8 @@ namespace Zio.Tests.FileSystems
                 Assert.Throws<UnauthorizedAccessException>(() => fs.MoveFile(filePath, "/toto.txt"));
 
                 // ReplaceFile
-                Assert.Throws<UnauthorizedAccessException>(() => fs.ReplaceFile("/toto.txt", filePath, filePath, true));
-                Assert.Throws<UnauthorizedAccessException>(() => fs.ReplaceFile(filePath, "/toto.txt", filePath, true));
+                Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/toto.txt", filePath, filePath, true));
+                Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile(filePath, "/toto.txt", filePath, true));
                 Assert.Throws<UnauthorizedAccessException>(() => fs.ReplaceFile(filePath, filePath, "/toto.txt", true));
 
                 Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile(filePathNotExist, filePath, filePath, true));
