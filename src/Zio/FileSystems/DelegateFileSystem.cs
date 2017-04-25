@@ -19,13 +19,13 @@ namespace Zio.FileSystems
         /// <exception cref="System.ArgumentNullException">fileSystem</exception>
         protected DelegateFileSystem(IFileSystem fileSystem)
         {
-            NextFileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+            NextFileSystem = fileSystem;
         }
 
         /// <summary>
         /// Gets the next delegated file system.
         /// </summary>
-        public IFileSystem NextFileSystem { get; }
+        protected IFileSystem NextFileSystem { get; }
 
         // ----------------------------------------------
         // Directory API
