@@ -16,32 +16,38 @@ namespace Zio
     {
         public static string ReadAllText(this IFileSystem fs, PathInfo path)
         {
-            using (var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read))
+            var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read);
             {
-                var reader = new StreamReader(stream);
-                return reader.ReadToEnd();
+                using (var reader = new StreamReader(stream))
+                {
+                    return reader.ReadToEnd();
+                }
             }
         }
 
         public static void WriteAllText(this IFileSystem fs, PathInfo path, string content, Encoding encoding = null)
         {
             if (content == null) throw new ArgumentNullException(nameof(content));
-            using (var stream = fs.OpenFile(path, FileMode.OpenOrCreate, FileAccess.Write))
+            var stream = fs.OpenFile(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
             {
-                var writer = new StreamWriter(stream, encoding ?? Encoding.UTF8);
-                writer.Write(content);
-                writer.Flush();
+                using (var writer = new StreamWriter(stream, encoding ?? Encoding.UTF8))
+                {
+                    writer.Write(content);
+                    writer.Flush();
+                }
             }
         }
 
         public static void AppendAllText(this IFileSystem fs, PathInfo path, string content, Encoding encoding = null)
         {
             if (content == null) throw new ArgumentNullException(nameof(content));
-            using (var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write))
+            var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write);
             {
-                var writer = new StreamWriter(stream, encoding ?? Encoding.UTF8);
-                writer.Write(content);
-                writer.Flush();
+                using (var writer = new StreamWriter(stream, encoding ?? Encoding.UTF8))
+                {
+                    writer.Write(content);
+                    writer.Flush();
+                }
             }
         }
 
