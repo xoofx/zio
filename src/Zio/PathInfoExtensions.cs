@@ -72,25 +72,6 @@ namespace Zio
             }
         }
 
-        public static void DequeueDirectory(this PathInfo path, out string firstDirectory, out PathInfo remainingPath)
-        {
-            path.AssertNotNull();
-            remainingPath = new PathInfo();
-
-            var fullname = path.FullName;
-            var index = fullname.IndexOf(PathInfo.DirectorySeparator, 1);
-            if (index < 0)
-            {
-                firstDirectory = fullname.Substring(1, fullname.Length - 1);
-            }
-            else
-            {
-                firstDirectory = fullname.Substring(1, index);
-                remainingPath = fullname.Substring(index);
-            }
-        }
-
-
         public static string GetName(this PathInfo path)
         {
             path.AssertNotNull();
