@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace Zio.Tests
@@ -111,6 +113,99 @@ namespace Zio.Tests
             Assert.Equal(expectedPath, path);
             Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
         }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("/", "")]
+        [InlineData("/a", "a")]
+        [InlineData("/a/b", "b")]
+        [InlineData("/a/b/c.txt", "c.txt")]
+        [InlineData("a", "a")]
+        [InlineData("../a", "a")]
+        [InlineData("../../a/b", "b")]
+        public void TestGetName(string path1, string expectedName)
+        {
+            var path = (PathInfo) path1;
+            var result = path.GetName();
+            Assert.Equal(expectedName, result);
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("/", "")]
+        [InlineData("/a", "a")]
+        [InlineData("/a/b", "b")]
+        [InlineData("/a/b/c.txt", "c")]
+        [InlineData("a", "a")]
+        [InlineData("../a", "a")]
+        [InlineData("../../a/b", "b")]
+        public void TestGetNameWithoutExtension(string path1, string expectedName)
+        {
+            var path = (PathInfo)path1;
+            var result = path.GetNameWithoutExtension();
+            Assert.Equal(expectedName, result);
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("/", "")]
+        [InlineData("/a.txt", ".txt")]
+        [InlineData("/a.", "")]
+        [InlineData("/a.txt.bak", ".bak")]
+        [InlineData("a.txt", ".txt")]
+        [InlineData("a.", "")]
+        [InlineData("a.txt.bak", ".bak")]
+        public void TestGetExtension(string path1, string expectedName)
+        {
+            var path = (PathInfo)path1;
+            var result = path.GetDotExtension();
+            Assert.Equal(expectedName, result);
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("/", null)]
+        [InlineData("/a", "/")]
+        [InlineData("/a/b", "/a")]
+        [InlineData("/a/b/c.txt", "/a/b")]
+        [InlineData("a", "")]
+        [InlineData("../a", "..")]
+        [InlineData("../../a/b", "../../a")]
+        public void TestGetDirectory(string path1, string expectedDir)
+        {
+            var path = (PathInfo)path1;
+            var result = path.GetDirectory();
+            Assert.Equal(expectedDir, result);
+        }
+
+        [Theory]
+        [InlineData("", ".txt", "")]
+        [InlineData("/", ".txt", "/.txt")]
+        [InlineData("/a", ".txt", "/a.txt")]
+        [InlineData("/a/b", ".txt", "/a/b.txt")]
+        [InlineData("/a/b/c.bin", ".txt", "/a/b/c.txt")]
+        [InlineData("a", ".txt", "a.txt")]
+        [InlineData("../a", ".txt", "../a.txt")]
+        [InlineData("../../a/b", ".txt", "../../a/b.txt")]
+        public void TestChangeExtension(string path1, string newExt, string expectedPath)
+        {
+            var path = (PathInfo)path1;
+            var result = path.ChangeExtension(newExt);
+            Assert.Equal(expectedPath, result);
+        }
+
+        [Fact]
+        public void TestSplit()
+        {
+            Assert.Equal(new List<string>(), ((PathInfo)"").Split().ToList());
+            Assert.Equal(new List<string>(), ((PathInfo)"/").Split().ToList());
+            Assert.Equal(new List<string>() { "a" }, ((PathInfo)"/a").Split().ToList());
+            Assert.Equal(new List<string>() {"a", "b", "c"}, ((PathInfo) "/a/b/c").Split().ToList());
+            Assert.Equal(new List<string>() { "a" }, ((PathInfo)"a").Split().ToList());
+            Assert.Equal(new List<string>() { "a", "b" }, ((PathInfo)"a/b").Split().ToList());
+            Assert.Equal(new List<string>() { "a", "b", "c" }, ((PathInfo)"a/b/c").Split().ToList());
+        }
+
 
         [Fact]
         public void TestExpectedException()
