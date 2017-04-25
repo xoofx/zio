@@ -9,11 +9,11 @@ using System.IO;
 namespace Zio
 {
     /// <summary>
-    /// Extension methods for <see cref="PathInfo"/>
+    /// Extension methods for <see cref="UPath"/>
     /// </summary>
-    public static class PathInfoExtensions
+    public static class UPathExtensions
     {
-        public static PathInfo ToRelative(this PathInfo path)
+        public static UPath ToRelative(this UPath path)
         {
             path.AssertNotNull();
 
@@ -22,10 +22,10 @@ namespace Zio
                 return path;
             }
 
-            return path.FullName == "/" ? PathInfo.Empty : new PathInfo(path.FullName.Substring(1), true);
+            return path.FullName == "/" ? UPath.Empty : new UPath(path.FullName.Substring(1), true);
         }
 
-        public static PathInfo GetDirectory(this PathInfo path)
+        public static UPath GetDirectory(this UPath path)
         {
             path.AssertNotNull();
 
@@ -33,24 +33,24 @@ namespace Zio
 
             if (fullname == "/")
             {
-                return new PathInfo();
+                return new UPath();
             }
 
-            var lastIndex = fullname.LastIndexOf(PathInfo.DirectorySeparator);
+            var lastIndex = fullname.LastIndexOf(UPath.DirectorySeparator);
             if (lastIndex > 0)
             {
                 return fullname.Substring(0, lastIndex);
             }
-            return lastIndex == 0 ? PathInfo.Root : PathInfo.Empty;
+            return lastIndex == 0 ? UPath.Root : UPath.Empty;
         }
 
-        public static void ExtractFirstDirectory(this PathInfo path, out string firstDirectory, out PathInfo remainingPath)
+        public static void ExtractFirstDirectory(this UPath path, out string firstDirectory, out UPath remainingPath)
         {
             path.AssertNotNull();
-            remainingPath = new PathInfo();
+            remainingPath = new UPath();
 
             var fullname = path.FullName;
-            var index = fullname.IndexOf(PathInfo.DirectorySeparator, 1);
+            var index = fullname.IndexOf(UPath.DirectorySeparator, 1);
             if (index < 0)
             {
                 firstDirectory = fullname.Substring(1, fullname.Length - 1);
@@ -62,7 +62,7 @@ namespace Zio
             }
         }
 
-        public static IEnumerable<string> Split(this PathInfo path)
+        public static IEnumerable<string> Split(this UPath path)
         {
             path.AssertNotNull();
 
@@ -74,7 +74,7 @@ namespace Zio
 
             int previousIndex = path.IsAbsolute ? 1 : 0;
             int nextIndex = 0;
-            while ((nextIndex = fullname.IndexOf(PathInfo.DirectorySeparator, previousIndex)) >= 0)
+            while ((nextIndex = fullname.IndexOf(UPath.DirectorySeparator, previousIndex)) >= 0)
             {
                 if (nextIndex != 0)
                 {
@@ -90,36 +90,36 @@ namespace Zio
             }
         }
 
-        public static string GetName(this PathInfo path)
+        public static string GetName(this UPath path)
         {
             path.AssertNotNull();
             return Path.GetFileName(path.FullName);
         }
 
-        public static string GetNameWithoutExtension(this PathInfo path)
+        public static string GetNameWithoutExtension(this UPath path)
         {
             path.AssertNotNull();
             return Path.GetFileNameWithoutExtension(path.FullName);
         }
 
-        public static string GetDotExtension(this PathInfo path)
+        public static string GetDotExtension(this UPath path)
         {
             return Path.GetExtension(path.FullName);
         }
 
-        public static PathInfo ChangeExtension(this PathInfo path, string extension)
+        public static UPath ChangeExtension(this UPath path, string extension)
         {
-            return new PathInfo(Path.ChangeExtension(path.FullName, extension));
+            return new UPath(Path.ChangeExtension(path.FullName, extension));
         }
 
-        public static PathInfo AssertNotNull(this PathInfo path, string name = "path")
+        public static UPath AssertNotNull(this UPath path, string name = "path")
         {
             if (path.FullName == null)
                 throw new ArgumentNullException(name);
             return path;
         }
 
-        public static PathInfo AssertAbsolute(this PathInfo path, string name = "path")
+        public static UPath AssertAbsolute(this UPath path, string name = "path")
         {
             AssertNotNull(path, name);
 

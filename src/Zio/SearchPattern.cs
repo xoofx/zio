@@ -18,7 +18,7 @@ namespace Zio
         private readonly string _exactMatch;
         private readonly Regex _regexMatch;
 
-        public bool Match(PathInfo path)
+        public bool Match(UPath path)
         {
             path.AssertNotNull();
             var name = path.GetName();
@@ -33,12 +33,12 @@ namespace Zio
             return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
         }
 
-        public static SearchPattern Parse(ref PathInfo path, ref string searchPattern)
+        public static SearchPattern Parse(ref UPath path, ref string searchPattern)
         {
             return new SearchPattern(ref path, ref searchPattern);
         }
 
-        private SearchPattern(ref PathInfo path, ref string searchPattern)
+        private SearchPattern(ref UPath path, ref string searchPattern)
         {
             path.AssertAbsolute();
             if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
@@ -62,7 +62,7 @@ namespace Zio
             // If the path contains any directory, we need to concatenate the directory part with the input path
             if (searchPattern.IndexOf('/') > 0)
             {
-                var pathPattern = new PathInfo(searchPattern);
+                var pathPattern = new UPath(searchPattern);
                 var directory = pathPattern.GetDirectory();
                 if (!directory.IsNull && !directory.IsEmpty)
                 {
@@ -84,7 +84,7 @@ namespace Zio
             {
                 if (builder == null)
                 {
-                    builder = PathInfo.GetSharedStringBuilder();
+                    builder = UPath.GetSharedStringBuilder();
                     builder.Append("^");
                 }
 

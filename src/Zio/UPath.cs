@@ -11,28 +11,28 @@ namespace Zio
     /// <summary>
     /// Uniform and secure path wrapper.
     /// </summary>
-    /// <seealso cref="PathInfo" />
-    public struct PathInfo : IEquatable<PathInfo>, IComparable<PathInfo>
+    /// <seealso cref="UPath" />
+    public struct UPath : IEquatable<UPath>, IComparable<UPath>
     {
         [ThreadStatic] private static InternalHelper _internalHelperTls;
 
-        public static readonly PathInfo Empty = new PathInfo(string.Empty, true);
+        public static readonly UPath Empty = new UPath(string.Empty, true);
 
-        public static readonly PathInfo Root = new PathInfo("/", true);
+        public static readonly UPath Root = new UPath("/", true);
 
         public const char DirectorySeparator = '/';
 
         private static InternalHelper InternalHelperTls => _internalHelperTls ?? (_internalHelperTls = new InternalHelper());
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="PathInfo"/> struct.
+        /// Initializes a new instance of the <see cref="UPath"/> struct.
         /// </summary>
         /// <param name="path">The path that will be normalized.</param>
-        public PathInfo(string path) : this(path, false)
+        public UPath(string path) : this(path, false)
         {
         }
 
-        internal PathInfo(string path, bool safe)
+        internal UPath(string path, bool safe)
         {
             if (safe)
             {
@@ -58,17 +58,17 @@ namespace Zio
         public bool IsRelative => !IsAbsolute;
 
 
-        public static implicit operator PathInfo(string path)
+        public static implicit operator UPath(string path)
         {
-            return new PathInfo(path);
+            return new UPath(path);
         }
 
-        public static explicit operator string(PathInfo path)
+        public static explicit operator string(UPath path)
         {
             return path.FullName;
         }
 
-        public static PathInfo Combine(PathInfo path1, PathInfo path2)
+        public static UPath Combine(UPath path1, UPath path2)
         {
             if (path1.FullName == null)
                 throw new ArgumentNullException(nameof(path1));
@@ -98,9 +98,9 @@ namespace Zio
             try
             {
                 var newPath = builder.ToString();
-                // Make sure to clean the builder as it is going to be when creating a new PathInfo
+                // Make sure to clean the builder as it is going to be when creating a new UPath
                 builder.Length = 0;
-                return new PathInfo(newPath);
+                return new UPath(newPath);
             }
             catch (ArgumentException ex)
             {
@@ -108,19 +108,19 @@ namespace Zio
             }
         }
 
-        public static PathInfo operator /(PathInfo path1, PathInfo path2)
+        public static UPath operator /(UPath path1, UPath path2)
         {
             return Combine(path1, path2);
         }
 
-        public bool Equals(PathInfo other)
+        public bool Equals(UPath other)
         {
             return string.Equals(FullName, other.FullName);
         }
 
         public override bool Equals(object obj)
         {
-            return obj is PathInfo && Equals((PathInfo) obj);
+            return obj is UPath && Equals((UPath) obj);
         }
 
         public override int GetHashCode()
@@ -128,12 +128,12 @@ namespace Zio
             return FullName?.GetHashCode() ?? 0;
         }
 
-        public static bool operator ==(PathInfo left, PathInfo right)
+        public static bool operator ==(UPath left, UPath right)
         {
             return left.Equals(right);
         }
 
-        public static bool operator !=(PathInfo left, PathInfo right)
+        public static bool operator !=(UPath left, UPath right)
         {
             return !left.Equals(right);
         }
@@ -143,11 +143,11 @@ namespace Zio
             return FullName;
         }
 
-        public static bool TryParse(string path, out PathInfo pathInfo)
+        public static bool TryParse(string path, out UPath pathInfo)
         {
             string errorMessage;
             path = ValidateAndNormalize(path, out errorMessage);
-            pathInfo = errorMessage == null ? new PathInfo(path, true) : new PathInfo();
+            pathInfo = errorMessage == null ? new UPath(path, true) : new UPath();
             return errorMessage == null;
         }
 
@@ -199,7 +199,7 @@ namespace Zio
 
                     //if (c < ' ' || c == ':' || c == '<' || c == '>' || c == '"' || c == '|')
                     //{
-                    //    throw new InvalidPathInfoException($"The path `{path}` contains invalid characters `{c}`");
+                    //    throw new InvalidUPathException($"The path `{path}` contains invalid characters `{c}`");
                     //}
 
                     if (c == '.')
@@ -371,7 +371,7 @@ namespace Zio
             public int Length => End - Start + 1;
         }
 
-        public int CompareTo(PathInfo other)
+        public int CompareTo(UPath other)
         {
             return string.Compare(FullName, other.FullName, StringComparison.Ordinal);
         }

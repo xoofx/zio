@@ -21,32 +21,32 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public void CreateDirectory(PathInfo path)
+        public void CreateDirectory(UPath path)
         {
-            if (path == PathInfo.Root)
+            if (path == UPath.Root)
             {
                 throw new UnauthorizedAccessException("Cannot create root directory `/`");
             }
 
             CreateDirectoryImpl(ValidatePath(path));
         }
-        protected abstract void CreateDirectoryImpl(PathInfo path);
+        protected abstract void CreateDirectoryImpl(UPath path);
 
         /// <inheritdoc />
-        public bool DirectoryExists(PathInfo path)
+        public bool DirectoryExists(UPath path)
         {
             return DirectoryExistsImpl(ValidatePath(path));
         }
-        protected abstract bool DirectoryExistsImpl(PathInfo path);
+        protected abstract bool DirectoryExistsImpl(UPath path);
 
         /// <inheritdoc />
-        public void MoveDirectory(PathInfo srcPath, PathInfo destPath)
+        public void MoveDirectory(UPath srcPath, UPath destPath)
         {
-            if (srcPath == PathInfo.Root)
+            if (srcPath == UPath.Root)
             {
                 throw new UnauthorizedAccessException("Cannot move from the source root directory `/`");
             }
-            if (destPath == PathInfo.Root)
+            if (destPath == UPath.Root)
             {
                 throw new UnauthorizedAccessException("Cannot move to the root directory `/`");
             }
@@ -58,33 +58,33 @@ namespace Zio.FileSystems
 
             MoveDirectoryImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
-        protected abstract void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath);
+        protected abstract void MoveDirectoryImpl(UPath srcPath, UPath destPath);
 
         /// <inheritdoc />
-        public void DeleteDirectory(PathInfo path, bool isRecursive)
+        public void DeleteDirectory(UPath path, bool isRecursive)
         {
-            if (path == PathInfo.Root)
+            if (path == UPath.Root)
             {
                 throw new UnauthorizedAccessException("Cannot delete root directory `/`");
             }
 
             DeleteDirectoryImpl(ValidatePath(path), isRecursive);
         }
-        protected abstract void DeleteDirectoryImpl(PathInfo path, bool isRecursive);
+        protected abstract void DeleteDirectoryImpl(UPath path, bool isRecursive);
 
         // ----------------------------------------------
         // File API
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public void CopyFile(PathInfo srcPath, PathInfo destPath, bool overwrite)
+        public void CopyFile(UPath srcPath, UPath destPath, bool overwrite)
         {
             CopyFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), overwrite);
         }
-        protected abstract void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite);
+        protected abstract void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite);
 
         /// <inheritdoc />
-        public void ReplaceFile(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
+        public void ReplaceFile(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             srcPath = ValidatePath(srcPath, nameof(srcPath));
             destPath = ValidatePath(destPath, nameof(destPath));
@@ -107,142 +107,142 @@ namespace Zio.FileSystems
 
             ReplaceFileImpl(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
         }
-        protected abstract void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors);
+        protected abstract void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors);
 
         /// <inheritdoc />
-        public long GetFileLength(PathInfo path)
+        public long GetFileLength(UPath path)
         {
             return GetFileLengthImpl(ValidatePath(path));
         }
-        protected abstract long GetFileLengthImpl(PathInfo path);
+        protected abstract long GetFileLengthImpl(UPath path);
 
         /// <inheritdoc />
-        public bool FileExists(PathInfo path)
+        public bool FileExists(UPath path)
         {
             return FileExistsImpl(ValidatePath(path));
         }
-        protected abstract bool FileExistsImpl(PathInfo path);
+        protected abstract bool FileExistsImpl(UPath path);
 
         /// <inheritdoc />
-        public void MoveFile(PathInfo srcPath, PathInfo destPath)
+        public void MoveFile(UPath srcPath, UPath destPath)
         {
             MoveFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
-        protected abstract void MoveFileImpl(PathInfo srcPath, PathInfo destPath);
+        protected abstract void MoveFileImpl(UPath srcPath, UPath destPath);
 
         /// <inheritdoc />
-        public void DeleteFile(PathInfo path)
+        public void DeleteFile(UPath path)
         {
             DeleteFileImpl(ValidatePath(path));
         }
-        protected abstract void DeleteFileImpl(PathInfo path);
+        protected abstract void DeleteFileImpl(UPath path);
 
         /// <inheritdoc />
-        public Stream OpenFile(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        public Stream OpenFile(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             return OpenFileImpl(ValidatePath(path), mode, access, share);
         }
-        protected abstract Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share);
+        protected abstract Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share);
 
         // ----------------------------------------------
         // Metadata API
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public FileAttributes GetAttributes(PathInfo path)
+        public FileAttributes GetAttributes(UPath path)
         {
             return GetAttributesImpl(ValidatePath(path));
         }
 
-        protected abstract FileAttributes GetAttributesImpl(PathInfo path);
+        protected abstract FileAttributes GetAttributesImpl(UPath path);
 
         /// <inheritdoc />
-        public void SetAttributes(PathInfo path, FileAttributes attributes)
+        public void SetAttributes(UPath path, FileAttributes attributes)
         {
             SetAttributesImpl(ValidatePath(path), attributes);
         }
-        protected abstract void SetAttributesImpl(PathInfo path, FileAttributes attributes);
+        protected abstract void SetAttributesImpl(UPath path, FileAttributes attributes);
 
         /// <inheritdoc />
-        public DateTime GetCreationTime(PathInfo path)
+        public DateTime GetCreationTime(UPath path)
         {
             return GetCreationTimeImpl(ValidatePath(path));
         }
 
-        protected abstract DateTime GetCreationTimeImpl(PathInfo path);
+        protected abstract DateTime GetCreationTimeImpl(UPath path);
 
         /// <inheritdoc />
-        public void SetCreationTime(PathInfo path, DateTime time)
+        public void SetCreationTime(UPath path, DateTime time)
         {
             SetCreationTimeImpl(ValidatePath(path), time);
         }
-        protected abstract void SetCreationTimeImpl(PathInfo path, DateTime time);
+        protected abstract void SetCreationTimeImpl(UPath path, DateTime time);
 
         /// <inheritdoc />
-        public DateTime GetLastAccessTime(PathInfo path)
+        public DateTime GetLastAccessTime(UPath path)
         {
             return GetLastAccessTimeImpl(ValidatePath(path));
         }
-        protected abstract DateTime GetLastAccessTimeImpl(PathInfo path);
+        protected abstract DateTime GetLastAccessTimeImpl(UPath path);
 
         /// <inheritdoc />
-        public void SetLastAccessTime(PathInfo path, DateTime time)
+        public void SetLastAccessTime(UPath path, DateTime time)
         {
             SetLastAccessTimeImpl(ValidatePath(path), time);
         }
-        protected abstract void SetLastAccessTimeImpl(PathInfo path, DateTime time);
+        protected abstract void SetLastAccessTimeImpl(UPath path, DateTime time);
 
         /// <inheritdoc />
-        public DateTime GetLastWriteTime(PathInfo path)
+        public DateTime GetLastWriteTime(UPath path)
         {
             return GetLastWriteTimeImpl(ValidatePath(path));
         }
-        protected abstract DateTime GetLastWriteTimeImpl(PathInfo path);
+        protected abstract DateTime GetLastWriteTimeImpl(UPath path);
 
         /// <inheritdoc />
-        public void SetLastWriteTime(PathInfo path, DateTime time)
+        public void SetLastWriteTime(UPath path, DateTime time)
         {
             SetLastWriteTimeImpl(ValidatePath(path), time);
         }
-        protected abstract void SetLastWriteTimeImpl(PathInfo path, DateTime time);
+        protected abstract void SetLastWriteTimeImpl(UPath path, DateTime time);
 
         // ----------------------------------------------
         // Search API
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public IEnumerable<PathInfo> EnumeratePaths(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        public IEnumerable<UPath> EnumeratePaths(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumeratePathsImpl(ValidatePath(path), searchPattern, searchOption, searchTarget);
         }
 
-        protected abstract IEnumerable<PathInfo> EnumeratePathsImpl(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
+        protected abstract IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
 
         // ----------------------------------------------
         // Path API
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public string ConvertToSystem(PathInfo path)
+        public string ConvertToSystem(UPath path)
         {
             return ConvertToSystemImpl(ValidatePath(path));
         }
-        protected abstract string ConvertToSystemImpl(PathInfo path);
+        protected abstract string ConvertToSystemImpl(UPath path);
 
         /// <inheritdoc />
-        public PathInfo ConvertFromSystem(string systemPath)
+        public UPath ConvertFromSystem(string systemPath)
         {
             if (systemPath == null) throw new ArgumentNullException(nameof(systemPath));
             return ValidatePath(ConvertFromSystemImpl(systemPath));
         }
-        protected abstract PathInfo ConvertFromSystemImpl(string systemPath);
+        protected abstract UPath ConvertFromSystemImpl(string systemPath);
 
-        protected virtual void ValidatePathImpl(PathInfo path, string name = "path")
+        protected virtual void ValidatePathImpl(UPath path, string name = "path")
         {
         }
 
-        protected PathInfo ValidatePath(PathInfo path, string name = "path", bool allowNull = false)
+        protected UPath ValidatePath(UPath path, string name = "path", bool allowNull = false)
         {
             if (allowNull && path.IsNull)
             {

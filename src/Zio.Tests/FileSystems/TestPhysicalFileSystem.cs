@@ -36,7 +36,7 @@ namespace Zio.Tests.FileSystems
 
                 // EnumerateDirectories
                 var directories = fs.EnumerateDirectories(pathInfo).ToList();
-                Assert.Equal(new List<PathInfo>() {pathToCreate}, directories);
+                Assert.Equal(new List<UPath>() {pathToCreate}, directories);
 
                 // MoveDirectory
                 fs.MoveDirectory(pathToCreate, movedDirectory);
@@ -63,7 +63,7 @@ namespace Zio.Tests.FileSystems
             if (IsWindows)
             {
                 var directories = fs.EnumerateDirectories("/").ToList();
-                Assert.Equal(new List<PathInfo>() { "/drive" }, directories);
+                Assert.Equal(new List<UPath>() { "/drive" }, directories);
 
                 var drives = fs.EnumerateDirectories("/drive").ToList();
                 Assert.True(drives.Count > 0);
@@ -83,7 +83,7 @@ namespace Zio.Tests.FileSystems
                 Assert.True(files.Count == 0);
 
                 var paths = fs.EnumeratePaths("/").ToList();
-                Assert.Equal(new List<PathInfo>() { "/drive" }, paths);
+                Assert.Equal(new List<UPath>() { "/drive" }, paths);
             }
         }
 

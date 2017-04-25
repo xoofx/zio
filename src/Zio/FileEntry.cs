@@ -12,7 +12,7 @@ namespace Zio
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The file path.</param>
-        public FileEntry(IFileSystem fileSystem, PathInfo path) : base(fileSystem, path)
+        public FileEntry(IFileSystem fileSystem, UPath path) : base(fileSystem, path)
         {
         }
 
@@ -87,7 +87,7 @@ namespace Zio
         /// <exception cref="T:System.NotSupportedException">
         ///     <paramref name="destFileName" /> contains a colon (:) in the middle of the string.
         /// </exception>
-        public FileEntry CopyTo(PathInfo destFileName, bool overwrite)
+        public FileEntry CopyTo(UPath destFileName, bool overwrite)
         {
             FileSystem.CopyFile(Path, destFileName, overwrite);
             return new FileEntry(FileSystem, destFileName);
@@ -129,7 +129,7 @@ namespace Zio
         /// <exception cref="T:System.NotSupportedException">
         ///     <paramref name="destFileName" /> contains a colon (:) in the middle of the string.
         /// </exception>
-        public void MoveTo(PathInfo destFileName)
+        public void MoveTo(UPath destFileName)
         {
             FileSystem.MoveFile(Path, destFileName);
         }

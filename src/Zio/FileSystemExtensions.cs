@@ -22,7 +22,7 @@ namespace Zio
         /// <param name="srcPath">The source path of the file to copy from the source filesystem</param>
         /// <param name="destPath">The destination path of the file in the destination filesystem</param>
         /// <param name="overwrite"><c>true</c> to overwrite an existing destination file</param>
-        public static void CopyFileTo(this IFileSystem fs, IFileSystem destFileSystem, PathInfo srcPath, PathInfo destPath, bool overwrite)
+        public static void CopyFileTo(this IFileSystem fs, IFileSystem destFileSystem, UPath srcPath, UPath destPath, bool overwrite)
         {
             if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
 
@@ -61,7 +61,7 @@ namespace Zio
             }
         }
 
-        public static string ReadAllText(this IFileSystem fs, PathInfo path)
+        public static string ReadAllText(this IFileSystem fs, UPath path)
         {
             var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read);
             {
@@ -72,7 +72,7 @@ namespace Zio
             }
         }
 
-        public static void WriteAllText(this IFileSystem fs, PathInfo path, string content, Encoding encoding = null)
+        public static void WriteAllText(this IFileSystem fs, UPath path, string content, Encoding encoding = null)
         {
             if (content == null) throw new ArgumentNullException(nameof(content));
             var stream = fs.OpenFile(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
@@ -85,7 +85,7 @@ namespace Zio
             }
         }
 
-        public static void AppendAllText(this IFileSystem fs, PathInfo path, string content, Encoding encoding = null)
+        public static void AppendAllText(this IFileSystem fs, UPath path, string content, Encoding encoding = null)
         {
             if (content == null) throw new ArgumentNullException(nameof(content));
             var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write);
@@ -98,23 +98,23 @@ namespace Zio
             }
         }
 
-        public static Stream CreateFile(this IFileSystem fileSystem, PathInfo path)
+        public static Stream CreateFile(this IFileSystem fileSystem, UPath path)
         {
             path.AssertAbsolute();
             return fileSystem.OpenFile(path, FileMode.Create, FileAccess.ReadWrite);
         }
 
-        public static IEnumerable<PathInfo> EnumerateDirectories(this IFileSystem fileSystem, PathInfo path)
+        public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateDirectories(fileSystem, path, "*");
         }
 
-        public static IEnumerable<PathInfo> EnumerateDirectories(this IFileSystem fileSystem, PathInfo path, string searchPattern)
+        public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
             return EnumerateDirectories(fileSystem, path, "*", SearchOption.TopDirectoryOnly);
         }
 
-        public static IEnumerable<PathInfo> EnumerateDirectories(this IFileSystem fileSystem, PathInfo path,
+        public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path,
             string searchPattern, SearchOption searchOption)
         {
             foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption,
@@ -122,52 +122,52 @@ namespace Zio
                 yield return subPath;
         }
 
-        public static IEnumerable<PathInfo> EnumerateFiles(this IFileSystem fileSystem, PathInfo path)
+        public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateFiles(fileSystem, path, "*");
         }
 
-        public static IEnumerable<PathInfo> EnumerateFiles(this IFileSystem fileSystem, PathInfo path,
+        public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path,
             string searchPattern)
         {
             return EnumerateFiles(fileSystem, path, "*", SearchOption.TopDirectoryOnly);
         }
 
-        public static IEnumerable<PathInfo> EnumerateFiles(this IFileSystem fileSystem, PathInfo path, string searchPattern, SearchOption searchOption)
+        public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.File))
                 yield return subPath;
         }
 
-        public static IEnumerable<PathInfo> EnumeratePaths(this IFileSystem fileSystem, PathInfo path)
+        public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path)
         {
             return EnumeratePaths(fileSystem, path, "*");
         }
 
-        public static IEnumerable<PathInfo> EnumeratePaths(this IFileSystem fileSystem, PathInfo path,
+        public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path,
             string searchPattern)
         {
             return EnumeratePaths(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
-        public static IEnumerable<PathInfo> EnumeratePaths(this IFileSystem fileSystem, PathInfo path, string searchPattern, SearchOption searchOption)
+        public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             return fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Both);
         }
 
 
-        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, PathInfo path)
+        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateFileEntries(fileSystem, path, "*");
         }
 
-        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, PathInfo path,
+        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path,
             string searchPattern)
         {
             return EnumerateFileEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
-        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, PathInfo path, string searchPattern, SearchOption searchOption)
+        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             foreach (var subPath in EnumerateFiles(fileSystem, path, searchPattern, searchOption))
             {
@@ -175,18 +175,18 @@ namespace Zio
             }
         }
 
-        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, PathInfo path)
+        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateDirectoryEntries(fileSystem, path, "*");
         }
 
-        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, PathInfo path,
+        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path,
             string searchPattern)
         {
             return EnumerateDirectoryEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
-        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, PathInfo path, string searchPattern, SearchOption searchOption)
+        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             foreach (var subPath in EnumerateDirectories(fileSystem, path, searchPattern, searchOption))
             {
@@ -194,18 +194,18 @@ namespace Zio
             }
         }
 
-        public static IEnumerable<FileSystemEntry> EnumerateEntries(this IFileSystem fileSystem, PathInfo path)
+        public static IEnumerable<FileSystemEntry> EnumerateEntries(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateEntries(fileSystem, path, "*");
         }
 
-        public static IEnumerable<FileSystemEntry> EnumerateEntries(this IFileSystem fileSystem, PathInfo path,
+        public static IEnumerable<FileSystemEntry> EnumerateEntries(this IFileSystem fileSystem, UPath path,
             string searchPattern)
         {
             return EnumerateEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
-        public static IEnumerable<FileSystemEntry> EnumerateEntries(this IFileSystem fileSystem, PathInfo path, string searchPattern, SearchOption searchOption)
+        public static IEnumerable<FileSystemEntry> EnumerateEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Both))
             {
@@ -213,7 +213,7 @@ namespace Zio
             }
         }
 
-        public static FileEntry GetFileEntry(this IFileSystem fileSystem, PathInfo filePath)
+        public static FileEntry GetFileEntry(this IFileSystem fileSystem, UPath filePath)
         {
             if (!fileSystem.FileExists(filePath))
             {
@@ -222,7 +222,7 @@ namespace Zio
             return new FileEntry(fileSystem, filePath);
         }
 
-        public static DirectoryEntry GetDirectoryEntry(this IFileSystem fileSystem, PathInfo directoryPath)
+        public static DirectoryEntry GetDirectoryEntry(this IFileSystem fileSystem, UPath directoryPath)
         {
             if (!fileSystem.DirectoryExists(directoryPath))
             {

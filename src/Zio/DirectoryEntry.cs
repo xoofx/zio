@@ -15,7 +15,7 @@ namespace Zio
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The directory path.</param>
-        public DirectoryEntry(IFileSystem fileSystem, PathInfo path) : base(fileSystem, path)
+        public DirectoryEntry(IFileSystem fileSystem, UPath path) : base(fileSystem, path)
         {
         }
 
@@ -56,7 +56,7 @@ namespace Zio
         /// <PermissionSet>
         ///   <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />
         /// </PermissionSet>
-        public DirectoryEntry CreateSubdirectory(PathInfo path)
+        public DirectoryEntry CreateSubdirectory(UPath path)
         {
             if (!path.IsRelative)
             {
@@ -121,7 +121,7 @@ namespace Zio
         /// <PermissionSet>
         ///   <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />
         /// </PermissionSet>
-        public void MoveTo(PathInfo destDirName)
+        public void MoveTo(UPath destDirName)
         {
             FileSystem.MoveDirectory(Path, destDirName);
         }

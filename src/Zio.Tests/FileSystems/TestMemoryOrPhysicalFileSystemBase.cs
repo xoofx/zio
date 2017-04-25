@@ -303,7 +303,7 @@ namespace Zio.Tests.FileSystems
             fs.WriteAllText("/titi.txt", "yo2");
             Assert.Throws<IOException>(() => fs.MoveFile("/toto.txt", "/titi.txt"));
 
-            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/1.txt", default(PathInfo), true));
+            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/1.txt", default(UPath), true));
             Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/1.txt", true));
             Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/2.txt", true));
             Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/3.txt", true));
@@ -454,10 +454,10 @@ namespace Zio.Tests.FileSystems
             fs.WriteAllText("/file01.txt", "content1");
             fs.WriteAllText("/file02.txt", "content2");
 
-            var entries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList<PathInfo>();
+            var entries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList<UPath>();
             entries.Sort();
 
-            Assert.Equal(new List<PathInfo>()
+            Assert.Equal(new List<UPath>()
                 {
                     "/dir1",
                     "/dir1/a",
@@ -475,10 +475,10 @@ namespace Zio.Tests.FileSystems
                 , entries);
 
 
-            var folders = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList<PathInfo>();
+            var folders = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList<UPath>();
             folders.Sort();
 
-            Assert.Equal(new List<PathInfo>()
+            Assert.Equal(new List<UPath>()
                 {
                     "/dir1",
                     "/dir1/a",
@@ -491,10 +491,10 @@ namespace Zio.Tests.FileSystems
                 , folders);
 
 
-            var files = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File).ToList<PathInfo>();
+            var files = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
             files.Sort();
 
-            Assert.Equal(new List<PathInfo>()
+            Assert.Equal(new List<UPath>()
                 {
                     "/dir1/a/file10.txt",
                     "/dir1/a1/file11.txt",
@@ -505,29 +505,29 @@ namespace Zio.Tests.FileSystems
                 , files);
 
 
-            folders = fs.EnumeratePaths("/dir1", "a", SearchOption.AllDirectories, SearchTarget.Directory).ToList<PathInfo>();
+            folders = fs.EnumeratePaths("/dir1", "a", SearchOption.AllDirectories, SearchTarget.Directory).ToList<UPath>();
             folders.Sort();
-            Assert.Equal(new List<PathInfo>()
+            Assert.Equal(new List<UPath>()
                 {
                     "/dir1/a",
                 }
                 , folders);
 
 
-            files = fs.EnumeratePaths("/dir1", "file1?.txt", SearchOption.AllDirectories, SearchTarget.File).ToList<PathInfo>();
+            files = fs.EnumeratePaths("/dir1", "file1?.txt", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
             files.Sort();
 
-            Assert.Equal(new List<PathInfo>()
+            Assert.Equal(new List<UPath>()
                 {
                     "/dir1/a/file10.txt",
                     "/dir1/a1/file11.txt",
                 }
                 , files);
 
-            files = fs.EnumeratePaths("/", "file?0.txt", SearchOption.AllDirectories, SearchTarget.File).ToList<PathInfo>();
+            files = fs.EnumeratePaths("/", "file?0.txt", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
             files.Sort();
 
-            Assert.Equal(new List<PathInfo>()
+            Assert.Equal(new List<UPath>()
                 {
                     "/dir1/a/file10.txt",
                     "/dir2/file20.txt",

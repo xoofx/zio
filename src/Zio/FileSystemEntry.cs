@@ -7,14 +7,14 @@ namespace Zio
 {
     public abstract class FileSystemEntry
     {
-        protected FileSystemEntry(IFileSystem fileSystem, PathInfo path)
+        protected FileSystemEntry(IFileSystem fileSystem, UPath path)
         {
             FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
             path.AssertAbsolute();
             Path = path;
         }
 
-        public PathInfo Path { get; }
+        public UPath Path { get; }
 
         public IFileSystem FileSystem { get; }
 

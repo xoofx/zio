@@ -53,10 +53,10 @@ namespace Zio.Tests
         [InlineData("/a/b/c", "x?z", "d/xyz")]
         public void TestMatch(string path, string searchPattern, string pathToSearch, bool match = true)
         {
-            var pathInfo = new PathInfo(path);
+            var pathInfo = new UPath(path);
             var pathInfoCopy = pathInfo;
             var search = SearchPattern.Parse(ref pathInfoCopy, ref searchPattern);
-            var pathToSearchInfo = new PathInfo(pathToSearch);
+            var pathToSearchInfo = new UPath(pathToSearch);
             Assert.Equal(match, search.Match(pathToSearchInfo));
         }
 
@@ -64,10 +64,10 @@ namespace Zio.Tests
         [Fact]
         public void TestExpectedExceptions()
         {
-            var path = new PathInfo("/yoyo");
+            var path = new UPath("/yoyo");
             Assert.Throws<ArgumentNullException>(() =>
             {
-                var nullPath = new PathInfo();
+                var nullPath = new UPath();
                 string searchPattern = "valid";
                 SearchPattern.Parse(ref nullPath, ref searchPattern);
             });
@@ -87,28 +87,28 @@ namespace Zio.Tests
         public void TestExtensions()
         {
             {
-                var path = new PathInfo("/a/b/c/d.txt");
-                Assert.Equal(new PathInfo("/a/b/c"), path.GetDirectory());
+                var path = new UPath("/a/b/c/d.txt");
+                Assert.Equal(new UPath("/a/b/c"), path.GetDirectory());
                 Assert.Equal("d.txt", path.GetName());
                 Assert.Equal("d", path.GetNameWithoutExtension());
                 Assert.Equal(".txt", path.GetDotExtension());
                 var newPath = path.ChangeExtension(".zip");
                 Assert.Equal("/a/b/c/d.zip", newPath.FullName);
-                Assert.Equal(new PathInfo("a/b/c/d.txt"), path.ToRelative());
+                Assert.Equal(new UPath("a/b/c/d.txt"), path.ToRelative());
                 Assert.Equal(path, path.AssertAbsolute());
-                Assert.Throws<ArgumentNullException>(() => new PathInfo().AssertNotNull());
-                Assert.Throws<ArgumentException>(() => new PathInfo("not_absolute").AssertAbsolute());
+                Assert.Throws<ArgumentNullException>(() => new UPath().AssertNotNull());
+                Assert.Throws<ArgumentException>(() => new UPath("not_absolute").AssertAbsolute());
             }
 
             {
-                var path = new PathInfo("d.txt");
-                Assert.Equal(PathInfo.Empty, path.GetDirectory());
+                var path = new UPath("d.txt");
+                Assert.Equal(UPath.Empty, path.GetDirectory());
                 Assert.Equal("d.txt", path.GetName());
                 Assert.Equal("d", path.GetNameWithoutExtension());
                 Assert.Equal(".txt", path.GetDotExtension());
                 var newPath = path.ChangeExtension(".zip");
                 Assert.Equal("d.zip", newPath.FullName);
-                Assert.Equal(new PathInfo("d.txt"), path.ToRelative());
+                Assert.Equal(new UPath("d.txt"), path.ToRelative());
             }
         }
 

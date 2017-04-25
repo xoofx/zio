@@ -25,7 +25,7 @@ namespace Zio.FileSystems
             _mounts = new Dictionary<string, IFileSystem>();
         }
 
-        public void Mount(PathInfo name, IFileSystem fileSystem)
+        public void Mount(UPath name, IFileSystem fileSystem)
         {
             name.AssertAbsolute();
             if (fileSystem == null) throw new ArgumentNullException(nameof(fileSystem));
@@ -35,12 +35,12 @@ namespace Zio.FileSystems
                 throw new ArgumentException("Cannot recursively mount the filesystem to self", nameof(fileSystem));
             }
 
-            if (name == PathInfo.Root)
+            if (name == UPath.Root)
             {
                 throw new ArgumentException("The mount name cannot be a `/` root filesystem", nameof(name));
             }
 
-            if (name.GetDirectory() != PathInfo.Root)
+            if (name.GetDirectory() != UPath.Root)
             {
                 throw new ArgumentException("The mount name cannot contain subpath and must contain only a root path e.g `/mount`", nameof(name));
             }
@@ -57,15 +57,15 @@ namespace Zio.FileSystems
             }
         }
 
-        public void Unmount(PathInfo name)
+        public void Unmount(UPath name)
         {
             name.AssertAbsolute();
-            if (name == PathInfo.Root)
+            if (name == UPath.Root)
             {
                 throw new ArgumentException("The mount name cannot be a `/` root filesystem", nameof(name));
             }
 
-            if (name.GetDirectory() != PathInfo.Root)
+            if (name.GetDirectory() != UPath.Root)
             {
                 throw new ArgumentException("The mount name cannot contain subpath and must contain only a root path e.g `/mount`", nameof(name));
             }
@@ -81,10 +81,10 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override void CreateDirectoryImpl(PathInfo path)
+        protected override void CreateDirectoryImpl(UPath path)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -101,15 +101,15 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override bool DirectoryExistsImpl(PathInfo path)
+        protected override bool DirectoryExistsImpl(UPath path)
         {
-            if (path == PathInfo.Root)
+            if (path == UPath.Root)
             {
                 return true;
             }
 
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -120,7 +120,7 @@ namespace Zio.FileSystems
             return NextFileSystem != null && NextFileSystem.DirectoryExists(path);
         }
 
-        protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             if (!DirectoryExistsImpl(srcPath))
             {
@@ -134,11 +134,11 @@ namespace Zio.FileSystems
             }
 
             string srcMountName;
-            PathInfo srcMountSubPath;
+            UPath srcMountSubPath;
             var srcfs = TryGetMount(srcPath, out srcMountName, out srcMountSubPath);
 
             string destMountName;
-            PathInfo destMountSubPath;
+            UPath destMountSubPath;
             var destfs = TryGetMount(destPath, out destMountName, out destMountSubPath);
 
             if (srcfs != null &&  srcMountSubPath == "")
@@ -165,10 +165,10 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
+        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null && mountSubPath == "")
@@ -190,7 +190,7 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite)
+        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             if (!FileExistsImpl(srcPath))
             {
@@ -204,11 +204,11 @@ namespace Zio.FileSystems
             }
 
             string srcMountName;
-            PathInfo srcMountSubPath;
+            UPath srcMountSubPath;
             var srcfs = TryGetMount(srcPath, out srcMountName, out srcMountSubPath);
 
             string destMountName;
-            PathInfo destMountSubPath;
+            UPath destMountSubPath;
             var destfs = TryGetMount(destPath, out destMountName, out destMountSubPath);
 
             if (srcfs == null)
@@ -241,15 +241,15 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
+        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             throw new NotImplementedException();
         }
 
-        protected override long GetFileLengthImpl(PathInfo path)
+        protected override long GetFileLengthImpl(UPath path)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -265,10 +265,10 @@ namespace Zio.FileSystems
             throw new FileNotFoundException($"The file path `{path}` does not exist");
         }
 
-        protected override bool FileExistsImpl(PathInfo path)
+        protected override bool FileExistsImpl(UPath path)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -279,7 +279,7 @@ namespace Zio.FileSystems
             return NextFileSystem != null && NextFileSystem.FileExists(path);
         }
 
-        protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
         {
             if (!FileExistsImpl(srcPath))
             {
@@ -298,11 +298,11 @@ namespace Zio.FileSystems
             }
 
             string srcMountName;
-            PathInfo srcMountSubPath;
+            UPath srcMountSubPath;
             var srcfs = TryGetMount(srcPath, out srcMountName, out srcMountSubPath);
 
             string destMountName;
-            PathInfo destMountSubPath;
+            UPath destMountSubPath;
             var destfs = TryGetMount(destPath, out destMountName, out destMountSubPath);
 
             if (srcfs != null && srcfs == destfs)
@@ -319,7 +319,7 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override void DeleteFileImpl(PathInfo path)
+        protected override void DeleteFileImpl(UPath path)
         {
             if (!FileExistsImpl(path))
             {
@@ -327,7 +327,7 @@ namespace Zio.FileSystems
             }
 
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -340,10 +340,10 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -363,10 +363,10 @@ namespace Zio.FileSystems
             throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
         }
 
-        protected override FileAttributes GetAttributesImpl(PathInfo path)
+        protected override FileAttributes GetAttributesImpl(UPath path)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -382,10 +382,10 @@ namespace Zio.FileSystems
             throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
         }
 
-        protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
+        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -402,10 +402,10 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override DateTime GetCreationTimeImpl(PathInfo path)
+        protected override DateTime GetCreationTimeImpl(UPath path)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -421,10 +421,10 @@ namespace Zio.FileSystems
             return DefaultFileTime;
         }
 
-        protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
+        protected override void SetCreationTimeImpl(UPath path, DateTime time)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -441,10 +441,10 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override DateTime GetLastAccessTimeImpl(PathInfo path)
+        protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -461,10 +461,10 @@ namespace Zio.FileSystems
 
         }
 
-        protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -481,10 +481,10 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override DateTime GetLastWriteTimeImpl(PathInfo path)
+        protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -501,10 +501,10 @@ namespace Zio.FileSystems
 
         }
 
-        protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             string mountName;
-            PathInfo mountSubPath;
+            UPath mountSubPath;
             var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
             if (mountfs != null)
@@ -521,19 +521,19 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override IEnumerable<PathInfo> EnumeratePathsImpl(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             // Use the search pattern to normalize the path/search pattern
             var search = SearchPattern.Parse(ref path, ref searchPattern);
 
-            if (path == PathInfo.Root)
+            if (path == UPath.Root)
             {
                 throw new NotImplementedException();
             }
             else
             {
                 string mountName;
-                PathInfo mountSubPath;
+                UPath mountSubPath;
                 var mountfs = TryGetMount(path, out mountName, out mountSubPath);
 
                 if (mountfs != null)
@@ -549,17 +549,17 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
             }
         }
-        protected override PathInfo ConvertPathToDelegate(PathInfo path)
+        protected override UPath ConvertPathToDelegate(UPath path)
         {
             return path;
         }
 
-        protected override PathInfo ConvertPathFromDelegate(PathInfo path)
+        protected override UPath ConvertPathFromDelegate(UPath path)
         {
             return path;
         }
 
-        private IFileSystem TryGetMount(PathInfo path, out string mountName, out PathInfo mountSubPath)
+        private IFileSystem TryGetMount(UPath path, out string mountName, out UPath mountSubPath)
         {
             path.ExtractFirstDirectory(out mountName, out mountSubPath);
             IFileSystem mountfs;

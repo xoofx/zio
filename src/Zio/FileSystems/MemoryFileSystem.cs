@@ -34,7 +34,7 @@ namespace Zio.FileSystems
         // Directory API
         // ----------------------------------------------
 
-        protected override void CreateDirectoryImpl(PathInfo path)
+        protected override void CreateDirectoryImpl(UPath path)
         {
             EnterFileSystemShared();
             try
@@ -47,9 +47,9 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override bool DirectoryExistsImpl(PathInfo path)
+        protected override bool DirectoryExistsImpl(UPath path)
         {
-            if (path == PathInfo.Root)
+            if (path == UPath.Root)
             {
                 return true;
             }
@@ -73,12 +73,12 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             MoveFileOrDirectory(srcPath, destPath, true);
         }
 
-        protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
+        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             EnterFileSystemShared();
             try
@@ -144,7 +144,7 @@ namespace Zio.FileSystems
         // File API
         // ----------------------------------------------
 
-        protected override void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite)
+        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             EnterFileSystemShared();
             try
@@ -223,26 +223,26 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
+        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             // Get the directories of src/dest/backup
             var parentSrcPath = srcPath.GetDirectory();
             var parentDestPath = destPath.GetDirectory();
-            var parentDestBackupPath = destBackupPath.IsNull ? new PathInfo() : destBackupPath.GetDirectory();
+            var parentDestBackupPath = destBackupPath.IsNull ? new UPath() : destBackupPath.GetDirectory();
 
             // Simple case: src/dest/backup in the same folder
             var isSameFolder = parentSrcPath == parentDestPath && (destBackupPath.IsNull || (parentDestBackupPath == parentSrcPath));
             // Else at least one folder is different. This is a rename semantic (as per the locking guidelines)
 
-            var paths = new List<KeyValuePair<PathInfo, int>>
+            var paths = new List<KeyValuePair<UPath, int>>
             {
-                new KeyValuePair<PathInfo, int>(srcPath, 0),
-                new KeyValuePair<PathInfo, int>(destPath, 1)
+                new KeyValuePair<UPath, int>(srcPath, 0),
+                new KeyValuePair<UPath, int>(destPath, 1)
             };
 
             if (!destBackupPath.IsNull)
             {
-                paths.Add(new KeyValuePair<PathInfo, int>(destBackupPath, 2));
+                paths.Add(new KeyValuePair<UPath, int>(destBackupPath, 2));
             }
             paths.Sort((p1, p2) => string.Compare(p1.Key.FullName, p2.Key.FullName, StringComparison.Ordinal));
 
@@ -326,7 +326,7 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override long GetFileLengthImpl(PathInfo path)
+        protected override long GetFileLengthImpl(UPath path)
         {
             EnterFileSystemShared();
             try
@@ -339,7 +339,7 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override bool FileExistsImpl(PathInfo path)
+        protected override bool FileExistsImpl(UPath path)
         {
             EnterFileSystemShared();
             try
@@ -354,12 +354,12 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
         {
             MoveFileOrDirectory(srcPath, destPath, false);
         }
 
-        protected override void DeleteFileImpl(PathInfo path)
+        protected override void DeleteFileImpl(UPath path)
         {
             EnterFileSystemShared();
             try
@@ -392,7 +392,7 @@ namespace Zio.FileSystems
             }
         }
 
-        protected override Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share)
+        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share)
         {
             if (mode == FileMode.Append && (access & FileAccess.Read) != 0)
             {
@@ -582,7 +582,7 @@ namespace Zio.FileSystems
         // Metadata API
         // ----------------------------------------------
 
-        protected override FileAttributes GetAttributesImpl(PathInfo path)
+        protected override FileAttributes GetAttributesImpl(UPath path)
         {
             var node = FindNodeSafe(path, false);
             var attributes = node.Attributes;
@@ -598,7 +598,7 @@ namespace Zio.FileSystems
             return attributes;
         }
 
-        protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
+        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             // We don't store the attributes Normal or directory
             // As they are returned by GetAttributes and we don't want
@@ -610,32 +610,32 @@ namespace Zio.FileSystems
             node.Attributes = attributes;
         }
 
-        protected override DateTime GetCreationTimeImpl(PathInfo path)
+        protected override DateTime GetCreationTimeImpl(UPath path)
         {
             return TryFindNodeSafe(path)?.CreationTime ?? DefaultFileTime;
         }
 
-        protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
+        protected override void SetCreationTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).CreationTime = time;
         }
 
-        protected override DateTime GetLastAccessTimeImpl(PathInfo path)
+        protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
             return TryFindNodeSafe(path)?.LastAccessTime ?? DefaultFileTime;
         }
 
-        protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).LastAccessTime = time;
         }
 
-        protected override DateTime GetLastWriteTimeImpl(PathInfo path)
+        protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
             return TryFindNodeSafe(path)?.LastWriteTime ?? DefaultFileTime;
         }
 
-        protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).LastWriteTime = time;
         }
@@ -644,14 +644,14 @@ namespace Zio.FileSystems
         // Search API
         // ----------------------------------------------
 
-        protected override IEnumerable<PathInfo> EnumeratePathsImpl(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             var search = SearchPattern.Parse(ref path, ref searchPattern);
 
-            var foldersToProcess = new Queue<PathInfo>();
+            var foldersToProcess = new Queue<UPath>();
             foldersToProcess.Enqueue(path);
 
-            var entries = new List<PathInfo>();
+            var entries = new List<UPath>();
             while (foldersToProcess.Count > 0)
             {
                 var directoryPath = foldersToProcess.Dequeue();
@@ -736,17 +736,17 @@ namespace Zio.FileSystems
         // Path API
         // ----------------------------------------------
 
-        protected override string ConvertToSystemImpl(PathInfo path)
+        protected override string ConvertToSystemImpl(UPath path)
         {
             return path.FullName;
         }
 
-        protected override PathInfo ConvertFromSystemImpl(string systemPath)
+        protected override UPath ConvertFromSystemImpl(string systemPath)
         {
-            return new PathInfo(systemPath);
+            return new UPath(systemPath);
         }
 
-        protected override void ValidatePathImpl(PathInfo path, string name = "path")
+        protected override void ValidatePathImpl(UPath path, string name = "path")
         {
             // TODO: Performing the same check as a PhysicalFileSystem on Windows for now
             if (path.FullName.IndexOf(':') >= 0)
@@ -759,7 +759,7 @@ namespace Zio.FileSystems
         // Internals
         // ----------------------------------------------
 
-        private void MoveFileOrDirectory(PathInfo srcPath, PathInfo destPath, bool expectDirectory)
+        private void MoveFileOrDirectory(UPath srcPath, UPath destPath, bool expectDirectory)
         {
             var parentSrcPath = srcPath.GetDirectory();
             var parentDestPath = destPath.GetDirectory();
@@ -878,7 +878,7 @@ namespace Zio.FileSystems
         }
 
 
-        private void AssertDirectory(FileSystemNode node, PathInfo srcPath)
+        private void AssertDirectory(FileSystemNode node, UPath srcPath)
         {
             if (node is FileNode)
             {
@@ -890,7 +890,7 @@ namespace Zio.FileSystems
             }
         }
 
-        private void AssertFile(FileSystemNode node, PathInfo srcPath)
+        private void AssertFile(FileSystemNode node, UPath srcPath)
         {
             if (node == null)
             {
@@ -898,7 +898,7 @@ namespace Zio.FileSystems
             }
         }
 
-        private FileSystemNode TryFindNodeSafe(PathInfo path)
+        private FileSystemNode TryFindNodeSafe(UPath path)
         {
             EnterFileSystemShared();
             try
@@ -920,7 +920,7 @@ namespace Zio.FileSystems
             }
         }
 
-        private FileSystemNode FindNodeSafe(PathInfo path, bool expectFileOnly)
+        private FileSystemNode FindNodeSafe(UPath path, bool expectFileOnly)
         {
             var node = TryFindNodeSafe(path);
 
@@ -944,7 +944,7 @@ namespace Zio.FileSystems
             return node;
         }
 
-        private void CreateDirectoryNode(PathInfo path)
+        private void CreateDirectoryNode(UPath path)
         {
             ExitFindNode(EnterFindNode(path, FindNodeFlags.CreatePathIfNotExist));
         }
@@ -1016,18 +1016,18 @@ namespace Zio.FileSystems
         }
 
     
-        private NodeResult EnterFindNode(PathInfo path, FindNodeFlags flags, params NodeResult[] existingNodes)
+        private NodeResult EnterFindNode(UPath path, FindNodeFlags flags, params NodeResult[] existingNodes)
         {
             return EnterFindNode(path, flags, null, existingNodes);
         }
 
-        private NodeResult EnterFindNode(PathInfo path, FindNodeFlags flags, FileShare? share, params NodeResult[] existingNodes)
+        private NodeResult EnterFindNode(UPath path, FindNodeFlags flags, FileShare? share, params NodeResult[] existingNodes)
         {
             var result = new NodeResult();
 
             var sharePath = share ?? FileShare.Read;
 
-            if (path == PathInfo.Root)
+            if (path == UPath.Root)
             {
                 if ((flags & FindNodeFlags.NodeExclusive) != 0)
                 {
@@ -1152,7 +1152,7 @@ namespace Zio.FileSystems
 
         private void EnterFileSystemShared()
         {
-            _globalLock.EnterShared(PathInfo.Root);
+            _globalLock.EnterShared(UPath.Root);
         }
 
         private void ExitFileSystemShared()
@@ -1170,27 +1170,27 @@ namespace Zio.FileSystems
             _globalLock.ExitExclusive();
         }
 
-        private void EnterSharedDirectoryOrBlock(DirectoryNode node, PathInfo context)
+        private void EnterSharedDirectoryOrBlock(DirectoryNode node, UPath context)
         {
             EnterShared(node, context, true, FileShare.Read);
         }
 
-        private void EnterExclusiveDirectoryOrBlock(DirectoryNode node, PathInfo context)
+        private void EnterExclusiveDirectoryOrBlock(DirectoryNode node, UPath context)
         {
             EnterExclusive(node, context, true);
         }
 
-        private void EnterExclusive(FileSystemNode node, PathInfo context)
+        private void EnterExclusive(FileSystemNode node, UPath context)
         {
             EnterExclusive(node, context, node is DirectoryNode);
         }
 
-        private void EnterShared(FileSystemNode node, PathInfo context, FileShare share)
+        private void EnterShared(FileSystemNode node, UPath context, FileShare share)
         {
             EnterShared(node, context, node is DirectoryNode, share);
         }
 
-        private void EnterShared(FileSystemNode node, PathInfo context, bool block, FileShare share)
+        private void EnterShared(FileSystemNode node, UPath context, bool block, FileShare share)
         {
             if (block)
             {
@@ -1208,7 +1208,7 @@ namespace Zio.FileSystems
             node.ExitShared();
         }
 
-        private void EnterExclusive(FileSystemNode node, PathInfo context, bool block)
+        private void EnterExclusive(FileSystemNode node, UPath context, bool block)
         {
             if (block)
             {
@@ -1226,7 +1226,7 @@ namespace Zio.FileSystems
             node.ExitExclusive();
         }
 
-        private void TryLockExclusive(FileSystemNode node, ListFileSystemNodes locks, bool recursive, PathInfo context)
+        private void TryLockExclusive(FileSystemNode node, ListFileSystemNodes locks, bool recursive, UPath context)
         {
             if (locks == null) throw new ArgumentNullException(nameof(locks));
 
@@ -1619,12 +1619,12 @@ namespace Zio.FileSystems
 
             internal bool IsLocked => _sharedCount != 0;
 
-            public void EnterShared(PathInfo context)
+            public void EnterShared(UPath context)
             {
                 EnterShared(FileShare.Read, context);
             }
 
-            public void EnterShared(FileShare share, PathInfo context)
+            public void EnterShared(FileShare share, UPath context)
             {
                 Monitor.Enter(this);
                 try

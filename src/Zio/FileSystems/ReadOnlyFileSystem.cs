@@ -28,19 +28,19 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CreateDirectoryImpl(PathInfo path)
+        protected override void CreateDirectoryImpl(UPath path)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
+        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
@@ -50,31 +50,31 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite)
+        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
+        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void DeleteFileImpl(PathInfo path)
+        protected override void DeleteFileImpl(UPath path)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             if (mode != FileMode.Open)
             {
@@ -93,32 +93,32 @@ namespace Zio.FileSystems
         // Metadata API
         // ----------------------------------------------
 
-        protected override FileAttributes GetAttributesImpl(PathInfo path)
+        protected override FileAttributes GetAttributesImpl(UPath path)
         {
             // All paths are readonly
             return base.GetAttributesImpl(path) | FileAttributes.ReadOnly;
         }
 
         /// <inheritdoc />
-        protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
+        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
+        protected override void SetCreationTimeImpl(UPath path, DateTime time)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
@@ -128,14 +128,14 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override PathInfo ConvertPathToDelegate(PathInfo path)
+        protected override UPath ConvertPathToDelegate(UPath path)
         {
             // A readonly filesystem doesn't change the path to the delegated filesystem
             return path;
         }
 
         /// <inheritdoc />
-        protected override PathInfo ConvertPathFromDelegate(PathInfo path)
+        protected override UPath ConvertPathFromDelegate(UPath path)
         {
             // A readonly filesystem doesn't change the path from the delegated filesystem
             return path;

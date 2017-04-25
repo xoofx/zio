@@ -16,7 +16,7 @@ namespace Zio.FileSystems
     public class PhysicalFileSystem : FileSystemBase
     {
         private const string DrivePrefixOnWindows = "/drive/";
-        private static readonly PathInfo PathDrivePrefixOnWindows = new PathInfo(DrivePrefixOnWindows);
+        private static readonly UPath PathDrivePrefixOnWindows = new UPath(DrivePrefixOnWindows);
 #if NETSTANDARD
         private static readonly bool IsOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 #else
@@ -42,7 +42,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CreateDirectoryImpl(PathInfo path)
+        protected override void CreateDirectoryImpl(UPath path)
         {
             if (IsWithinSpecialDirectory(path))
             {
@@ -53,13 +53,13 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override bool DirectoryExistsImpl(PathInfo path)
+        protected override bool DirectoryExistsImpl(UPath path)
         {
             return IsWithinSpecialDirectory(path) ? SpecialDirectoryExists(path) : Directory.Exists(ConvertToSystem(path));
         }
 
         /// <inheritdoc />
-        protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             if (IsOnWindows)
             {
@@ -97,7 +97,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
+        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             if (IsWithinSpecialDirectory(path))
             {
@@ -116,7 +116,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite)
+        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             if (IsWithinSpecialDirectory(srcPath))
             {
@@ -131,7 +131,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
+        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             if (IsWithinSpecialDirectory(srcPath))
             {
@@ -157,7 +157,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override long GetFileLengthImpl(PathInfo path)
+        protected override long GetFileLengthImpl(UPath path)
         {
             if (IsWithinSpecialDirectory(path))
             {
@@ -167,13 +167,13 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override bool FileExistsImpl(PathInfo path)
+        protected override bool FileExistsImpl(UPath path)
         {
             return !IsWithinSpecialDirectory(path) && File.Exists(ConvertToSystem(path));
         }
 
         /// <inheritdoc />
-        protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
         {
             if (IsWithinSpecialDirectory(srcPath))
             {
@@ -187,7 +187,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void DeleteFileImpl(PathInfo path)
+        protected override void DeleteFileImpl(UPath path)
         {
             if (IsWithinSpecialDirectory(path))
             {
@@ -197,7 +197,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access,
+        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access,
             FileShare share = FileShare.None)
         {
             if (IsWithinSpecialDirectory(path))
@@ -208,7 +208,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override FileAttributes GetAttributesImpl(PathInfo path)
+        protected override FileAttributes GetAttributesImpl(UPath path)
         {
             // Handle special folders to return valid FileAttributes
             if (IsWithinSpecialDirectory(path))
@@ -219,7 +219,7 @@ namespace Zio.FileSystems
                 }
 
                 // The path / and /drive are readonly
-                if (path == PathDrivePrefixOnWindows || path == PathInfo.Root)
+                if (path == PathDrivePrefixOnWindows || path == UPath.Root)
                 {
                     return FileAttributes.Directory | FileAttributes.System | FileAttributes.ReadOnly;
                 }
@@ -234,7 +234,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
+        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             // Handle special folders
             if (IsWithinSpecialDirectory(path))
@@ -250,7 +250,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override DateTime GetCreationTimeImpl(PathInfo path)
+        protected override DateTime GetCreationTimeImpl(UPath path)
         {
             // Handle special folders
 
@@ -262,7 +262,7 @@ namespace Zio.FileSystems
                 }
 
                 // For /drive and /, get the oldest CreationTime of all folders (approx)
-                if (path == PathDrivePrefixOnWindows || path == PathInfo.Root)
+                if (path == PathDrivePrefixOnWindows || path == UPath.Root)
                 {
                     var creationTime = DateTime.MaxValue;
 
@@ -282,7 +282,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
+        protected override void SetCreationTimeImpl(UPath path, DateTime time)
         {
             // Handle special folders
             if (IsWithinSpecialDirectory(path))
@@ -298,7 +298,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastAccessTimeImpl(PathInfo path)
+        protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
             // Handle special folders to return valid LastAccessTime
             if (IsWithinSpecialDirectory(path))
@@ -309,7 +309,7 @@ namespace Zio.FileSystems
                 }
 
                 // For /drive and /, get the oldest CreationTime of all folders (approx)
-                if (path == PathDrivePrefixOnWindows || path == PathInfo.Root)
+                if (path == PathDrivePrefixOnWindows || path == UPath.Root)
                 {
                     var lastAccessTime = DateTime.MaxValue;
 
@@ -331,7 +331,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             // Handle special folders
             if (IsWithinSpecialDirectory(path))
@@ -346,7 +346,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastWriteTimeImpl(PathInfo path)
+        protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
             // Handle special folders to return valid LastAccessTime
             if (IsWithinSpecialDirectory(path))
@@ -357,7 +357,7 @@ namespace Zio.FileSystems
                 }
 
                 // For /drive and /, get the oldest CreationTime of all folders (approx)
-                if (path == PathDrivePrefixOnWindows || path == PathInfo.Root)
+                if (path == PathDrivePrefixOnWindows || path == UPath.Root)
                 {
                     var lastWriteTime = DateTime.MaxValue;
 
@@ -379,7 +379,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             // Handle special folders
             if (IsWithinSpecialDirectory(path))
@@ -399,7 +399,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override IEnumerable<PathInfo> EnumeratePathsImpl(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             // Special case for Windows as we need to provide list for:
             // - the root folder / (which should just return the /drive folder)
@@ -417,7 +417,7 @@ namespace Zio.FileSystems
                     var searchForDirectory = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.Directory;
 
                     // Only sub folder "/drive/" on root folder /
-                    if (path == PathInfo.Root)
+                    if (path == UPath.Root)
                     {
                         if (searchForDirectory)
                         {
@@ -438,7 +438,7 @@ namespace Zio.FileSystems
                     // When listing for /drive, return the list of drives available
                     if (path == PathDrivePrefixOnWindows)
                     {
-                        var pathDrives = new List<PathInfo>();
+                        var pathDrives = new List<UPath>();
                         foreach (var drive in DriveInfo.GetDrives())
                         {
                             if (drive.Name.Length < 2 || drive.Name[1] != ':')
@@ -497,7 +497,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override string ConvertToSystemImpl(PathInfo path)
+        protected override string ConvertToSystemImpl(UPath path)
         {
             var absolutePath = path.FullName;
 
@@ -511,13 +511,13 @@ namespace Zio.FileSystems
                 var driveLetter = char.ToUpper(absolutePath[DrivePrefixOnWindows.Length]);
                 if (absolutePath.Length != DrivePrefixOnWindows.Length + 1 &&
                     absolutePath[DrivePrefixOnWindows.Length + 1] !=
-                    PathInfo.DirectorySeparator)
+                    UPath.DirectorySeparator)
                     throw new ArgumentException($"The driver letter `/{DrivePrefixOnWindows}{absolutePath[DrivePrefixOnWindows.Length]}` must be followed by a `/` or nothing in the path -> `{absolutePath}`");
 
-                var builder = PathInfo.GetSharedStringBuilder();
+                var builder = UPath.GetSharedStringBuilder();
                 builder.Append(driveLetter).Append(":\\");
                 if (absolutePath.Length > DrivePrefixOnWindows.Length + 1)
-                    builder.Append(absolutePath.Replace(PathInfo.DirectorySeparator, '\\').Substring(DrivePrefixOnWindows.Length + 2));
+                    builder.Append(absolutePath.Replace(UPath.DirectorySeparator, '\\').Substring(DrivePrefixOnWindows.Length + 2));
 
                 var result = builder.ToString();
                 builder.Length = 0;
@@ -527,7 +527,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override PathInfo ConvertFromSystemImpl(string systemPath)
+        protected override UPath ConvertFromSystemImpl(string systemPath)
         {
             if (IsOnWindows)
             {
@@ -540,19 +540,19 @@ namespace Zio.FileSystems
                 if (driveIndex != 1)
                     throw new ArgumentException($"Expecting a drive for the path `{absolutePath}`");
 
-                var builder = PathInfo.GetSharedStringBuilder();
+                var builder = UPath.GetSharedStringBuilder();
                 builder.Append(DrivePrefixOnWindows).Append(char.ToLowerInvariant(absolutePath[0])).Append('/');
                 if (absolutePath.Length > 2)
                     builder.Append(absolutePath.Substring(2));
 
                 var result = builder.ToString();
                 builder.Length = 0;
-                return new PathInfo(result);
+                return new UPath(result);
             }
             return systemPath;
         }
 
-        private static bool IsWithinSpecialDirectory(PathInfo path)
+        private static bool IsWithinSpecialDirectory(UPath path)
         {
             if (!IsOnWindows)
             {
@@ -561,22 +561,22 @@ namespace Zio.FileSystems
 
             var parentDirectory = path.GetDirectory();
             return path == PathDrivePrefixOnWindows ||
-                   path == PathInfo.Root ||
+                   path == UPath.Root ||
                    parentDirectory == PathDrivePrefixOnWindows ||
-                   parentDirectory == PathInfo.Root;
+                   parentDirectory == UPath.Root;
         }
 
-        private static bool SpecialDirectoryExists(PathInfo path)
+        private static bool SpecialDirectoryExists(UPath path)
         {
             // /drive or / can be read
-            if (path == PathDrivePrefixOnWindows || path == PathInfo.Root)
+            if (path == PathDrivePrefixOnWindows || path == UPath.Root)
             {
                 return true;
             }
 
             // If /xxx, invalid (parent folder is /)
             var parentDirectory = path.GetDirectory();
-            if (parentDirectory == PathInfo.Root)
+            if (parentDirectory == UPath.Root)
             {
                 return false;
             }

@@ -28,22 +28,22 @@ namespace Zio.FileSystems
         // Directory API
         // ----------------------------------------------
 
-        protected override void CreateDirectoryImpl(PathInfo path)
+        protected override void CreateDirectoryImpl(UPath path)
         {
             _zipArchive.CreateEntry(SafeDirectory(path));
         }
 
-        protected override bool DirectoryExistsImpl(PathInfo path)
+        protected override bool DirectoryExistsImpl(UPath path)
         {
             return _zipArchive.GetEntry(SafeDirectory(path)) != null;
         }
 
-        protected override void MoveDirectoryImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             throw new NotImplementedException();
         }
 
-        protected override void DeleteDirectoryImpl(PathInfo path, bool isRecursive)
+        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             var entry = _zipArchive.GetEntry(SafeDirectory(path));
             entry?.Delete();
@@ -53,17 +53,17 @@ namespace Zio.FileSystems
         // File API
         // ----------------------------------------------
 
-        protected override void CopyFileImpl(PathInfo srcPath, PathInfo destPath, bool overwrite)
+        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             throw new NotImplementedException();
         }
 
-        protected override void ReplaceFileImpl(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors)
+        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             throw new NotImplementedException();
         }
 
-        protected override long GetFileLengthImpl(PathInfo path)
+        protected override long GetFileLengthImpl(UPath path)
         {
             var entry = _zipArchive.GetEntry(path.FullName);
             if (entry == null)
@@ -73,28 +73,28 @@ namespace Zio.FileSystems
             return entry.Length;
         }
 
-        protected override bool FileExistsImpl(PathInfo path)
+        protected override bool FileExistsImpl(UPath path)
         {
             return _zipArchive.GetEntry(path.FullName) != null;
         }
 
-        protected override void MoveFileImpl(PathInfo srcPath, PathInfo destPath)
+        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
         {
             throw new NotImplementedException();
         }
 
-        protected override void DeleteFileImpl(PathInfo path)
+        protected override void DeleteFileImpl(UPath path)
         {
             var entry = _zipArchive.GetEntry(path.FullName);
             entry?.Delete();
         }
 
-        private Stream CreateFile(PathInfo path)
+        private Stream CreateFile(UPath path)
         {
             return _zipArchive.CreateEntry(path.FullName).Open();
         }
 
-        protected override Stream OpenFileImpl(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             var abspath = path.FullName;
             var entry = _zipArchive.GetEntry(abspath);
@@ -145,37 +145,37 @@ namespace Zio.FileSystems
         // Metadata API
         // ----------------------------------------------
 
-        protected override FileAttributes GetAttributesImpl(PathInfo path)
+        protected override FileAttributes GetAttributesImpl(UPath path)
         {
             throw new NotImplementedException();
         }
 
-        protected override void SetAttributesImpl(PathInfo path, FileAttributes attributes)
+        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             throw new NotImplementedException();
         }
 
-        protected override DateTime GetCreationTimeImpl(PathInfo path)
+        protected override DateTime GetCreationTimeImpl(UPath path)
         {
             throw new NotImplementedException();
         }
 
-        protected override void SetCreationTimeImpl(PathInfo path, DateTime time)
+        protected override void SetCreationTimeImpl(UPath path, DateTime time)
         {
             throw new NotImplementedException();
         }
 
-        protected override DateTime GetLastAccessTimeImpl(PathInfo path)
+        protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
             throw new NotImplementedException();
         }
 
-        protected override void SetLastAccessTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             throw new NotImplementedException();
         }
 
-        protected override DateTime GetLastWriteTimeImpl(PathInfo path)
+        protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
             var entry = _zipArchive.GetEntry(path.FullName);
             if (entry == null)
@@ -185,7 +185,7 @@ namespace Zio.FileSystems
             return entry.LastWriteTime.DateTime;
         }
 
-        protected override void SetLastWriteTimeImpl(PathInfo path, DateTime time)
+        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             var entry = _zipArchive.GetEntry(path.FullName);
             if (entry == null)
@@ -199,7 +199,7 @@ namespace Zio.FileSystems
         // Search API
         // ----------------------------------------------
 
-        protected override IEnumerable<PathInfo> EnumeratePathsImpl(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             var search = SearchPattern.Parse(ref path, ref searchPattern);
             switch (searchTarget)
@@ -207,7 +207,7 @@ namespace Zio.FileSystems
                 case SearchTarget.File:
                     foreach (var entry in _zipArchive.Entries)
                     {
-                        var pathInfo = new PathInfo(entry.FullName);
+                        var pathInfo = new UPath(entry.FullName);
                         if (search.Match(pathInfo))
                         {
                             yield return pathInfo;
@@ -223,17 +223,17 @@ namespace Zio.FileSystems
         // Path API
         // ----------------------------------------------
 
-        protected override string ConvertToSystemImpl(PathInfo path)
+        protected override string ConvertToSystemImpl(UPath path)
         {
             return path.FullName;
         }
 
-        protected override PathInfo ConvertFromSystemImpl(string systemPath)
+        protected override UPath ConvertFromSystemImpl(string systemPath)
         {
-            return new PathInfo(systemPath).AssertAbsolute();
+            return new UPath(systemPath).AssertAbsolute();
         }
 
-        private static string SafeDirectory(PathInfo path)
+        private static string SafeDirectory(UPath path)
         {
             return path.ToRelative().FullName + "/";
         }

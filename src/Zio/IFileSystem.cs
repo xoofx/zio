@@ -17,64 +17,64 @@ namespace Zio
         // Directory API
         // ----------------------------------------------
 
-        void CreateDirectory(PathInfo path);
+        void CreateDirectory(UPath path);
 
-        bool DirectoryExists(PathInfo path);
+        bool DirectoryExists(UPath path);
 
-        void MoveDirectory(PathInfo srcPath, PathInfo destPath);
+        void MoveDirectory(UPath srcPath, UPath destPath);
 
-        void DeleteDirectory(PathInfo path, bool isRecursive);
+        void DeleteDirectory(UPath path, bool isRecursive);
 
         // ----------------------------------------------
         // File API
         // ----------------------------------------------
 
-        void CopyFile(PathInfo srcPath, PathInfo destPath, bool overwrite);
+        void CopyFile(UPath srcPath, UPath destPath, bool overwrite);
 
-        void ReplaceFile(PathInfo srcPath, PathInfo destPath, PathInfo destBackupPath, bool ignoreMetadataErrors);
+        void ReplaceFile(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors);
 
-        long GetFileLength(PathInfo path);
+        long GetFileLength(UPath path);
 
-        bool FileExists(PathInfo path);
+        bool FileExists(UPath path);
 
-        void MoveFile(PathInfo srcPath, PathInfo destPath);
+        void MoveFile(UPath srcPath, UPath destPath);
 
-        void DeleteFile(PathInfo path);
+        void DeleteFile(UPath path);
 
-        Stream OpenFile(PathInfo path, FileMode mode, FileAccess access, FileShare share = FileShare.None);
+        Stream OpenFile(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None);
 
         // ----------------------------------------------
         // Metadata API
         // ----------------------------------------------
 
-        FileAttributes GetAttributes(PathInfo path);
+        FileAttributes GetAttributes(UPath path);
 
-        void SetAttributes(PathInfo path, FileAttributes attributes);
+        void SetAttributes(UPath path, FileAttributes attributes);
 
-        DateTime GetCreationTime(PathInfo path);
+        DateTime GetCreationTime(UPath path);
 
-        void SetCreationTime(PathInfo path, DateTime time);
+        void SetCreationTime(UPath path, DateTime time);
 
-        DateTime GetLastAccessTime(PathInfo path);
+        DateTime GetLastAccessTime(UPath path);
 
-        void SetLastAccessTime(PathInfo path, DateTime time);
+        void SetLastAccessTime(UPath path, DateTime time);
 
-        DateTime GetLastWriteTime(PathInfo path);
+        DateTime GetLastWriteTime(UPath path);
 
-        void SetLastWriteTime(PathInfo path, DateTime time);
+        void SetLastWriteTime(UPath path, DateTime time);
 
         // ----------------------------------------------
         // Search API
         // ----------------------------------------------
 
-        IEnumerable<PathInfo> EnumeratePaths(PathInfo path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
+        IEnumerable<UPath> EnumeratePaths(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
 
         // ----------------------------------------------
         // Path API
         // ----------------------------------------------
 
-        string ConvertToSystem(PathInfo path);
+        string ConvertToSystem(UPath path);
 
-        PathInfo ConvertFromSystem(string systemPath);
+        UPath ConvertFromSystem(string systemPath);
     }
 }
