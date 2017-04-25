@@ -44,6 +44,24 @@ namespace Zio
             return lastIndex == 0 ? PathInfo.Root : PathInfo.Empty;
         }
 
+        public static void ExtractFirstDirectory(this PathInfo path, out string firstDirectory, out PathInfo remainingPath)
+        {
+            path.AssertNotNull();
+            remainingPath = new PathInfo();
+
+            var fullname = path.FullName;
+            var index = fullname.IndexOf(PathInfo.DirectorySeparator, 1);
+            if (index < 0)
+            {
+                firstDirectory = fullname.Substring(1, fullname.Length - 1);
+            }
+            else
+            {
+                firstDirectory = fullname.Substring(1, index);
+                remainingPath = fullname.Substring(index);
+            }
+        }
+
         public static IEnumerable<string> Split(this PathInfo path)
         {
             path.AssertNotNull();
