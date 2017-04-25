@@ -94,9 +94,9 @@ namespace Zio.FileSystems
                 {
                     AssertDirectory(result.Node, path);
 
-                    if ((result.Node.Attributes & FileAttributes.ReadOnly) != 0)
+                    if (result.Node.IsReadOnly)
                     {
-                        throw new IOException($"The path `{path}` is readonly and cannot be deleted");
+                        throw new IOException($"Access to the path `{path}` is denied");
                     }
 
                     using (var locks = new ListFileSystemNodes(this))
@@ -108,7 +108,7 @@ namespace Zio.FileSystems
                         {
                             var node = lockFile.Value;
 
-                            if ((node.Attributes & FileAttributes.ReadOnly) != 0)
+                            if (node.IsReadOnly)
                             {
                                 throw new UnauthorizedAccessException($"Access to path `{path}` is denied.");
                             }
@@ -191,6 +191,10 @@ namespace Zio.FileSystems
                         }
                         else if (overwrite)
                         {
+                            if (destNode.IsReadOnly)
+                            {
+                                throw new UnauthorizedAccessException($"Access to path `{destPath}` is denied.");
+                            }
                             var destFileNode = (FileNode)destNode;
                             destFileNode.Content.CopyFrom(((FileNode)srcNode).Content);
                         }
@@ -373,7 +377,7 @@ namespace Zio.FileSystems
                         // If the file to be deleted does not exist, no exception is thrown.
                         return;
                     }
-                    if (srcNode is DirectoryNode || (srcNode.Attributes & FileAttributes.ReadOnly) != 0)
+                    if (srcNode is DirectoryNode || srcNode.IsReadOnly)
                     {
                         throw new UnauthorizedAccessException($"Access to path `{path}` is denied.");
                     }
@@ -414,7 +418,7 @@ namespace Zio.FileSystems
                     throw new DirectoryNotFoundException($"The directory from the path `{path}` was not found");
                 }
 
-                if (result.Node is DirectoryNode)
+                if (result.Node is DirectoryNode || (isWriting && result.Node != null && result.Node.IsReadOnly))
                 {
                     ExitFindNode(result);
                     throw new UnauthorizedAccessException($"Access to the path `{path}` is denied.");
@@ -1279,6 +1283,8 @@ namespace Zio.FileSystems
 
             public bool IsDisposed { get; set; }
 
+            public bool IsReadOnly => (Attributes & FileAttributes.ReadOnly) != 0;
+
             public void DetachFromParent(string name)
             {
                 Debug.Assert(IsLocked);
@@ -1305,14 +1311,6 @@ namespace Zio.FileSystems
                 Debug.Assert(IsLocked);
                 // In order to issue a Dispose, we need to have control on this node
                 IsDisposed = true;
-            }
-
-            private void CheckAlive(PathInfo context)
-            {
-                if (IsDisposed)
-                {
-                    throw new InvalidOperationException($"The path `{context}` does not exist anymore");
-                }
             }
         }
 
@@ -1344,7 +1342,6 @@ namespace Zio.FileSystems
 
             public DirectoryNode() : base(null, null)
             {
-                IsRoot = true;
                 _children = new Dictionary<string, FileSystemNode>();
             }
 
@@ -1353,10 +1350,6 @@ namespace Zio.FileSystems
                 Debug.Assert(parent != null);
                 _children = new Dictionary<string, FileSystemNode>();
             }
-
-            public bool IsRoot { get; }
-
-            public bool Exists => IsRoot || Parent != null;
 
             public Dictionary<string, FileSystemNode> Children
             {
@@ -1438,6 +1431,14 @@ namespace Zio.FileSystems
                 }
             }
 
+            public void SetPosition(long position)
+            {
+                lock (this)
+                {
+                    _stream.Position = position;
+                }
+            }
+
             public long Length
             {
                 get
@@ -1464,14 +1465,14 @@ namespace Zio.FileSystems
             private readonly bool _canRead;
             private readonly bool _canWrite;
             private readonly bool _isExclusive;
-            private bool _isDisposed;
+            private int _isDisposed;
             private long _position;
 
             public MemoryFileStream(MemoryFileSystem fs, FileNode fileNode, bool canWrite, bool isExclusive)
             {
-                if (fileNode == null) throw new ArgumentNullException(nameof(fileNode));
-                Debug.Assert(fileNode.IsLocked);
                 Debug.Assert(fs != null);
+                Debug.Assert(fileNode != null);
+                Debug.Assert(fileNode.IsLocked);
                 _fs = fs;
                 _fileNode = fileNode;
                 _canWrite = canWrite;
@@ -1480,24 +1481,38 @@ namespace Zio.FileSystems
                 _position = 0;
             }
 
-            public override bool CanRead => _canRead;
+            public override bool CanRead => _isDisposed == 0 && _canRead;
 
-            public override bool CanSeek => true;
+            public override bool CanSeek => _isDisposed == 0;
 
-            public override bool CanWrite => _canWrite;
+            public override bool CanWrite => _isDisposed == 0 && _canWrite;
 
-            public override long Length => _fileNode.Content.Length;
+            public override long Length
+            {
+                get
+                {
+                    CheckNotDisposed();
+                    return _fileNode.Content.Length;
+                }
+            }
 
             public override long Position
             {
-                get => _position;
+                get
+                {
+                    CheckNotDisposed();
+                    return _position;
+                }
+
                 set
                 {
+                    CheckNotDisposed();
                     if (value < 0)
                     {
                         throw new ArgumentOutOfRangeException("The position cannot be negative");
                     }
                     _position = value;
+                    _fileNode.Content.SetPosition(_position);
                 }
             }
 
@@ -1508,11 +1523,10 @@ namespace Zio.FileSystems
 
             protected override void Dispose(bool disposing)
             {
-                if (_isDisposed)
+                if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
                 {
-                    throw new ObjectDisposedException("The stream is already disposed");
+                    return;
                 }
-                _isDisposed = true;
 
                 if (_isExclusive)
                 {
@@ -1528,10 +1542,12 @@ namespace Zio.FileSystems
 
             public override void Flush()
             {
+                CheckNotDisposed();
             }
 
             public override int Read(byte[] buffer, int offset, int count)
             {
+                CheckNotDisposed();
                 int readCount = _fileNode.Content.Read(_position, buffer, offset, count);
                 _position += readCount;
                 _fileNode.LastAccessTime = DateTime.Now;
@@ -1540,6 +1556,7 @@ namespace Zio.FileSystems
 
             public override long Seek(long offset, SeekOrigin origin)
             {
+                CheckNotDisposed();
                 var newPosition = offset;
 
                 switch (origin)
@@ -1555,7 +1572,7 @@ namespace Zio.FileSystems
 
                 if (newPosition < 0)
                 {
-                    throw new ArgumentException($"Seeking to position `{newPosition}` is attempted before the beginning of the stream", nameof(offset));
+                    throw new IOException("An attempt was made to move the file pointer before the beginning of the file");
                 }
 
                 return _position = newPosition;
@@ -1563,6 +1580,7 @@ namespace Zio.FileSystems
 
             public override void SetLength(long value)
             {
+                CheckNotDisposed();
                 _fileNode.Content.Length = value;
 
                 var time = DateTime.Now;
@@ -1572,12 +1590,22 @@ namespace Zio.FileSystems
 
             public override void Write(byte[] buffer, int offset, int count)
             {
+                CheckNotDisposed();
                 _fileNode.Content.Write(_position, buffer, offset, count);
                 _position += count;
 
                 var time = DateTime.Now;
                 _fileNode.LastAccessTime = time;
                 _fileNode.LastWriteTime = time;
+            }
+
+
+            private void CheckNotDisposed()
+            {
+                if (_isDisposed > 0)
+                {
+                    throw new ObjectDisposedException("Cannot access a closed file.");
+                }
             }
         }
 
@@ -1668,11 +1696,6 @@ namespace Zio.FileSystems
                 {
                     Monitor.Exit(this);
                 }
-            }
-
-            public bool TryEnterShared()
-            {
-                return TryEnterShared(FileShare.Read);
             }
 
             public bool TryEnterShared(FileShare share)

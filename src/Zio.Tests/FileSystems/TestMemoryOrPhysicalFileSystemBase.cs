@@ -174,9 +174,11 @@ namespace Zio.Tests.FileSystems
             content = fs.ReadAllText("/titi.bak.txt");
             Assert.Equal(originalContent, content);
 
-            // SetAttributes
+            // Check File ReadOnly
             fs.SetAttributes("/titi.txt", FileAttributes.ReadOnly);
             Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteFile("/titi.txt"));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.CopyFile("/titi.bak.txt", "/titi.txt", true));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.OpenFile("/titi.txt", FileMode.Open, FileAccess.ReadWrite));
             fs.SetAttributes("/titi.txt", FileAttributes.Normal);
 
             // Delete File
@@ -651,6 +653,79 @@ namespace Zio.Tests.FileSystems
             fs.WriteAllText("/tata.txt", "content2");
 
             Assert.Throws<IOException>(() => fs.ReplaceFile("/toto.txt", "/tata.txt", "/toto.txt", true));
+        }
+
+        [Fact]
+        public void TestStreamSeek()
+        {
+            //                            0123456
+            fs.WriteAllText("/toto.txt", "content", Encoding.ASCII);
+
+            using (var stream = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read))
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+                Assert.Equal((byte) 'c', stream.ReadByte());
+                Assert.Equal((byte) 'o', stream.ReadByte());
+
+                stream.Seek(3, SeekOrigin.Begin);
+                Assert.Equal((byte) 't', stream.ReadByte());
+
+                stream.Seek(1, SeekOrigin.Current);
+                Assert.Equal((byte) 'n', stream.ReadByte());
+
+                stream.Seek(-3, SeekOrigin.End);
+                Assert.Equal((byte) 'e', stream.ReadByte());
+
+                Assert.Throws<IOException>(() => stream.Seek(-1, SeekOrigin.Begin));
+                Assert.Throws<ArgumentOutOfRangeException>(() => stream.Position = -1);
+                stream.Position = 0;
+                Assert.Equal((byte) 'c', stream.ReadByte());
+            }
+        }
+
+        [Fact]
+        public void TestDispose()
+        {
+            fs.WriteAllText("/toto.txt", "content");
+            var stream = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.ReadWrite);
+            stream.Dispose();
+            stream.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => stream.ReadByte());
+            Assert.Throws<ObjectDisposedException>(() => stream.WriteByte(1));
+            Assert.Throws<ObjectDisposedException>(() => stream.Position);
+            Assert.False(stream.CanRead);
+            Assert.False(stream.CanSeek);
+            Assert.False(stream.CanWrite);
+            Assert.Throws<ObjectDisposedException>(() => stream.Flush());
+            Assert.Throws<ObjectDisposedException>(() => stream.Length);
+            Assert.Throws<ObjectDisposedException>(() => stream.SetLength(0));
+            Assert.Throws<ObjectDisposedException>(() => stream.Seek(0, SeekOrigin.Begin));
+        }
+
+        [Fact]
+        public void TestDeleteDirectoryNonEmpty()
+        {
+            fs.CreateDirectory("/dir/dir1");
+            Assert.Throws<IOException>(() => fs.DeleteDirectory("/dir", false));
+        }
+
+        [Fact]
+        public void TestInvalidCharacter()
+        {
+            Assert.Throws<NotSupportedException>(() => fs.CreateDirectory("/toto/ta:ta"));
+        }
+
+        [Fact]
+        public void TestFileAttributes()
+        {
+            fs.WriteAllText("/toto.txt", "content");
+            fs.SetAttributes("/toto.txt", 0);
+            Assert.Equal(FileAttributes.Normal, fs.GetAttributes("/toto.txt"));
+
+            fs.CreateDirectory("/dir");
+            fs.SetAttributes("/dir", 0);
+            Assert.Equal(FileAttributes.Directory, fs.GetAttributes("/dir"));
         }
     }
 }
