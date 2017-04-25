@@ -13,8 +13,10 @@ namespace Zio.FileSystems
     /// <summary>
     /// Provides a FileSystem on top of a <see cref="ZipArchive"/>.
     /// </summary>
-    public class ZipFileSystem : FileSystemBase
+    internal class ZipFileSystem : FileSystemBase
     {
+        // TODO: The implementation is not finished
+
         private readonly ZipArchive _zipArchive;
 
         public ZipFileSystem(ZipArchive zipArchive)
