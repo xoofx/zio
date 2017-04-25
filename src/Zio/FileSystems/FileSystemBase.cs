@@ -12,6 +12,10 @@ namespace Zio.FileSystems
     /// </summary>
     public abstract class FileSystemBase : IFileSystem
     {
+        // For GetCreationTime...etc. If the file described in a path parameter does not exist
+        // the default file time is 12:00 midnight, January 1, 1601 A.D. (C.E.) Coordinated Universal Time (UTC), adjusted to local time.
+        public static readonly DateTime DefaultFileTime = new DateTime(1601, 01, 01, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
+
         // ----------------------------------------------
         // Directory API
         // ----------------------------------------------
