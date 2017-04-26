@@ -4,6 +4,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using Xunit;
 using Zio.FileSystems;
 
@@ -28,6 +30,7 @@ namespace Zio.Tests.FileSystems
             fs.Mount("/test", memfs);
             Assert.True(fs.IsMounted("/test"));
             Assert.Throws<ArgumentException>(() => fs.Mount("/test", memfs));
+            Assert.Throws<ArgumentException>(() => fs.Mount("/test", fs));
 
             Assert.Throws<ArgumentNullException>(() => fs.Unmount(null));
             Assert.Throws<ArgumentException>(() => fs.Unmount("test"));
@@ -53,6 +56,143 @@ namespace Zio.Tests.FileSystems
             fs.Unmount("/test2");
 
             Assert.Equal(0, fs.GetMounts().Count);
+        }
+
+
+        [Fact]
+        public void CreateDirectoryFail()
+        {
+            var mountfs = new MountFileSystem();
+            Assert.Throws<UnauthorizedAccessException>(() => mountfs.CreateDirectory("/test"));
+        }
+
+        [Fact]
+        public void MoveDirectoryFail()
+        {
+            var mountfs = new MountFileSystem();
+            mountfs.Mount("/dir1", new MemoryFileSystem());
+            mountfs.Mount("/dir2", new MemoryFileSystem());
+
+            Assert.Throws<UnauthorizedAccessException>(() => mountfs.MoveDirectory("/dir1", "/dir2/yyy"));
+            Assert.Throws<UnauthorizedAccessException>(() => mountfs.MoveDirectory("/dir1/xxx", "/dir2"));
+            Assert.Throws<NotSupportedException>(() => mountfs.MoveDirectory("/dir1/xxx", "/dir2/yyy"));
+        }
+
+        [Fact]
+        public void DeleteDirectoryFail()
+        {
+            var mountfs = new MountFileSystem();
+            mountfs.Mount("/dir1", new MemoryFileSystem());
+
+            Assert.Throws<UnauthorizedAccessException>(() => mountfs.DeleteDirectory("/dir1", true));
+            Assert.Throws<UnauthorizedAccessException>(() => mountfs.DeleteDirectory("/dir1", false));
+            Assert.Throws<DirectoryNotFoundException>(() => mountfs.DeleteDirectory("/dir2", false));
+        }
+
+        [Fact]
+        public void CopyFileFail()
+        {
+            var mountfs = new MountFileSystem();
+            mountfs.Mount("/dir1", new MemoryFileSystem());
+            Assert.Throws<FileNotFoundException>(() => mountfs.CopyFile("/test", "/test2", true));
+            Assert.Throws<DirectoryNotFoundException>(() => mountfs.CopyFile("/dir1/test.txt", "/test2", true));
+        }
+
+        [Fact]
+        public void ReplaceFileFail()
+        {
+            var mountfs = new MountFileSystem();
+            var memfs1 = new MemoryFileSystem();
+            memfs1.WriteAllText("/file.txt", "content1");
+
+            var memfs2 = new MemoryFileSystem();
+            memfs2.WriteAllText("/file2.txt", "content1");
+
+            mountfs.Mount("/dir1", memfs1);
+            mountfs.Mount("/dir2", memfs2);
+            Assert.Throws<FileNotFoundException>(() => mountfs.ReplaceFile("/dir1/file.txt", "/dir1/to.txt", "/dir1/to.bak", true));
+            Assert.Throws<FileNotFoundException>(() => mountfs.ReplaceFile("/dir1/to.txt", "/dir1/file.txt", "/dir1/to.bak", true));
+            Assert.Throws<NotSupportedException>(() => mountfs.ReplaceFile("/dir1/file.txt", "/dir2/file2.txt", null, true));
+        }
+
+        [Fact]
+        public void GetFileLengthFail()
+        {
+            var mountfs = new MountFileSystem();
+            Assert.Throws<FileNotFoundException>(() => mountfs.GetFileLength("/toto.txt"));
+        }
+
+        [Fact]
+        public void MoveFileFail()
+        {
+            var mountfs = new MountFileSystem();
+            var memfs1 = new MemoryFileSystem();
+            memfs1.WriteAllText("/file.txt", "content1");
+
+            var memfs2 = new MemoryFileSystem();
+            memfs2.WriteAllText("/file2.txt", "content1");
+
+            mountfs.Mount("/dir1", memfs1);
+            mountfs.Mount("/dir2", memfs2);
+            Assert.Throws<DirectoryNotFoundException>(() => mountfs.MoveFile("/dir1/file.txt", "/xxx/yyy.txt"));
+            Assert.Throws<FileNotFoundException>(() => mountfs.MoveFile("/dir1/xxx", "/dir1/file1.txt"));
+            Assert.Throws<FileNotFoundException>(() => mountfs.MoveFile("/xxx", "/dir1/file1.txt"));
+        }
+
+
+        [Fact]
+        public void OpenFileFail()
+        {
+            var mountfs = new MountFileSystem();
+            Assert.Throws<FileNotFoundException>(() => mountfs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read));
+            Assert.Throws<UnauthorizedAccessException>(() => mountfs.OpenFile("/toto.txt", FileMode.Create, FileAccess.Read));
+        }
+
+        [Fact]
+        public void AttributesFail()
+        {
+            var mountfs = new MountFileSystem();
+            Assert.Throws<FileNotFoundException>(() => mountfs.GetAttributes("/toto.txt"));
+            Assert.Throws<FileNotFoundException>(() => mountfs.SetAttributes("/toto.txt", FileAttributes.Normal));
+        }
+
+        [Fact]
+        public void TimesFail()
+        {
+            var mountfs = new MountFileSystem();
+            Assert.Throws<FileNotFoundException>(() => mountfs.SetCreationTime("/toto.txt", DateTime.Now));
+            Assert.Throws<FileNotFoundException>(() => mountfs.SetLastAccessTime("/toto.txt", DateTime.Now));
+            Assert.Throws<FileNotFoundException>(() => mountfs.SetLastWriteTime("/toto.txt", DateTime.Now));
+        }
+
+        [Fact]
+        public void EnumerateFail()
+        {
+            var mountfs = new MountFileSystem();
+            Assert.Throws<DirectoryNotFoundException>(() => mountfs.EnumeratePaths("/dir").ToList());
+        }
+
+        [Fact]
+        public void CopyAndMoveFileCross()
+        {
+            var mountfs = new MountFileSystem();
+            var memfs1 = new MemoryFileSystem();
+            memfs1.WriteAllText("/file1.txt", "content1");
+            var memfs2 = new MemoryFileSystem();
+
+            mountfs.Mount("/dir1", memfs1);
+            mountfs.Mount("/dir2", memfs2);
+
+            mountfs.CopyFile("/dir1/file1.txt", "/dir2/file2.txt", true);
+
+            Assert.True(memfs2.FileExists("/file2.txt"));
+            Assert.Equal("content1", memfs2.ReadAllText("/file2.txt"));
+
+            mountfs.MoveFile("/dir1/file1.txt", "/dir2/file1.txt");
+
+            Assert.False(memfs1.FileExists("/file1.txt"));
+            Assert.True(memfs2.FileExists("/file1.txt"));
+            Assert.Equal("content1", memfs2.ReadAllText("/file1.txt"));
         }
     }
 }

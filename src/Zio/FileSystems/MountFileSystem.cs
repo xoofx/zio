@@ -85,7 +85,6 @@ namespace Zio.FileSystems
                 }
             }
         }
-
         protected override void CreateDirectoryImpl(UPath path)
         {
             var originalSrcPath = path;
@@ -139,7 +138,7 @@ namespace Zio.FileSystems
             else
             {
                 // TODO: Add support for Copy + Delete ?
-                throw new UnauthorizedAccessException($"Cannot move directory between mount `{originalSrcPath}` and `{originalDestPath}`");
+                throw new NotSupportedException($"Cannot move directory between mount `{originalSrcPath}` and `{originalDestPath}`");
             }
         }
 
@@ -171,7 +170,7 @@ namespace Zio.FileSystems
             var srcfs = TryGetMountOrNext(ref srcPath);
             var destfs = TryGetMountOrNext(ref destPath);
 
-            if (srcfs != null)
+            if (srcfs != null && destfs != null)
             {
                 if (srcfs == destfs)
                 {
@@ -185,7 +184,12 @@ namespace Zio.FileSystems
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` or `{originalDestPath}` is denied");
+                if (srcfs == null)
+                {
+                    throw NewFileNotFoundException(originalSrcPath);
+                }
+
+                throw NewDirectoryNotFoundException(originalDestPath);
             }
         }
 
@@ -216,7 +220,7 @@ namespace Zio.FileSystems
             else
             {
                 // TODO: Add support for moving file between filesystems (Copy+Delete) ?
-                throw new UnauthorizedAccessException($"Cannot replace file between mount `{originalSrcPath}`, `{originalDestPath}` and `{originalDestBackupPath}`");
+                throw new NotSupportedException($"Cannot replace file between mount `{originalSrcPath}`, `{originalDestPath}` and `{originalDestBackupPath}`");
             }
         }
 
@@ -311,7 +315,7 @@ namespace Zio.FileSystems
             {
                 return mountfs.GetAttributes(path);
             }
-            throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` is denied");
+            throw NewFileNotFoundException(originalSrcPath);
         }
 
         protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
@@ -324,7 +328,7 @@ namespace Zio.FileSystems
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` is denied");
+                throw NewFileNotFoundException(originalSrcPath);
             }
         }
 
