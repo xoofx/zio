@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
+using static Zio.FileSystems.FileSystemExceptionHelper;
+
 namespace Zio
 {
     /// <summary>
@@ -15,7 +17,7 @@ namespace Zio
     public static class FileSystemExtensions
     {
         /// <summary>
-        /// Copies a file from a source <see cref="IFileSystem"/> to a destination file system
+        /// Copies a file between two filesystems.
         /// </summary>
         /// <param name="fs">The source filesystem</param>
         /// <param name="destFileSystem">The destination filesystem</param>
@@ -26,7 +28,7 @@ namespace Zio
         {
             if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
 
-            // If this is the same filesystem, don't try to copy it directly
+            // If this is the same filesystem, use the file system directly to perform the action
             if (fs == destFileSystem)
             {
                 fs.CopyFile(srcPath, destPath, overwrite);
@@ -34,17 +36,16 @@ namespace Zio
             }
 
             srcPath.AssertAbsolute(nameof(srcPath));
-            destPath.AssertAbsolute(nameof(destPath));
-
             if (!fs.FileExists(srcPath))
             {
-                throw new FileNotFoundException($"The file path `{srcPath}` does not exist");
+                throw NewFileNotFoundException(srcPath);
             }
 
+            destPath.AssertAbsolute(nameof(destPath));
             var destDirectory = destPath.GetDirectory();
             if (!destFileSystem.DirectoryExists(destDirectory))
             {
-                throw new DirectoryNotFoundException($"The destination directory `{destDirectory}` does not exist");
+                throw NewDirectoryNotFoundException(destDirectory);
             }
 
             if (destFileSystem.FileExists(destPath) && !overwrite)
@@ -54,9 +55,131 @@ namespace Zio
 
             using (var sourceStream = fs.OpenFile(srcPath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                using (var destStream = destFileSystem.OpenFile(destPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                bool copied = false;
+                try
                 {
-                    sourceStream.CopyTo(destStream);
+                    using (var destStream = destFileSystem.OpenFile(destPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    {
+                        sourceStream.CopyTo(destStream);
+                    }
+
+                    // Preserve attributes and LastWriteTime as a regular File.Copy
+                    destFileSystem.SetAttributes(destPath, fs.GetAttributes(srcPath));
+                    destFileSystem.SetLastWriteTime(destPath, fs.GetLastWriteTime(srcPath));
+
+                    copied = true;
+                }
+                finally
+                {
+                    if (!copied)
+                    {
+                        try
+                        {
+                            destFileSystem.DeleteFile(destPath);
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Moves a file between two filesystems.
+        /// </summary>
+        /// <param name="fs">The source filesystem</param>
+        /// <param name="destFileSystem">The destination filesystem</param>
+        /// <param name="srcPath">The source path of the file to move from the source filesystem</param>
+        /// <param name="destPath">The destination path of the file in the destination filesystem</param>
+        public static void MoveFileTo(this IFileSystem fs, IFileSystem destFileSystem, UPath srcPath, UPath destPath)
+        {
+            if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
+
+            // If this is the same filesystem, use the file system directly to perform the action
+            if (fs == destFileSystem)
+            {
+                fs.MoveFile(srcPath, destPath);
+                return;
+            }
+
+            // Check source
+            srcPath.AssertAbsolute(nameof(srcPath));
+            if (!fs.FileExists(srcPath))
+            {
+                throw NewFileNotFoundException(srcPath);
+            }
+
+            // Check destination
+            destPath.AssertAbsolute(nameof(destPath));
+            var destDirectory = destPath.GetDirectory();
+            if (!destFileSystem.DirectoryExists(destDirectory))
+            {
+                throw NewDirectoryNotFoundException(destPath);
+            }
+
+            if (destFileSystem.DirectoryExists(destPath))
+            {
+                throw new IOException($"The destination path `{destPath}` is an existing directory");
+            }
+
+            if (destFileSystem.FileExists(destPath))
+            {
+                throw new IOException($"The destination path `{destPath}` already exists");
+            }
+
+            using (var sourceStream = fs.OpenFile(srcPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                bool copied = false;
+                try
+                {
+                    using (var destStream = destFileSystem.OpenFile(destPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    {
+                        sourceStream.CopyTo(destStream);
+                    }
+
+                    // Preserve all attributes and times
+                    destFileSystem.SetAttributes(destPath, fs.GetAttributes(srcPath));
+                    destFileSystem.SetCreationTime(destPath, fs.GetCreationTime(srcPath));
+                    destFileSystem.SetLastAccessTime(destPath, fs.GetLastAccessTime(srcPath));
+                    destFileSystem.SetLastWriteTime(destPath, fs.GetLastWriteTime(srcPath));
+                    copied = true;
+                }
+                finally
+                {
+                    if (!copied)
+                    {
+                        try
+                        {
+                            destFileSystem.DeleteFile(destPath);
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    }
+                }
+            }
+
+            bool deleted = false;
+            try
+            {
+                fs.DeleteFile(srcPath);
+                deleted = true;
+            }
+            finally
+            {
+                if (!deleted)
+                {
+                    try
+                    {
+                        destFileSystem.DeleteFile(destPath);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
         }
@@ -217,7 +340,7 @@ namespace Zio
         {
             if (!fileSystem.FileExists(filePath))
             {
-                throw new FileNotFoundException($"The file `{filePath}` does not exist");
+                throw NewFileNotFoundException(filePath);
             }
             return new FileEntry(fileSystem, filePath);
         }
@@ -226,7 +349,7 @@ namespace Zio
         {
             if (!fileSystem.DirectoryExists(directoryPath))
             {
-                throw new DirectoryNotFoundException($"The directory `{directoryPath}` was not found");
+                throw NewDirectoryNotFoundException(directoryPath);
             }
             return new DirectoryEntry(fileSystem, directoryPath);
         }

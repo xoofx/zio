@@ -4,7 +4,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+
+using static Zio.FileSystems.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
 {
@@ -27,49 +30,51 @@ namespace Zio.FileSystems
 
         public void Mount(UPath name, IFileSystem fileSystem)
         {
-            name.AssertAbsolute();
             if (fileSystem == null) throw new ArgumentNullException(nameof(fileSystem));
-
             if (fileSystem == this)
             {
                 throw new ArgumentException("Cannot recursively mount the filesystem to self", nameof(fileSystem));
             }
-
-            if (name == UPath.Root)
-            {
-                throw new ArgumentException("The mount name cannot be a `/` root filesystem", nameof(name));
-            }
-
-            if (name.GetDirectory() != UPath.Root)
-            {
-                throw new ArgumentException("The mount name cannot contain subpath and must contain only a root path e.g `/mount`", nameof(name));
-            }
-
+            AssertMountName(name);
             var mountName = name.GetName();
 
             lock (_mounts)
             {
                 if (_mounts.ContainsKey(mountName))
-                {
+                {                    
                     throw new ArgumentException("There is already a mount with the same name: `{mountName}`", nameof(name));
                 }
                 _mounts.Add(mountName, fileSystem);
             }
         }
 
+        public bool IsMounted(UPath name)
+        {
+            AssertMountName(name);
+            var mountName = name.GetName();
+
+            lock (_mounts)
+            {
+                return _mounts.ContainsKey(mountName);
+            }
+        }
+
+        public Dictionary<UPath, IFileSystem> GetMounts()
+        {
+            var dict = new Dictionary<UPath, IFileSystem>();
+            lock (_mounts)
+            {
+                foreach (var mount in _mounts)
+                {
+                    dict.Add(UPath.Root / mount.Key, mount.Value);
+                }
+            }
+            return dict;
+        }
+
         public void Unmount(UPath name)
         {
-            name.AssertAbsolute();
-            if (name == UPath.Root)
-            {
-                throw new ArgumentException("The mount name cannot be a `/` root filesystem", nameof(name));
-            }
-
-            if (name.GetDirectory() != UPath.Root)
-            {
-                throw new ArgumentException("The mount name cannot contain subpath and must contain only a root path e.g `/mount`", nameof(name));
-            }
-
+            AssertMountName(name);
             var mountName = name.GetName();
 
             lock (_mounts)
@@ -83,21 +88,15 @@ namespace Zio.FileSystems
 
         protected override void CreateDirectoryImpl(UPath path)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
-            if (mountfs != null)
+            var originalSrcPath = path;
+            var fs = TryGetMountOrNext(ref path);
+            if (fs != null && path != UPath.Root)
             {
-                mountfs.CreateDirectory(mountSubPath);
-            }
-            else if (NextFileSystem != null)
-            {
-                NextFileSystem.CreateDirectory(path);
+                fs.CreateDirectory(path);
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+                throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` is denied");
             }
         }
 
@@ -107,189 +106,151 @@ namespace Zio.FileSystems
             {
                 return true;
             }
-
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
-            if (mountfs != null)
+            var fs = TryGetMountOrNext(ref path);
+            if (fs != null)
             {
-                return mountfs.DirectoryExists(mountSubPath);
+                return path == UPath.Root || fs.DirectoryExists(path);
             }
-
-            return NextFileSystem != null && NextFileSystem.DirectoryExists(path);
+            return false;
         }
 
         protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
-            if (!DirectoryExistsImpl(srcPath))
+            var originalSrcPath = srcPath;
+            var originalDestPath = destPath;
+
+            var srcfs = TryGetMountOrNext(ref srcPath);
+            var destfs = TryGetMountOrNext(ref destPath);
+
+            if (srcfs != null && srcPath == UPath.Root)
             {
-                throw new DirectoryNotFoundException($"The directory `{srcPath}` was not found");
+                throw new UnauthorizedAccessException($"Cannot move a mount directory `{originalSrcPath}`");
             }
 
-            var destDirectory = destPath.GetDirectory();
-            if (!DirectoryExistsImpl(destDirectory))
+            if (destfs != null && destPath == UPath.Root)
             {
-                throw new DirectoryNotFoundException($"The directory `{destDirectory}` was not found");
-            }
-
-            string srcMountName;
-            UPath srcMountSubPath;
-            var srcfs = TryGetMount(srcPath, out srcMountName, out srcMountSubPath);
-
-            string destMountName;
-            UPath destMountSubPath;
-            var destfs = TryGetMount(destPath, out destMountName, out destMountSubPath);
-
-            if (srcfs != null &&  srcMountSubPath == "")
-            {
-                throw new UnauthorizedAccessException($"Cannot move a mount directory `{srcPath}`");
-            }
-
-            if (destfs != null && destMountSubPath == "")
-            {
-                throw new UnauthorizedAccessException($"Cannot move a mount directory `{destPath}`");
+                throw new UnauthorizedAccessException($"Cannot move a mount directory `{originalDestPath}`");
             }
 
             if (srcfs != null && srcfs == destfs)
             {
-                srcfs.MoveDirectory(srcMountSubPath, destMountSubPath);
-            }
-            else if (srcfs == null && destfs == null && NextFileSystem != null)
-            {
-                NextFileSystem.MoveDirectory(srcPath, destPath);
+                srcfs.MoveDirectory(srcPath, destPath);
             }
             else
             {
-                throw new UnauthorizedAccessException($"Cannot move directory between mount");
+                // TODO: Add support for Copy + Delete ?
+                throw new UnauthorizedAccessException($"Cannot move directory between mount `{originalSrcPath}` and `{originalDestPath}`");
             }
         }
 
         protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
+            var originalSrcPath = path;
+            var mountfs = TryGetMountOrNext(ref path);
 
-            if (mountfs != null && mountSubPath == "")
+            if (mountfs != null && path == UPath.Root)
             {
-                throw new UnauthorizedAccessException($"Cannot delete mount directory `{path}`. Use Unmount() instead");
+                throw new UnauthorizedAccessException($"Cannot delete mount directory `{originalSrcPath}`. Use Unmount() instead");
             }
 
             if (mountfs != null)
             {
-                mountfs.DeleteDirectory(mountSubPath, isRecursive);
-            }
-            else if (NextFileSystem != null)
-            {
-                NextFileSystem.DeleteDirectory(path, isRecursive);
+                mountfs.DeleteDirectory(path, isRecursive);
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+                throw NewDirectoryNotFoundException(originalSrcPath);
             }
         }
 
         protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
-            if (!FileExistsImpl(srcPath))
-            {
-                throw new FileNotFoundException($"The file `{srcPath}` was not found");
-            }
+            var originalSrcPath = srcPath;
+            var originalDestPath = destPath;
 
-            var destDirectory = destPath.GetDirectory();
-            if (!DirectoryExistsImpl(destDirectory))
-            {
-                throw new DirectoryNotFoundException($"The directory `{destDirectory}` was not found");
-            }
-
-            string srcMountName;
-            UPath srcMountSubPath;
-            var srcfs = TryGetMount(srcPath, out srcMountName, out srcMountSubPath);
-
-            string destMountName;
-            UPath destMountSubPath;
-            var destfs = TryGetMount(destPath, out destMountName, out destMountSubPath);
-
-            if (srcfs == null)
-            {
-                srcfs = NextFileSystem;
-                srcMountSubPath = srcPath;
-            }
-
-            if (destfs == null)
-            {
-                destfs = NextFileSystem;
-                destMountSubPath = destPath;
-            }
+            var srcfs = TryGetMountOrNext(ref srcPath);
+            var destfs = TryGetMountOrNext(ref destPath);
 
             if (srcfs != null)
             {
                 if (srcfs == destfs)
                 {
-                    srcfs.CopyFile(srcMountSubPath, destMountSubPath, overwrite);
+                    srcfs.CopyFile(srcPath, destPath, overwrite);
                 }
                 else
                 {
                     // Otherwise, perform a copy between filesystem
-                    srcfs.CopyFileTo(destfs, srcMountSubPath, destMountSubPath, overwrite);
+                    srcfs.CopyFileTo(destfs, srcPath, destPath, overwrite);
                 }
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{srcPath}` or `{destPath}` is denied");
+                throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` or `{originalDestPath}` is denied");
             }
         }
 
         protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
-            throw new NotImplementedException();
+            var originalSrcPath = srcPath;
+            var originalDestPath = destPath;
+            var originalDestBackupPath = destBackupPath;
+
+            if (!FileExistsImpl(srcPath))
+            {
+                throw NewFileNotFoundException(srcPath);
+            }
+
+            if (!FileExistsImpl(destPath))
+            {
+                throw NewFileNotFoundException(destPath);
+            }
+
+            var srcfs = TryGetMountOrNext(ref srcPath);
+            var destfs = TryGetMountOrNext(ref destPath);
+            var backupfs = TryGetMountOrNext(ref destBackupPath);
+
+            if (srcfs != null && srcfs == destfs && (destBackupPath.IsNull || srcfs == backupfs))
+            {
+                srcfs.ReplaceFile(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
+            }
+            else
+            {
+                // TODO: Add support for moving file between filesystems (Copy+Delete) ?
+                throw new UnauthorizedAccessException($"Cannot replace file between mount `{originalSrcPath}`, `{originalDestPath}` and `{originalDestBackupPath}`");
+            }
         }
 
         protected override long GetFileLengthImpl(UPath path)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
+            var originalSrcPath = path;
+            var mountfs = TryGetMountOrNext(ref path);
 
             if (mountfs != null)
             {
-                return mountfs.GetFileLength(mountSubPath);
+                return mountfs.GetFileLength(path);
             }
-
-            if (NextFileSystem != null)
-            {
-                return NextFileSystem.GetFileLength(path);
-            }
-
-            throw new FileNotFoundException($"The file path `{path}` does not exist");
+            throw NewFileNotFoundException(originalSrcPath);
         }
 
         protected override bool FileExistsImpl(UPath path)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
-            if (mountfs != null)
-            {
-                return mountfs.FileExists(mountSubPath);
-            }
-
-            return NextFileSystem != null && NextFileSystem.FileExists(path);
+            var mountfs = TryGetMountOrNext(ref path);
+            return mountfs?.FileExists(path) ?? false;
         }
 
         protected override void MoveFileImpl(UPath srcPath, UPath destPath)
         {
+            var originalSrcPath = srcPath;
+            var originalDestPath = destPath;
             if (!FileExistsImpl(srcPath))
             {
-                throw new FileNotFoundException($"The file `{srcPath}` was not found");
+                throw NewFileNotFoundException(srcPath);
             }
 
             var destDirectory = destPath.GetDirectory();
             if (!DirectoryExistsImpl(destDirectory))
             {
-                throw new DirectoryNotFoundException($"The directory `{destDirectory}` was not found");
+                throw NewDirectoryNotFoundException(destDirectory);
             }
 
             if (FileExistsImpl(destPath))
@@ -297,227 +258,130 @@ namespace Zio.FileSystems
                 throw new IOException($"The destination path `{destPath}` already exists");
             }
 
-            string srcMountName;
-            UPath srcMountSubPath;
-            var srcfs = TryGetMount(srcPath, out srcMountName, out srcMountSubPath);
-
-            string destMountName;
-            UPath destMountSubPath;
-            var destfs = TryGetMount(destPath, out destMountName, out destMountSubPath);
+            var srcfs = TryGetMountOrNext(ref srcPath);
+            var destfs = TryGetMountOrNext(ref destPath);
 
             if (srcfs != null && srcfs == destfs)
             {
-                srcfs.MoveFile(srcMountSubPath, destMountSubPath);
+                srcfs.MoveFile(srcPath, destPath);
             }
-            else if (srcfs == null && destfs == null && NextFileSystem != null)
+            else if (srcfs != null && destfs != null)
             {
-                NextFileSystem.MoveFile(srcPath, destPath);
+                srcfs.MoveFileTo(destfs, srcPath, destPath);
             }
             else
             {
-                throw new UnauthorizedAccessException($"Cannot move file between mount");
+                if (srcfs == null)
+                {
+                    throw NewFileNotFoundException(originalSrcPath);
+                }
+                throw NewDirectoryNotFoundException(originalDestPath);
             }
         }
 
         protected override void DeleteFileImpl(UPath path)
         {
-            if (!FileExistsImpl(path))
-            {
-                throw new FileNotFoundException($"The file `{path}` was not found");
-            }
-
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
-            if (mountfs != null)
-            {
-                mountfs.DeleteFile(mountSubPath);
-            }
-            else if (NextFileSystem != null)
-            {
-                NextFileSystem.DeleteFile(path);
-            }
+            var mountfs = TryGetMountOrNext(ref path);
+            mountfs?.DeleteFile(path);
         }
 
         protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
+            var originalSrcPath = path;
+            var mountfs = TryGetMountOrNext(ref path);
 
             if (mountfs != null)
             {
-                return mountfs.OpenFile(mountSubPath, mode, access, share);
-            }
-            else if (NextFileSystem != null)
-            {
-                return NextFileSystem.OpenFile(path, mode, access, share);
+                return mountfs.OpenFile(path, mode, access, share);
             }
 
             if (mode == FileMode.Open || mode == FileMode.Truncate)
             {
-                throw new FileNotFoundException($"The file `{path}` was not found");
+                throw NewFileNotFoundException(originalSrcPath);
             }
 
-            throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+            throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` is denied");
         }
 
         protected override FileAttributes GetAttributesImpl(UPath path)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
+            var originalSrcPath = path;
+            var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                return mountfs.GetAttributes(mountSubPath);
+                return mountfs.GetAttributes(path);
             }
-
-            if (NextFileSystem != null)
-            {
-                return NextFileSystem.GetAttributes(path);
-            }
-
-            throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+            throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` is denied");
         }
 
         protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
+            var originalSrcPath = path;
+            var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                mountfs.SetAttributes(mountSubPath, attributes);
-            }
-            else if (NextFileSystem != null)
-            {
-                NextFileSystem.SetAttributes(path, attributes);
+                mountfs.SetAttributes(path, attributes);
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+                throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` is denied");
             }
         }
 
         protected override DateTime GetCreationTimeImpl(UPath path)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
-            if (mountfs != null)
-            {
-                return mountfs.GetCreationTime(mountSubPath);
-            }
-
-            if (NextFileSystem != null)
-            {
-                return NextFileSystem.GetCreationTime(path);
-            }
-
-            return DefaultFileTime;
+            return TryGetMountOrNext(ref path)?.GetCreationTime(path) ?? DefaultFileTime;
         }
 
         protected override void SetCreationTimeImpl(UPath path, DateTime time)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
+            var originalSrcPath = path;
+            var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                mountfs.SetCreationTime(mountSubPath, time);
-            }
-            else if (NextFileSystem != null)
-            {
-                NextFileSystem.SetCreationTime(path, time);
+                mountfs.SetCreationTime(path, time);
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+                throw NewFileNotFoundException(originalSrcPath);
             }
         }
 
         protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
-            if (mountfs != null)
-            {
-                return mountfs.GetLastAccessTime(mountSubPath);
-            }
-
-            if (NextFileSystem != null)
-            {
-                return NextFileSystem.GetLastAccessTime(path);
-            }
-
-            return DefaultFileTime;
-
+            return TryGetMountOrNext(ref path)?.GetLastAccessTime(path) ?? DefaultFileTime;
         }
 
         protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
+            var originalSrcPath = path;
+            var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                mountfs.SetLastAccessTime(mountSubPath, time);
-            }
-            else if (NextFileSystem != null)
-            {
-                NextFileSystem.SetLastAccessTime(path, time);
+                mountfs.SetLastAccessTime(path, time);
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+                throw NewFileNotFoundException(originalSrcPath);
             }
         }
 
         protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
-            if (mountfs != null)
-            {
-                return mountfs.GetLastWriteTime(mountSubPath);
-            }
-
-            if (NextFileSystem != null)
-            {
-                return NextFileSystem.GetLastWriteTime(path);
-            }
-
-            return DefaultFileTime;
-
+            return TryGetMountOrNext(ref path)?.GetLastWriteTime(path) ?? DefaultFileTime;
         }
 
         protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
         {
-            string mountName;
-            UPath mountSubPath;
-            var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
+            var originalSrcPath = path;
+            var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                mountfs.SetLastWriteTime(mountSubPath, time);
-            }
-            else if (NextFileSystem != null)
-            {
-                NextFileSystem.SetLastWriteTime(path, time);
+                mountfs.SetLastWriteTime(path, time);
             }
             else
             {
-                throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+                throw NewFileNotFoundException(originalSrcPath);
             }
         }
 
@@ -525,30 +389,139 @@ namespace Zio.FileSystems
         {
             // Use the search pattern to normalize the path/search pattern
             var search = SearchPattern.Parse(ref path, ref searchPattern);
+            var originalSrcPath = path;
 
-            if (path == UPath.Root)
+            // Internal method used to retrieve the list of root directories
+            List<UPath> GetRootDirectories()
             {
-                throw new NotImplementedException();
-            }
-            else
-            {
-                string mountName;
-                UPath mountSubPath;
-                var mountfs = TryGetMount(path, out mountName, out mountSubPath);
-
-                if (mountfs != null)
+                var directories = new List<UPath>();
+                lock (_mounts)
                 {
-                    return mountfs.EnumeratePaths(mountSubPath, searchPattern, searchOption, searchTarget);
+                    foreach (var mountName in _mounts.Keys)
+                    {
+                        var mountPath = UPath.Root / mountName;
+                        directories.Add(mountPath);
+                    }
                 }
 
                 if (NextFileSystem != null)
                 {
-                    return NextFileSystem.EnumeratePaths(path, searchPattern, searchOption, searchTarget);
+                    foreach (var dir in NextFileSystem.EnumeratePaths(path, "*", SearchOption.TopDirectoryOnly, SearchTarget.Directory))
+                    {
+                        if (!directories.Contains(dir))
+                        {
+                            directories.Add(dir);
+                        }
+                    }
                 }
 
-                throw new UnauthorizedAccessException($"The access to path `{path}` is denied");
+                directories.Sort();
+                return directories;
+            }
+
+            IEnumerable<UPath> EnumeratePathFromFileSystem(UPath subPath, bool failOnInvalidPath)
+            {
+                string mountName;
+                var fs = TryGetMountOrNext(ref subPath, out mountName);
+
+                if (fs == null)
+                {
+                    if (failOnInvalidPath)
+                    {
+                        throw NewDirectoryNotFoundException(originalSrcPath);
+                    }
+                    yield break;
+                }
+
+                if (fs != NextFileSystem)
+                {
+                    // In the case of a mount, we need to return the full path
+                    Debug.Assert(mountName != null);
+                    var pathPrefix = UPath.Root / mountName;
+                    foreach (var entry in fs.EnumeratePaths(subPath, searchPattern, searchOption, searchTarget))
+                    {
+                        yield return pathPrefix / entry.ToRelative();
+                    }
+                }
+                else
+                {
+                    foreach (var entry in fs.EnumeratePaths(subPath, searchPattern, searchOption, searchTarget))
+                    {
+                        yield return entry;
+                    }
+                }
+            }
+
+            // Special case for the root as we have to return the list of mount directories
+            // and merge them with the underlying FileSystem
+            if (path == UPath.Root)
+            {
+                if (searchOption == SearchOption.TopDirectoryOnly)
+                {
+                    // Process the files first
+                    if (NextFileSystem != null && (searchTarget == SearchTarget.File || searchTarget == SearchTarget.Both))
+                    {
+                        foreach (var file in NextFileSystem.EnumeratePaths(path, searchPattern, SearchOption.TopDirectoryOnly, SearchTarget.File))
+                        {
+                            yield return file;
+                        }
+                    }
+
+                    if (searchTarget == SearchTarget.File)
+                    {
+                        yield break;
+                    }
+
+                    foreach (var dir in GetRootDirectories())
+                    {
+                        if (searchTarget == SearchTarget.Both || search.Match(dir))
+                        {
+                            yield return dir;
+                        }
+                    }
+                }
+                else // Recursive
+                {
+                    // Process the files first
+                    if (NextFileSystem != null && (searchTarget == SearchTarget.File || searchTarget == SearchTarget.Both))
+                    {
+                        foreach (var file in NextFileSystem.EnumeratePaths(path, searchPattern, SearchOption.TopDirectoryOnly, SearchTarget.File))
+                        {
+                            yield return file;
+                        }
+                    }
+
+                    // Return the list of dircetories
+                    var directories = GetRootDirectories();
+                    if (searchTarget != SearchTarget.File)
+                    {
+                        foreach (var dir in directories)
+                        {
+                            if (searchTarget == SearchTarget.Both || search.Match(dir))
+                            {
+                                yield return dir;
+                            }
+                        }
+                    }
+
+                    foreach (var dir in directories)
+                    {
+                        foreach (var entry in EnumeratePathFromFileSystem(dir, false))
+                        {
+                            yield return entry;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                foreach (var entry in EnumeratePathFromFileSystem(path, true))
+                {
+                    yield return entry;
+                }
             }
         }
+
         protected override UPath ConvertPathToDelegate(UPath path)
         {
             return path;
@@ -559,15 +532,56 @@ namespace Zio.FileSystems
             return path;
         }
 
-        private IFileSystem TryGetMount(UPath path, out string mountName, out UPath mountSubPath)
+        private IFileSystem TryGetMountOrNext(ref UPath path)
         {
+            string mountName;
+            return TryGetMountOrNext(ref path, out mountName);
+        }
+
+        private IFileSystem TryGetMountOrNext(ref UPath path, out string mountName)
+        {
+            mountName = null;
+            if (path.IsNull)
+            {
+                return null;
+            }
+
+            UPath mountSubPath;
+
             path.ExtractFirstDirectory(out mountName, out mountSubPath);
             IFileSystem mountfs;
             lock (_mounts)
             {
                 _mounts.TryGetValue(mountName, out mountfs);
             }
-            return mountfs;
+
+            if (mountfs != null)
+            {
+                path = mountSubPath.IsNull ? UPath.Root : mountSubPath;
+                Debug.Assert(path.IsAbsolute);
+                return mountfs;
+            }
+            else if (NextFileSystem != null)
+            {
+                mountName = null;
+                return NextFileSystem;
+            }
+            mountName = null;
+            return null;
+        }
+
+        private void AssertMountName(UPath name)
+        {
+            name.AssertAbsolute();
+            if (name == UPath.Root)
+            {
+                throw new ArgumentException("The mount name cannot be a `/` root filesystem", nameof(name));
+            }
+
+            if (name.GetDirectory() != UPath.Root)
+            {
+                throw new ArgumentException("The mount name cannot contain subpath and must contain only a root path e.g `/mount`", nameof(name));
+            }
         }
     }
 }
