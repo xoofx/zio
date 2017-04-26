@@ -180,7 +180,7 @@ namespace Zio.FileSystems
                 else
                 {
                     // Otherwise, perform a copy between filesystem
-                    srcfs.CopyFileTo(destfs, srcPath, destPath, overwrite);
+                    srcfs.CopyFileCross(destfs, srcPath, destPath, overwrite);
                 }
             }
             else
@@ -267,7 +267,7 @@ namespace Zio.FileSystems
             }
             else if (srcfs != null && destfs != null)
             {
-                srcfs.MoveFileTo(destfs, srcPath, destPath);
+                srcfs.MoveFileCross(destfs, srcPath, destPath);
             }
             else
             {

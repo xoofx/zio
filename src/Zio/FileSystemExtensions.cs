@@ -24,7 +24,7 @@ namespace Zio
         /// <param name="srcPath">The source path of the file to copy from the source filesystem</param>
         /// <param name="destPath">The destination path of the file in the destination filesystem</param>
         /// <param name="overwrite"><c>true</c> to overwrite an existing destination file</param>
-        public static void CopyFileTo(this IFileSystem fs, IFileSystem destFileSystem, UPath srcPath, UPath destPath, bool overwrite)
+        public static void CopyFileCross(this IFileSystem fs, IFileSystem destFileSystem, UPath srcPath, UPath destPath, bool overwrite)
         {
             if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
 
@@ -93,7 +93,7 @@ namespace Zio
         /// <param name="destFileSystem">The destination filesystem</param>
         /// <param name="srcPath">The source path of the file to move from the source filesystem</param>
         /// <param name="destPath">The destination path of the file in the destination filesystem</param>
-        public static void MoveFileTo(this IFileSystem fs, IFileSystem destFileSystem, UPath srcPath, UPath destPath)
+        public static void MoveFileCross(this IFileSystem fs, IFileSystem destFileSystem, UPath srcPath, UPath destPath)
         {
             if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
 
