@@ -4,6 +4,8 @@
 using System;
 using System.IO;
 
+using static Zio.FileSystems.FileSystemExceptionHelper;
+
 namespace Zio.FileSystems
 {
     /// <summary>
@@ -22,7 +24,7 @@ namespace Zio.FileSystems
             SubPath = subPath.AssertAbsolute(nameof(subPath));
             if (!fileSystem.DirectoryExists(SubPath))
             {
-                throw new DirectoryNotFoundException($"The directory `{SubPath}` does not exist in the delegated FileSystem");
+                throw NewDirectoryNotFoundException(SubPath);
             }
         }
 

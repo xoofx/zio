@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
+using static Zio.FileSystems.FileSystemExceptionHelper;
+
 namespace Zio.FileSystems
 {
     /// <summary>
@@ -92,12 +94,12 @@ namespace Zio.FileSystems
 
             if (!FileExistsImpl(srcPath))
             {
-                throw new FileNotFoundException($"Unable to find the source file `{srcPath}`.");
+                throw NewFileNotFoundException(srcPath);
             }
 
             if (!FileExistsImpl(destPath))
             {
-                throw new FileNotFoundException($"Unable to find the source file `{srcPath}`.");
+                throw NewFileNotFoundException(srcPath);
             }
 
             if (destBackupPath == srcPath)

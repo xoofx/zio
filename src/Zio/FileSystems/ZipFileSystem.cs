@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 
+using static Zio.FileSystems.FileSystemExceptionHelper;
+
 namespace Zio.FileSystems
 {
     /// <summary>
@@ -68,7 +70,7 @@ namespace Zio.FileSystems
             var entry = _zipArchive.GetEntry(path.FullName);
             if (entry == null)
             {
-                throw new FileNotFoundException($"The file `{path}` was not found in this zip archive");
+                throw NewFileNotFoundException(path);
             }
             return entry.Length;
         }
@@ -113,7 +115,7 @@ namespace Zio.FileSystems
                 case FileMode.Open:
                     if (entry == null)
                     {
-                        throw new FileNotFoundException($"The file `{path}` was not found in this zip archive");
+                        throw NewFileNotFoundException(path);
                     }
                     return entry.Open();
 
@@ -180,7 +182,7 @@ namespace Zio.FileSystems
             var entry = _zipArchive.GetEntry(path.FullName);
             if (entry == null)
             {
-                throw new FileNotFoundException($"The file `{path}` was not found in this zip archive");
+                throw NewFileNotFoundException(path);
             }
             return entry.LastWriteTime.DateTime;
         }
@@ -190,7 +192,7 @@ namespace Zio.FileSystems
             var entry = _zipArchive.GetEntry(path.FullName);
             if (entry == null)
             {
-                throw new FileNotFoundException($"The file `{path}` was not found in this zip archive");
+                throw NewFileNotFoundException(path);
             }
             entry.LastWriteTime = DateTimeOffset.FromFileTime(time.Ticks);
         }

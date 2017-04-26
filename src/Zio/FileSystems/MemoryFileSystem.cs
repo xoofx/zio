@@ -9,6 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
+using static Zio.FileSystems.FileSystemExceptionHelper;
+
 namespace Zio.FileSystems
 {
     /// <summary>
@@ -160,7 +162,7 @@ namespace Zio.FileSystems
                     }
                     if (srcNode == null)
                     {
-                        throw new FileNotFoundException($"The file `{srcPath}` was not found");
+                        throw NewFileNotFoundException(srcPath);
                     }
 
                     var destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.NodeExclusive);
@@ -172,7 +174,7 @@ namespace Zio.FileSystems
                         // The dest file may exist
                         if (destDirectory == null)
                         {
-                            throw new DirectoryNotFoundException($"The directory from the path `{destPath}` was not found");
+                            throw NewDirectoryNotFoundException(destPath);
                         }
                         if (destNode is DirectoryNode)
                         {
@@ -411,7 +413,7 @@ namespace Zio.FileSystems
                 if (result.Directory == null)
                 {
                     ExitFindNode(result);
-                    throw new DirectoryNotFoundException($"The directory from the path `{path}` was not found");
+                    throw NewDirectoryNotFoundException(path);
                 }
 
                 if (result.Node is DirectoryNode || (isWriting && result.Node != null && result.Node.IsReadOnly))
@@ -503,7 +505,7 @@ namespace Zio.FileSystems
                     }
                     else
                     {
-                        throw new FileNotFoundException($"The file `{path}` was not found");
+                        throw NewFileNotFoundException(path);
                     }
                 }
 
@@ -536,7 +538,7 @@ namespace Zio.FileSystems
                 {
                     if (fileNode == null)
                     {
-                        throw new FileNotFoundException($"The file `{path}` was not found");
+                        throw NewFileNotFoundException(path);
                     }
 
                     ExitExclusive(parentDirectory);
@@ -886,7 +888,7 @@ namespace Zio.FileSystems
             }
             if (node == null)
             {
-                throw new DirectoryNotFoundException($"The source directory `{srcPath}` was not found");
+                throw NewDirectoryNotFoundException(srcPath);
             }
         }
 
@@ -894,7 +896,7 @@ namespace Zio.FileSystems
         {
             if (node == null)
             {
-                throw new FileNotFoundException($"Unable to find the source file `{srcPath}`.");
+                throw NewFileNotFoundException(srcPath);
             }
         }
 
@@ -928,7 +930,7 @@ namespace Zio.FileSystems
             {
                 if (expectFileOnly)
                 {
-                    throw new FileNotFoundException($"Could not find file `{path}`");
+                    throw NewFileNotFoundException(path);
                 }
                 throw new IOException($"The file or directory `{path}` was not found");
             }
@@ -937,7 +939,7 @@ namespace Zio.FileSystems
             {
                 if (expectFileOnly)
                 {
-                    throw new FileNotFoundException($"Could not find file `{path}`");
+                    throw NewFileNotFoundException(path);
                 }
             }
 

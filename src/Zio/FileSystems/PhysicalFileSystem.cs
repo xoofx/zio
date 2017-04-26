@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 
+using static Zio.FileSystems.FileSystemExceptionHelper;
+
 namespace Zio.FileSystems
 {
     /// <summary>
@@ -67,7 +69,7 @@ namespace Zio.FileSystems
                 {
                     if (!SpecialDirectoryExists(srcPath))
                     {
-                        throw new DirectoryNotFoundException($"The directory `{srcPath}` does not exist");
+                        throw NewDirectoryNotFoundException(srcPath);
                     }
 
                     throw new UnauthorizedAccessException($"Cannot move the special directory `{srcPath}`");
@@ -77,7 +79,7 @@ namespace Zio.FileSystems
                 {
                     if (!SpecialDirectoryExists(destPath))
                     {
-                        throw new DirectoryNotFoundException($"The directory `{destPath}` does not exist");
+                        throw NewDirectoryNotFoundException(destPath);
                     }
                     throw new UnauthorizedAccessException($"Cannot move to the special directory `{destPath}`");
                 }
@@ -103,7 +105,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
                 throw new UnauthorizedAccessException($"Cannot delete directory `{path}`");
             }
@@ -215,7 +217,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
 
                 // The path / and /drive are readonly
@@ -241,7 +243,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
                 throw new UnauthorizedAccessException($"Cannot set attributes on system directory `{path}`");
             }
@@ -258,7 +260,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
 
                 // For /drive and /, get the oldest CreationTime of all folders (approx)
@@ -289,7 +291,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
                 throw new UnauthorizedAccessException($"Cannot set creation time on system directory `{path}`");
             }
@@ -305,7 +307,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
 
                 // For /drive and /, get the oldest CreationTime of all folders (approx)
@@ -338,7 +340,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
                 throw new UnauthorizedAccessException($"Cannot set last access time on system directory `{path}`");
             }
@@ -353,7 +355,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
 
                 // For /drive and /, get the oldest CreationTime of all folders (approx)
@@ -386,7 +388,7 @@ namespace Zio.FileSystems
             {
                 if (!SpecialDirectoryExists(path))
                 {
-                    throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                    throw NewDirectoryNotFoundException(path);
                 }
                 throw new UnauthorizedAccessException($"Cannot set last write time on system directory `{path}`");
             }
@@ -411,7 +413,7 @@ namespace Zio.FileSystems
                 {
                     if (!SpecialDirectoryExists(path))
                     {
-                        throw new DirectoryNotFoundException($"The directory `{path}` does not exist");
+                        throw NewDirectoryNotFoundException(path);
                     }
 
                     var searchForDirectory = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.Directory;
