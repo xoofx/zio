@@ -242,6 +242,10 @@ namespace Zio.FileSystems
 
         protected virtual void ValidatePathImpl(UPath path, string name = "path")
         {
+            if (path.FullName.IndexOf(':') >= 0)
+            {
+                throw new NotSupportedException($"The path `{path}` cannot contain the `:` character");
+            }
         }
 
         protected UPath ValidatePath(UPath path, string name = "path", bool allowNull = false)
@@ -251,6 +255,7 @@ namespace Zio.FileSystems
                 return path;
             }
             path.AssertAbsolute(name);
+
             ValidatePathImpl(path, name);
             return path;
         }

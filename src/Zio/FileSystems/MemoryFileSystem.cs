@@ -748,15 +748,6 @@ namespace Zio.FileSystems
             return new UPath(systemPath);
         }
 
-        protected override void ValidatePathImpl(UPath path, string name = "path")
-        {
-            // TODO: Performing the same check as a PhysicalFileSystem on Windows for now
-            if (path.FullName.IndexOf(':') >= 0)
-            {
-                throw new NotSupportedException($"The path `{path}` cannot contain the `:` character");
-            }
-        }
-
         // ----------------------------------------------
         // Internals
         // ----------------------------------------------
