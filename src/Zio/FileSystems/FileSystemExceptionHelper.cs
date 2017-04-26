@@ -17,5 +17,15 @@ namespace Zio.FileSystems
         {
             return new DirectoryNotFoundException($"Could not find a part of the path `{path}`.");
         }
+
+        public static IOException NewDestinationDirectoryExistException(UPath path)
+        {
+            return new IOException($"The destination path `{path}` is an existing directory");
+        }
+
+        public static IOException NewDestinationFileExistException(UPath path)
+        {
+            return new IOException($"The destination path `{path}` is an existing file");
+        }
     }
 }

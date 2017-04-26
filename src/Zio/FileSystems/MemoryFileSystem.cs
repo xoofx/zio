@@ -520,7 +520,7 @@ namespace Zio.FileSystems
                     if (fileNode != null)
                     {
                         fileNodeToRelease = fileNode;
-                        throw new IOException($"The file `{path}` already exist");
+                        throw NewDestinationFileExistException(path);
                     }
 
                     fileNode = new FileNode(parentDirectory);
@@ -757,26 +757,21 @@ namespace Zio.FileSystems
             var parentSrcPath = srcPath.GetDirectory();
             var parentDestPath = destPath.GetDirectory();
 
-            void CheckDestination(FileSystemNode node)
+            void AssertNoDestination(FileSystemNode node)
             {
                 if (expectDirectory)
                 {
-                    if (node is FileNode)
+                    if (node is FileNode || node != null)
                     {
-                        throw new IOException($"The destination path `{destPath}` is an existing file");
+                        throw NewDestinationFileExistException(destPath);
                     }
                 }
                 else
                 {
-                    if (node is DirectoryNode)
+                    if (node is DirectoryNode || node != null)
                     {
-                        throw new IOException($"The destination path `{destPath}` is an existing directory");
+                        throw NewDestinationDirectoryExistException(destPath);
                     }
-                }
-
-                if (node != null)
-                {
-                    throw new IOException($"The destination path `{destPath}` already exists");
                 }
             }
 
@@ -838,7 +833,7 @@ namespace Zio.FileSystems
                     }
                     AssertDirectory(destResult.Directory, destPath);
 
-                    CheckDestination(destResult.Node);
+                    AssertNoDestination(destResult.Node);
 
                     srcResult.Node.DetachFromParent(srcResult.Name);
                     srcResult.Node.AttachToParent(destResult.Directory, destResult.Name);

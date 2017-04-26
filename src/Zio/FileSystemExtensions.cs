@@ -121,12 +121,12 @@ namespace Zio
 
             if (destFileSystem.DirectoryExists(destPath))
             {
-                throw new IOException($"The destination path `{destPath}` is an existing directory");
+                throw NewDestinationDirectoryExistException(destPath);
             }
 
             if (destFileSystem.FileExists(destPath))
             {
-                throw new IOException($"The destination path `{destPath}` already exists");
+                throw NewDestinationFileExistException(destPath);
             }
 
             using (var sourceStream = fs.OpenFile(srcPath, FileMode.Open, FileAccess.Read, FileShare.Read))
