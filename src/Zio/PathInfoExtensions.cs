@@ -57,7 +57,7 @@ namespace Zio
             }
             else
             {
-                firstDirectory = fullname.Substring(1, index);
+                firstDirectory = fullname.Substring(1, index - 1);
                 remainingPath = fullname.Substring(index);
             }
         }
