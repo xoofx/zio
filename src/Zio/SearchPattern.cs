@@ -38,6 +38,11 @@ namespace Zio
             return new SearchPattern(ref path, ref searchPattern);
         }
 
+        public static void Normalize(ref UPath path, ref string searchPattern)
+        {
+            Parse(ref path, ref searchPattern);
+        }
+
         private SearchPattern(ref UPath path, ref string searchPattern)
         {
             path.AssertAbsolute();
