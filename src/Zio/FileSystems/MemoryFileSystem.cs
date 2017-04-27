@@ -32,6 +32,33 @@ namespace Zio.FileSystems
             _globalLock = new FileSystemNodeReadWriteLock();
         }
 
+        /// <summary>
+        /// Constructor used for deep cloning.
+        /// </summary>
+        /// <param name="copyFrom"></param>
+        private MemoryFileSystem(MemoryFileSystem copyFrom)
+        {
+            _rootDirectory = (DirectoryNode)copyFrom._rootDirectory.Clone(null);
+            _globalLock = new FileSystemNodeReadWriteLock();
+        }
+
+        /// <summary>
+        /// Deep clone of this filesystem
+        /// </summary>
+        /// <returns>A deep clone of this filesystem</returns>
+        public MemoryFileSystem Clone()
+        {
+            EnterFileSystemExclusive();
+            try
+            {
+                return new MemoryFileSystem(this);
+            }
+            finally
+            {
+                ExitFileSystemExclusive();
+            }
+        }
+
         // ----------------------------------------------
         // Directory API
         // ----------------------------------------------
@@ -1296,6 +1323,13 @@ namespace Zio.FileSystems
                 // In order to issue a Dispose, we need to have control on this node
                 IsDisposed = true;
             }
+
+            public virtual FileSystemNode Clone(DirectoryNode newParent)
+            {
+                var clone = (FileSystemNode)Clone();
+                clone.Parent = newParent;
+                return clone;
+            }
         }
 
         private class ListFileSystemNodes : List<KeyValuePair<string, FileSystemNode>>, IDisposable
@@ -1322,7 +1356,7 @@ namespace Zio.FileSystems
 
         private class DirectoryNode : FileSystemNode
         {
-            private readonly Dictionary<string, FileSystemNode> _children;
+            private Dictionary<string, FileSystemNode> _children;
 
             public DirectoryNode() : base(null, null)
             {
@@ -1343,6 +1377,17 @@ namespace Zio.FileSystems
                     return _children;
                 }
             }
+
+            public override FileSystemNode Clone(DirectoryNode newParent)
+            {
+                var dir = (DirectoryNode)base.Clone(newParent);
+                dir._children = new Dictionary<string, FileSystemNode>();
+                foreach (var name in _children.Keys)
+                {
+                    dir._children[name] = _children[name].Clone(dir);
+                }
+                return dir;
+            }
         }
 
         private class FileNode : FileSystemNode
@@ -1358,7 +1403,15 @@ namespace Zio.FileSystems
                 Content = copyNode != null ? new FileContent(copyNode.Content) : new FileContent();
             }
 
-            public FileContent Content { get; }
+            public FileContent Content { get; private set; }
+
+
+            public override FileSystemNode Clone(DirectoryNode newParent)
+            {
+                var copy = (FileNode)base.Clone(newParent);
+                copy.Content = new FileContent(Content);
+                return copy;
+            }
         }
 
         private class FileContent
@@ -1610,6 +1663,15 @@ namespace Zio.FileSystems
             public void EnterShared(UPath context)
             {
                 EnterShared(FileShare.Read, context);
+            }
+
+            protected FileSystemNodeReadWriteLock Clone()
+            {
+                var locker = (FileSystemNodeReadWriteLock)MemberwiseClone();
+                // Erase any locks
+                locker._sharedCount = 0;
+                locker._shared = null;
+                return locker;
             }
 
             public void EnterShared(FileShare share, UPath context)
