@@ -49,6 +49,9 @@ namespace Zio.Tests
         [InlineData("/a/b/c", "x*.txt", "xyoyo.txt")]
         [InlineData("/a/b/c", "x*.txt", "x.txt")]
         [InlineData("/a/b/c", "*.txt", "x.txt")]
+        [InlineData("/a/b/c", "*.txt", "x.txt1")]
+        [InlineData("/a/b/c", "*.i", "x.i")]
+        [InlineData("/a/b/c", "*.i", "x.i1", false)]
         [InlineData("/a/b/c", "x*.txt", "x_txt", false)]
         [InlineData("/a/b/c", "x?z", "d/xyz")]
         public void TestMatch(string path, string searchPattern, string pathToSearch, bool match = true)
