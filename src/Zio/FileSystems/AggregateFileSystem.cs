@@ -143,7 +143,8 @@ namespace Zio.FileSystems
             var directoryToVisit = new Queue<UPath>();
             directoryToVisit.Enqueue(path);
 
-            var entries = new HashSet<UPath>();
+            var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
+            var sortedDirectories = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
             var fileSystems = new List<IFileSystem>();
 
             if (NextFileSystem != null)
@@ -161,6 +162,7 @@ namespace Zio.FileSystems
             {
                 var pathToVisit = directoryToVisit.Dequeue();
                 entries.Clear();
+                sortedDirectories.Clear();
 
                 for (var i = fileSystems.Count - 1; i >= 0; i--)
                 {
@@ -170,16 +172,26 @@ namespace Zio.FileSystems
                     {
                         foreach (var item in fileSystem.EnumeratePaths(pathToVisit, searchPattern, SearchOption.TopDirectoryOnly, searchTarget))
                         {
-                            entries.Add(item);
-                            if (searchOption == SearchOption.AllDirectories && fileSystem.DirectoryExists(item))
+                            if (!entries.Contains(item))
                             {
-                                directoryToVisit.Enqueue(item);
+                                entries.Add(item);
+
+                                if (searchOption == SearchOption.AllDirectories && fileSystem.DirectoryExists(item))
+                                {
+                                    sortedDirectories.Add(item);
+                                }
                             }
                         }
                     }
                 }
 
-                // TODO: Check if PhysicalSystemPath.EnumeratePaths returns folders first and then files or not
+                // Enqueue directories and respect order
+                foreach (var nextDir in sortedDirectories)
+                {
+                    directoryToVisit.Enqueue(nextDir);
+                }
+
+                // Return entries
                 foreach (var entry in entries)
                 {
                     yield return entry;
