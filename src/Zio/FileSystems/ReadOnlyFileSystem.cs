@@ -13,7 +13,7 @@ namespace Zio.FileSystems
     /// <seealso cref="Zio.FileSystems.DelegateFileSystem" />
     public class ReadOnlyFileSystem : DelegateFileSystem
     {
-        private const string FileSystemIsReadOnly = "This filesystem is read-only";
+        protected const string FileSystemIsReadOnly = "This filesystem is read-only";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReadOnlyFileSystem"/> class.
