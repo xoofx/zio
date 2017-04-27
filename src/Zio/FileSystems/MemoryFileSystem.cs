@@ -428,6 +428,7 @@ namespace Zio.FileSystems
                 throw new ArgumentException("Combining FileMode: Append with FileAccess: Read is invalid.", nameof(access));
             }
 
+            var isReading = (access & FileAccess.Read) != 0;
             var isWriting = (access & FileAccess.Write) != 0;
             var isExclusive = share == FileShare.None;
 
@@ -575,7 +576,7 @@ namespace Zio.FileSystems
                 // TODO: Add checks between mode and access
 
                 // Create a memory file stream
-                var stream = new MemoryFileStream(this, fileNode, isWriting, isExclusive);
+                var stream = new MemoryFileStream(this, fileNode, isReading, isWriting, isExclusive);
                 if (shouldAppend)
                 {
                     stream.Position = stream.Length;
@@ -1507,7 +1508,7 @@ namespace Zio.FileSystems
             private int _isDisposed;
             private long _position;
 
-            public MemoryFileStream(MemoryFileSystem fs, FileNode fileNode, bool canWrite, bool isExclusive)
+            public MemoryFileStream(MemoryFileSystem fs, FileNode fileNode, bool canRead, bool canWrite, bool isExclusive)
             {
                 Debug.Assert(fs != null);
                 Debug.Assert(fileNode != null);
@@ -1515,7 +1516,7 @@ namespace Zio.FileSystems
                 _fs = fs;
                 _fileNode = fileNode;
                 _canWrite = canWrite;
-                _canRead = true;
+                _canRead = canRead;
                 _isExclusive = isExclusive;
                 _position = 0;
             }
