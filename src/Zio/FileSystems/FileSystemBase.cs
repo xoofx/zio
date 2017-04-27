@@ -303,14 +303,6 @@ namespace Zio.FileSystems
             return path;
         }
 
-        private void DisposeInternal(bool disposing)
-        {
-            AssertNotDisposed();
-            IsDisposing = true;
-            Dispose(disposing);
-            IsDisposed = true;
-        }
-
         protected virtual void Dispose(bool disposing)
         {
         }
@@ -321,6 +313,14 @@ namespace Zio.FileSystems
             {
                 throw new ObjectDisposedException($"This instance `{GetType()}` is already disposed.");
             }
+        }
+
+        private void DisposeInternal(bool disposing)
+        {
+            AssertNotDisposed();
+            IsDisposing = true;
+            Dispose(disposing);
+            IsDisposed = true;
         }
     }
 }
