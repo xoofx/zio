@@ -6,121 +6,269 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
+using static Zio.FileSystems.FileSystemExceptionHelper;
+
 namespace Zio.FileSystems
 {
     /// <summary>
     /// Provides an merged readonly view filesystem over multiple filesystems (overriding files/directory in order)
     /// </summary>
-    public class AggregateFileSystem : FileSystemBase
+    public class AggregateFileSystem : ReadOnlyFileSystem
     {
-        protected override void CreateDirectoryImpl(UPath path)
+        private readonly List<IFileSystem> _fileSystems;
+
+        public AggregateFileSystem() : this(null)
         {
-            throw new NotImplementedException();
         }
 
-        protected override bool DirectoryExistsImpl(UPath path)
+        public AggregateFileSystem(IFileSystem fileSystem) : base(fileSystem)
         {
-            throw new NotImplementedException();
+            _fileSystems = new List<IFileSystem>();
         }
 
-        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
+        public List<IFileSystem> GetFileSystems()
         {
-            throw new NotImplementedException();
+            lock (_fileSystems)
+            {
+                return new List<IFileSystem>(_fileSystems);
+            }
         }
 
-        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
+        public void AddFileSystem(IFileSystem fs)
         {
-            throw new NotImplementedException();
+            if (fs == null) throw new ArgumentNullException(nameof(fs));
+            if (fs == this) throw new ArgumentException("Cannot add this instance as an aggregate delegate of itself");
+
+            lock (_fileSystems)
+            {
+                if (!_fileSystems.Contains(fs))
+                {
+                    _fileSystems.Add(fs);
+                }
+                else
+                {
+                    throw new InvalidOperationException("The filesystem is already added");
+                }
+            }
         }
 
-        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
+        public void RemoveFileSystem(IFileSystem fs)
         {
-            throw new NotImplementedException();
-        }
-
-        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override long GetFileLengthImpl(UPath path)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override bool FileExistsImpl(UPath path)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void DeleteFileImpl(UPath path)
-        {
-            throw new NotImplementedException();
+            if (fs == null) throw new ArgumentNullException(nameof(fs));
+            lock (_fileSystems)
+            {
+                if (!_fileSystems.Contains(fs))
+                {
+                    _fileSystems.Remove(fs);
+                }
+                else
+                {
+                    throw new ArgumentException("FileSystem was not found", nameof(fs));
+                }
+            }
         }
 
         protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
-            throw new NotImplementedException();
+            if (mode != FileMode.Open)
+            {
+                throw new IOException(FileSystemIsReadOnly);
+            }
+
+            if ((access & FileAccess.Write) != 0)
+            {
+                throw new IOException(FileSystemIsReadOnly);
+            }
+
+            var entry = GetFile(path);
+            return entry.FileSystem.OpenFile(path, mode, access, share);
         }
 
         protected override FileAttributes GetAttributesImpl(UPath path)
         {
-            throw new NotImplementedException();
+            var entry = GetFile(path);
+            return entry.FileSystem.GetAttributes(path);
         }
 
-        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
+        protected override UPath ConvertPathToDelegate(UPath path)
         {
-            throw new NotImplementedException();
+            return path;
+        }
+
+        protected override UPath ConvertPathFromDelegate(UPath path)
+        {
+            return path;
+        }
+
+        protected override bool DirectoryExistsImpl(UPath path)
+        {
+            var directory = TryGetDirectory(path);
+            return directory.HasValue;
+        }
+
+        protected override long GetFileLengthImpl(UPath path)
+        {
+            var entry = GetFile(path);
+            return entry.FileSystem.GetFileLength(path);
+        }
+
+        protected override bool FileExistsImpl(UPath path)
+        {
+            var entry = TryGetFile(path);
+            return entry.HasValue;
         }
 
         protected override DateTime GetCreationTimeImpl(UPath path)
         {
-            throw new NotImplementedException();
-        }
-
-        protected override void SetCreationTimeImpl(UPath path, DateTime time)
-        {
-            throw new NotImplementedException();
+            var entry = TryGetFile(path);
+            return entry.HasValue ? entry.Value.SystemPath.FileSystem.GetCreationTime(path) : DefaultFileTime;
         }
 
         protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
-            throw new NotImplementedException();
-        }
-
-        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
-        {
-            throw new NotImplementedException();
+            var entry = TryGetFile(path);
+            return entry.HasValue ? entry.Value.SystemPath.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
         }
 
         protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
-            throw new NotImplementedException();
-        }
-
-        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
-        {
-            throw new NotImplementedException();
+            var entry = TryGetFile(path);
+            return entry.HasValue ? entry.Value.SystemPath.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
         }
 
         protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
-            throw new NotImplementedException();
+            SearchPattern.Normalize(ref path, ref searchPattern);
+
+            var directoryToVisit = new Queue<UPath>();
+            directoryToVisit.Enqueue(path);
+
+            var entries = new HashSet<UPath>();
+            var fileSystems = new List<IFileSystem>();
+
+            if (NextFileSystem != null)
+            {
+                fileSystems.Add(NextFileSystem);
+            }
+
+            // Query all filesystems just once
+            lock (_fileSystems)
+            {
+                fileSystems.AddRange(fileSystems);
+            }
+
+            while (directoryToVisit.Count > 0)
+            {
+                var pathToVisit = directoryToVisit.Dequeue();
+                entries.Clear();
+
+                for (var i = fileSystems.Count - 1; i >= 0; i--)
+                {
+                    var fileSystem = fileSystems[i];
+
+                    if (fileSystem.DirectoryExists(pathToVisit))
+                    {
+                        foreach (var item in fileSystem.EnumeratePaths(pathToVisit, searchPattern, SearchOption.TopDirectoryOnly, searchTarget))
+                        {
+                            entries.Add(item);
+                            if (searchOption == SearchOption.AllDirectories && fileSystem.DirectoryExists(item))
+                            {
+                                directoryToVisit.Enqueue(item);
+                            }
+                        }
+                    }
+                }
+
+                // TODO: Check if PhysicalSystemPath.EnumeratePaths returns folders first and then files or not
+                foreach (var entry in entries)
+                {
+                    yield return entry;
+                }
+            }
         }
 
         protected override string ConvertToSystemImpl(UPath path)
         {
-            throw new NotImplementedException();
+            return path.FullName;
         }
 
         protected override UPath ConvertFromSystemImpl(string systemPath)
         {
-            throw new NotImplementedException();
+            return (UPath) systemPath;
+        }
+
+        private FileSystemPath GetFile(UPath path)
+        {
+            var entry = TryGetFile(path);
+            if (!entry.HasValue)
+            {
+                throw NewFileNotFoundException(path);
+            }
+            return entry.Value.SystemPath;
+        }
+
+        private FileSystemPath GetDirectory(UPath path)
+        {
+            var entry = TryGetDirectory(path);
+            if (!entry.HasValue)
+            {
+                throw NewDirectoryNotFoundException(path);
+            }
+            return entry.Value.SystemPath;
+        }
+
+        private FileSystemPathExtended? TryGetFile(UPath path)
+        {
+            var entries = FindPaths(path, SearchTarget.File);
+            return entries.Count > 0 ? (FileSystemPathExtended?)entries[0] : null;
+        }
+
+        private FileSystemPathExtended? TryGetDirectory(UPath path)
+        {
+            var entries = FindPaths(path, SearchTarget.Directory);
+            return entries.Count > 0 ? (FileSystemPathExtended?)entries[0] : null;
+        }
+
+        private List<FileSystemPathExtended> FindPaths(UPath path, SearchTarget searchTarget)
+        {
+            var paths = new List<FileSystemPathExtended>();
+
+            bool queryDirectory = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.Directory;
+            bool queryFile = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.File;
+
+            lock (_fileSystems)
+            {
+                for (var i = _fileSystems.Count - 1; i >= -1; i--)
+                {
+                    var fileSystem = i < 0 ? NextFileSystem : _fileSystems[i];
+
+                    if (fileSystem == null)
+                    {
+                        break;
+                    }
+
+                    bool isFile = false;
+                    if ((queryDirectory && fileSystem.DirectoryExists(path)) || (queryFile && (isFile = fileSystem.FileExists(path))))
+                    {
+                        paths.Add(new FileSystemPathExtended(new FileSystemPath(fileSystem, path), isFile));
+                    }
+                }
+            }
+
+            return paths;
+        }
+
+        private struct FileSystemPathExtended
+        {
+            public FileSystemPathExtended(FileSystemPath systemPath, bool isFile)
+            {
+                SystemPath = systemPath;
+                IsFile = isFile;
+            }
+
+            public readonly FileSystemPath SystemPath;
+
+            public readonly bool IsFile;
         }
     }
 }
