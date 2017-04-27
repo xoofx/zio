@@ -18,6 +18,27 @@ namespace Zio.FileSystems
         // the default file time is 12:00 midnight, January 1, 1601 A.D. (C.E.) Coordinated Universal Time (UTC), adjusted to local time.
         public static readonly DateTime DefaultFileTime = new DateTime(1601, 01, 01, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
 
+        ~FileSystemBase()
+        {
+            Dispose(false);
+        }
+
+        public void Dispose()
+        {
+            DisposeInternal(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// <c>true</c> if this instance if being disposed.
+        /// </summary>
+        protected bool IsDisposing { get; private set; }
+
+        /// <summary>
+        /// <c>true</c> if this instance if being disposed.
+        /// </summary>
+        protected bool IsDisposed { get; private set; }
+
         // ----------------------------------------------
         // Directory API
         // ----------------------------------------------
@@ -25,6 +46,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void CreateDirectory(UPath path)
         {
+            AssertNotDisposed();
             if (path == UPath.Root)
             {
                 throw new UnauthorizedAccessException("Cannot create root directory `/`");
@@ -37,6 +59,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public bool DirectoryExists(UPath path)
         {
+            AssertNotDisposed();
             return DirectoryExistsImpl(ValidatePath(path));
         }
         protected abstract bool DirectoryExistsImpl(UPath path);
@@ -44,6 +67,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void MoveDirectory(UPath srcPath, UPath destPath)
         {
+            AssertNotDisposed();
             if (srcPath == UPath.Root)
             {
                 throw new UnauthorizedAccessException("Cannot move from the source root directory `/`");
@@ -65,6 +89,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void DeleteDirectory(UPath path, bool isRecursive)
         {
+            AssertNotDisposed();
             if (path == UPath.Root)
             {
                 throw new UnauthorizedAccessException("Cannot delete root directory `/`");
@@ -81,6 +106,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void CopyFile(UPath srcPath, UPath destPath, bool overwrite)
         {
+            AssertNotDisposed();
             CopyFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), overwrite);
         }
         protected abstract void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite);
@@ -88,6 +114,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void ReplaceFile(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
+            AssertNotDisposed();
             srcPath = ValidatePath(srcPath, nameof(srcPath));
             destPath = ValidatePath(destPath, nameof(destPath));
             destBackupPath = ValidatePath(destBackupPath, nameof(destBackupPath), true);
@@ -114,6 +141,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public long GetFileLength(UPath path)
         {
+            AssertNotDisposed();
             return GetFileLengthImpl(ValidatePath(path));
         }
         protected abstract long GetFileLengthImpl(UPath path);
@@ -121,6 +149,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public bool FileExists(UPath path)
         {
+            AssertNotDisposed();
             return FileExistsImpl(ValidatePath(path));
         }
         protected abstract bool FileExistsImpl(UPath path);
@@ -128,6 +157,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void MoveFile(UPath srcPath, UPath destPath)
         {
+            AssertNotDisposed();
             MoveFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
         protected abstract void MoveFileImpl(UPath srcPath, UPath destPath);
@@ -135,6 +165,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void DeleteFile(UPath path)
         {
+            AssertNotDisposed();
             DeleteFileImpl(ValidatePath(path));
         }
         protected abstract void DeleteFileImpl(UPath path);
@@ -142,6 +173,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public Stream OpenFile(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
+            AssertNotDisposed();
             return OpenFileImpl(ValidatePath(path), mode, access, share);
         }
         protected abstract Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share);
@@ -153,6 +185,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public FileAttributes GetAttributes(UPath path)
         {
+            AssertNotDisposed();
             return GetAttributesImpl(ValidatePath(path));
         }
 
@@ -161,6 +194,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void SetAttributes(UPath path, FileAttributes attributes)
         {
+            AssertNotDisposed();
             SetAttributesImpl(ValidatePath(path), attributes);
         }
         protected abstract void SetAttributesImpl(UPath path, FileAttributes attributes);
@@ -168,6 +202,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public DateTime GetCreationTime(UPath path)
         {
+            AssertNotDisposed();
             return GetCreationTimeImpl(ValidatePath(path));
         }
 
@@ -176,6 +211,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void SetCreationTime(UPath path, DateTime time)
         {
+            AssertNotDisposed();
             SetCreationTimeImpl(ValidatePath(path), time);
         }
         protected abstract void SetCreationTimeImpl(UPath path, DateTime time);
@@ -183,6 +219,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public DateTime GetLastAccessTime(UPath path)
         {
+            AssertNotDisposed();
             return GetLastAccessTimeImpl(ValidatePath(path));
         }
         protected abstract DateTime GetLastAccessTimeImpl(UPath path);
@@ -190,6 +227,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void SetLastAccessTime(UPath path, DateTime time)
         {
+            AssertNotDisposed();
             SetLastAccessTimeImpl(ValidatePath(path), time);
         }
         protected abstract void SetLastAccessTimeImpl(UPath path, DateTime time);
@@ -197,6 +235,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public DateTime GetLastWriteTime(UPath path)
         {
+            AssertNotDisposed();
             return GetLastWriteTimeImpl(ValidatePath(path));
         }
         protected abstract DateTime GetLastWriteTimeImpl(UPath path);
@@ -204,6 +243,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public void SetLastWriteTime(UPath path, DateTime time)
         {
+            AssertNotDisposed();
             SetLastWriteTimeImpl(ValidatePath(path), time);
         }
         protected abstract void SetLastWriteTimeImpl(UPath path, DateTime time);
@@ -215,6 +255,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public IEnumerable<UPath> EnumeratePaths(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
+            AssertNotDisposed();
             if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumeratePathsImpl(ValidatePath(path), searchPattern, searchOption, searchTarget);
         }
@@ -228,6 +269,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public string ConvertToSystem(UPath path)
         {
+            AssertNotDisposed();
             return ConvertToSystemImpl(ValidatePath(path));
         }
         protected abstract string ConvertToSystemImpl(UPath path);
@@ -235,6 +277,7 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public UPath ConvertFromSystem(string systemPath)
         {
+            AssertNotDisposed();
             if (systemPath == null) throw new ArgumentNullException(nameof(systemPath));
             return ValidatePath(ConvertFromSystemImpl(systemPath));
         }
@@ -258,6 +301,26 @@ namespace Zio.FileSystems
 
             ValidatePathImpl(path, name);
             return path;
+        }
+
+        private void DisposeInternal(bool disposing)
+        {
+            AssertNotDisposed();
+            IsDisposing = true;
+            Dispose(disposing);
+            IsDisposed = true;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+        }
+
+        private void AssertNotDisposed()
+        {
+            if (IsDisposing || IsDisposed)
+            {
+                throw new ObjectDisposedException($"This instance `{GetType()}` is already disposed.");
+            }
         }
     }
 }

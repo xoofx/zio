@@ -11,7 +11,7 @@ namespace Zio
     /// <summary>
     /// Base interface of a FileSystem.
     /// </summary>
-    public interface IFileSystem
+    public interface IFileSystem : IDisposable
     {
         // ----------------------------------------------
         // Directory API
