@@ -17,7 +17,7 @@ namespace Zio.FileSystems
     /// </summary>
     public class PhysicalFileSystem : FileSystemBase
     {
-        private const string DrivePrefixOnWindows = "/drive/";
+        private const string DrivePrefixOnWindows = "/mnt/";
         private static readonly UPath PathDrivePrefixOnWindows = new UPath(DrivePrefixOnWindows);
 #if NETSTANDARD
         private static readonly bool IsOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);

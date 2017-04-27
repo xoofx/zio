@@ -63,9 +63,9 @@ namespace Zio.Tests.FileSystems
             if (IsWindows)
             {
                 var directories = fs.EnumerateDirectories("/").ToList();
-                Assert.Equal(new List<UPath>() { "/drive" }, directories);
+                Assert.Equal(new List<UPath>() { "/mnt" }, directories);
 
-                var drives = fs.EnumerateDirectories("/drive").ToList();
+                var drives = fs.EnumerateDirectories("/mnt").ToList();
                 Assert.True(drives.Count > 0);
 
                 var allDrives = DriveInfo.GetDrives().Select(d => d.Name[0].ToString().ToLowerInvariant()).ToList();
@@ -73,17 +73,17 @@ namespace Zio.Tests.FileSystems
                 Assert.Equal(allDrives, driveNames);
 
                 Assert.True(fs.DirectoryExists("/"));
-                Assert.True(fs.DirectoryExists("/drive"));
+                Assert.True(fs.DirectoryExists("/mnt"));
                 Assert.True(fs.DirectoryExists(drives[0]));
 
                 var files = fs.EnumerateFiles("/").ToList();
                 Assert.True(files.Count == 0);
 
-                files = fs.EnumerateFiles("/drive").ToList();
+                files = fs.EnumerateFiles("/mnt").ToList();
                 Assert.True(files.Count == 0);
 
                 var paths = fs.EnumeratePaths("/").ToList();
-                Assert.Equal(new List<UPath>() { "/drive" }, paths);
+                Assert.Equal(new List<UPath>() { "/mnt" }, paths);
             }
         }
 
@@ -93,26 +93,26 @@ namespace Zio.Tests.FileSystems
             var fs = new PhysicalFileSystem();
             // Try to create a folder on an unauthorized location
             Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/"));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/drive2"));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/drive"));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/drive/yoyo"));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/drive/c"));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt2"));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt"));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt/yoyo"));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt/c"));
 
-            var drives = fs.EnumerateDirectories("/drive").ToList();
+            var drives = fs.EnumerateDirectories("/mnt").ToList();
             Assert.True(drives.Count > 0);
 
             Assert.Throws<UnauthorizedAccessException>(() => fs.MoveDirectory("/", drives[0] / "ShouldNotHappen"));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.MoveDirectory("/drive", drives[0] / "ShouldNotHappen"));
-            Assert.Throws<DirectoryNotFoundException>(() => fs.MoveDirectory("/drive2", drives[0] / "ShouldNotHappen"));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.MoveDirectory("/mnt", drives[0] / "ShouldNotHappen"));
+            Assert.Throws<DirectoryNotFoundException>(() => fs.MoveDirectory("/mnt2", drives[0] / "ShouldNotHappen"));
 
             Assert.Throws<UnauthorizedAccessException>(() => fs.MoveDirectory(drives[0] / "ShouldNotHappen", "/"));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.MoveDirectory(drives[0] / "ShouldNotHappen", "/drive"));
-            Assert.Throws<DirectoryNotFoundException>(() => fs.MoveDirectory(drives[0] / "ShouldNotHappen", "/drive2"));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.MoveDirectory(drives[0] / "ShouldNotHappen", "/mnt"));
+            Assert.Throws<DirectoryNotFoundException>(() => fs.MoveDirectory(drives[0] / "ShouldNotHappen", "/mnt2"));
 
             Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteDirectory("/", false));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteDirectory("/drive", false));
-            Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/drive2", false));
-            Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/drive/yoyo", false));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteDirectory("/mnt", false));
+            Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/mnt2", false));
+            Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/mnt/yoyo", false));
         }
 
         [Fact]
@@ -215,18 +215,18 @@ namespace Zio.Tests.FileSystems
                 fs.GetLastAccessTime("/");
                 fs.GetCreationTime("/");
 
-                fs.GetLastWriteTime("/drive");
-                fs.GetLastAccessTime("/drive");
-                fs.GetCreationTime("/drive");
+                fs.GetLastWriteTime("/mnt");
+                fs.GetLastAccessTime("/mnt");
+                fs.GetCreationTime("/mnt");
 
-                fs.GetLastWriteTime("/drive/c");
-                fs.GetLastAccessTime("/drive/c");
-                fs.GetCreationTime("/drive/c");
-                fs.GetAttributes("/drive/c");
+                fs.GetLastWriteTime("/mnt/c");
+                fs.GetLastAccessTime("/mnt/c");
+                fs.GetCreationTime("/mnt/c");
+                fs.GetAttributes("/mnt/c");
 
                 var sysAttr = FileAttributes.Directory | FileAttributes.System | FileAttributes.ReadOnly;
                 Assert.True((fs.GetAttributes("/") & (sysAttr)) == sysAttr);
-                Assert.True((fs.GetAttributes("/drive") & (sysAttr)) == sysAttr);
+                Assert.True((fs.GetAttributes("/mnt") & (sysAttr)) == sysAttr);
             }
             finally
             {
@@ -280,7 +280,7 @@ namespace Zio.Tests.FileSystems
                 Assert.Throws<NotSupportedException>(() => fs.ConvertFromSystem(@"zx:\toto.txt"));
 
                 Assert.Throws<ArgumentException>(() => fs.ConvertToSystem(@"/toto.txt"));
-                Assert.Throws<ArgumentException>(() => fs.ConvertToSystem(@"/drive/yo/toto.txt"));
+                Assert.Throws<ArgumentException>(() => fs.ConvertToSystem(@"/mnt/yo/toto.txt"));
 
                 // LastWriteTime, LastAccessTime, CreationTime
                 Assert.Throws<DirectoryNotFoundException>(() => fs.GetLastWriteTime("/toto.txt"));
@@ -291,9 +291,9 @@ namespace Zio.Tests.FileSystems
                 Assert.Throws<UnauthorizedAccessException>(() => fs.SetLastAccessTime("/", DateTime.Now));
                 Assert.Throws<UnauthorizedAccessException>(() => fs.SetCreationTime("/", DateTime.Now));
 
-                Assert.Throws<UnauthorizedAccessException>(() => fs.SetLastWriteTime("/drive", DateTime.Now));
-                Assert.Throws<UnauthorizedAccessException>(() => fs.SetLastAccessTime("/drive", DateTime.Now));
-                Assert.Throws<UnauthorizedAccessException>(() => fs.SetCreationTime("/drive", DateTime.Now));
+                Assert.Throws<UnauthorizedAccessException>(() => fs.SetLastWriteTime("/mnt", DateTime.Now));
+                Assert.Throws<UnauthorizedAccessException>(() => fs.SetLastAccessTime("/mnt", DateTime.Now));
+                Assert.Throws<UnauthorizedAccessException>(() => fs.SetCreationTime("/mnt", DateTime.Now));
 
                 Assert.Throws<DirectoryNotFoundException>(() => fs.SetLastWriteTime("/toto.txt", DateTime.Now));
                 Assert.Throws<DirectoryNotFoundException>(() => fs.SetLastAccessTime("/toto.txt", DateTime.Now));
