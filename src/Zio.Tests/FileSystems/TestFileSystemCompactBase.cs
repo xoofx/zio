@@ -14,11 +14,11 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
 {
-    public abstract class TestMemoryOrPhysicalFileSystemBase : TestFileSystemBase
+    public abstract class TestFileSystemCompactBase : TestFileSystemBase
     {
         protected IFileSystem fs;
 
-        protected TestMemoryOrPhysicalFileSystemBase()
+        protected TestFileSystemCompactBase()
         {
         }
 

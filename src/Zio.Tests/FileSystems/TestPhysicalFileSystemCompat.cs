@@ -10,53 +10,20 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
 {
-    public class TestPhysicalFileSystemCompat : TestMemoryOrPhysicalFileSystemBase
+    public class TestPhysicalFileSystemCompat : TestFileSystemCompactBase
     {
-        private readonly DirectoryInfo _compatDirectory;
+        private readonly PhysicalDirectoryHelper _fsHelper;
 
         public TestPhysicalFileSystemCompat()
         {
-            // Make sure that we don't have any remaining Compat-folders
-            foreach (var dir in Directory.EnumerateDirectories(SystemPath, "Compat-*"))
-            {
-                DeleteDirectoryForce(new DirectoryInfo(dir));
-            }
-
-            _compatDirectory = new DirectoryInfo(Path.Combine(SystemPath, "Compat-" + Guid.NewGuid()));
-            _compatDirectory.Create();
-
-            var pfs = new PhysicalFileSystem();
-            fs = new SubFileSystem(pfs, pfs.ConvertFromSystem(_compatDirectory.FullName));
+            _fsHelper = new PhysicalDirectoryHelper(SystemPath);
+            fs = _fsHelper.PhysicalFileSystem;
         }
 
         public override void Dispose()
         {
-            DeleteDirectoryForce(_compatDirectory);
-
+            _fsHelper.Dispose();
             base.Dispose();
-        }
-
-
-        private static void DeleteDirectoryForce(DirectoryInfo dir)
-        {
-            var infos = dir.EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
-            foreach (var info in infos)
-            {
-                if ((info.Attributes & FileAttributes.ReadOnly) != 0)
-                {
-                    info.Attributes = 0;
-                }
-                if (info is FileInfo)
-                {
-                    try
-                    {
-                        info.Delete();
-                    }
-                    catch { }
-                }
-            }
-
-            dir.Delete(true);
         }
     }
 }

@@ -6,9 +6,9 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
 {
-    public class TestMemoryFileSystem : TestMemoryOrPhysicalFileSystemBase
+    public class TestMemoryFileSystemCompact : TestFileSystemCompactBase
     {
-        public TestMemoryFileSystem()
+        public TestMemoryFileSystemCompact()
         {
             fs = new MemoryFileSystem();
         }

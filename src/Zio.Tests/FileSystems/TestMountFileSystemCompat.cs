@@ -5,7 +5,7 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
 {
-    public class TestMountFileSystemCompat : TestMemoryOrPhysicalFileSystemBase
+    public class TestMountFileSystemCompat : TestFileSystemCompactBase
     {
         public TestMountFileSystemCompat()
         {
