@@ -396,9 +396,9 @@ namespace Zio.FileSystems
             var originalSrcPath = path;
 
             // Internal method used to retrieve the list of root directories
-            List<UPath> GetRootDirectories()
+            SortedSet<UPath> GetRootDirectories()
             {
-                var directories = new List<UPath>();
+                var directories = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
                 lock (_mounts)
                 {
                     foreach (var mountName in _mounts.Keys)
@@ -419,7 +419,6 @@ namespace Zio.FileSystems
                     }
                 }
 
-                directories.Sort();
                 return directories;
             }
 
@@ -460,54 +459,39 @@ namespace Zio.FileSystems
             // and merge them with the underlying FileSystem
             if (path == UPath.Root)
             {
-                if (searchOption == SearchOption.TopDirectoryOnly)
+                var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
+
+                // Return the list of dircetories
+                var directories = GetRootDirectories();
+
+                // Process the files first
+                if (NextFileSystem != null && (searchTarget == SearchTarget.File || searchTarget == SearchTarget.Both))
                 {
-                    // Process the files first
-                    if (NextFileSystem != null && (searchTarget == SearchTarget.File || searchTarget == SearchTarget.Both))
+                    foreach (var file in NextFileSystem.EnumeratePaths(path, searchPattern, SearchOption.TopDirectoryOnly, SearchTarget.File))
                     {
-                        foreach (var file in NextFileSystem.EnumeratePaths(path, searchPattern, SearchOption.TopDirectoryOnly, SearchTarget.File))
-                        {
-                            yield return file;
-                        }
+                        entries.Add(file);
                     }
+                }
 
-                    if (searchTarget == SearchTarget.File)
+                if (searchTarget != SearchTarget.File)
+                {
+                    foreach (var dir in directories)
                     {
-                        yield break;
-                    }
-
-                    foreach (var dir in GetRootDirectories())
-                    {
-                        if (searchTarget == SearchTarget.Both || search.Match(dir))
+                        if (search.Match(dir))
                         {
-                            yield return dir;
+                            entries.Add(dir);
                         }
                     }
                 }
-                else // Recursive
+
+                // Return all entries sorted
+                foreach (var entry in entries)
                 {
-                    // Process the files first
-                    if (NextFileSystem != null && (searchTarget == SearchTarget.File || searchTarget == SearchTarget.Both))
-                    {
-                        foreach (var file in NextFileSystem.EnumeratePaths(path, searchPattern, SearchOption.TopDirectoryOnly, SearchTarget.File))
-                        {
-                            yield return file;
-                        }
-                    }
+                    yield return entry;
+                }
 
-                    // Return the list of dircetories
-                    var directories = GetRootDirectories();
-                    if (searchTarget != SearchTarget.File)
-                    {
-                        foreach (var dir in directories)
-                        {
-                            if (searchTarget == SearchTarget.Both || search.Match(dir))
-                            {
-                                yield return dir;
-                            }
-                        }
-                    }
-
+                if (searchOption == SearchOption.AllDirectories)
+                {
                     foreach (var dir in directories)
                     {
                         foreach (var entry in EnumeratePathFromFileSystem(dir, false))

@@ -677,13 +677,15 @@ namespace Zio.FileSystems
         {
             var search = SearchPattern.Parse(ref path, ref searchPattern);
 
-            var foldersToProcess = new Queue<UPath>();
-            foldersToProcess.Enqueue(path);
+            var foldersToProcess = new List<UPath>();
+            foldersToProcess.Add(path);
 
-            var entries = new List<UPath>();
+            var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
             while (foldersToProcess.Count > 0)
             {
-                var directoryPath = foldersToProcess.Dequeue();
+                var directoryPath = foldersToProcess[0];
+                foldersToProcess.RemoveAt(0);
+                int dirIndex = 0;
                 entries.Clear();
 
                 // This is important that here we don't lock the FileSystemShared
@@ -725,7 +727,7 @@ namespace Zio.FileSystems
 
                             var isEntryMatching = search.Match(nodePair.Key);
 
-                            var canFollowFolder = searchOption == SearchOption.AllDirectories && nodePair.Value is DirectoryNode && (searchTarget == SearchTarget.File || isEntryMatching);
+                            var canFollowFolder = searchOption == SearchOption.AllDirectories && nodePair.Value is DirectoryNode;
 
                             var addEntry = (nodePair.Value is FileNode && searchTarget != SearchTarget.Directory && isEntryMatching)
                                            || (nodePair.Value is DirectoryNode && searchTarget != SearchTarget.File && isEntryMatching);
@@ -734,7 +736,7 @@ namespace Zio.FileSystems
 
                             if (canFollowFolder)
                             {
-                                foldersToProcess.Enqueue(fullPath);
+                                foldersToProcess.Insert(dirIndex++, fullPath);
                             }
 
                             if (addEntry)

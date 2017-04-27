@@ -138,10 +138,10 @@ namespace Zio.FileSystems
 
         protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
-            SearchPattern.Normalize(ref path, ref searchPattern);
+            var search = SearchPattern.Parse(ref path, ref searchPattern);
 
-            var directoryToVisit = new Queue<UPath>();
-            directoryToVisit.Enqueue(path);
+            var directoryToVisit = new List<UPath>();
+            directoryToVisit.Add(path);
 
             var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
             var sortedDirectories = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
@@ -155,12 +155,14 @@ namespace Zio.FileSystems
             // Query all filesystems just once
             lock (_fileSystems)
             {
-                fileSystems.AddRange(fileSystems);
+                fileSystems.AddRange(_fileSystems);
             }
 
             while (directoryToVisit.Count > 0)
             {
-                var pathToVisit = directoryToVisit.Dequeue();
+                var pathToVisit = directoryToVisit[0];
+                directoryToVisit.RemoveAt(0);
+                int dirIndex = 0;
                 entries.Clear();
                 sortedDirectories.Clear();
 
@@ -170,13 +172,20 @@ namespace Zio.FileSystems
 
                     if (fileSystem.DirectoryExists(pathToVisit))
                     {
-                        foreach (var item in fileSystem.EnumeratePaths(pathToVisit, searchPattern, SearchOption.TopDirectoryOnly, searchTarget))
+                        foreach (var item in fileSystem.EnumeratePaths(pathToVisit, "*", SearchOption.TopDirectoryOnly, SearchTarget.Both))
                         {
                             if (!entries.Contains(item))
                             {
-                                entries.Add(item);
+                                var isFile = fileSystem.FileExists(item);
+                                var isDirectory = fileSystem.DirectoryExists(item);
+                                var isMatching = search.Match(item);
 
-                                if (searchOption == SearchOption.AllDirectories && fileSystem.DirectoryExists(item))
+                                if (isMatching && ((isFile && searchTarget != SearchTarget.Directory) || (isDirectory && searchTarget != SearchTarget.File)))
+                                {
+                                    entries.Add(item);
+                                }
+
+                                if (searchOption == SearchOption.AllDirectories && isDirectory)
                                 {
                                     sortedDirectories.Add(item);
                                 }
@@ -188,7 +197,7 @@ namespace Zio.FileSystems
                 // Enqueue directories and respect order
                 foreach (var nextDir in sortedDirectories)
                 {
-                    directoryToVisit.Enqueue(nextDir);
+                    directoryToVisit.Insert(dirIndex++, nextDir);
                 }
 
                 // Return entries
@@ -201,11 +210,13 @@ namespace Zio.FileSystems
 
         protected override string ConvertToSystemImpl(UPath path)
         {
+            // TODO: how to implement this correctly?
             return path.FullName;
         }
 
         protected override UPath ConvertFromSystemImpl(string systemPath)
         {
+            // TODO: how to implement this correctly?
             return (UPath) systemPath;
         }
 
