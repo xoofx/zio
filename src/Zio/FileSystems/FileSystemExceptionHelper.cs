@@ -6,7 +6,7 @@ using System.IO;
 
 namespace Zio.FileSystems
 {
-    public static class FileSystemExceptionHelper
+    internal static class FileSystemExceptionHelper
     {
         public static FileNotFoundException NewFileNotFoundException(UPath path)
         {
