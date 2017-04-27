@@ -24,6 +24,9 @@ namespace Zio
 
         private static InternalHelper InternalHelperTls => _internalHelperTls ?? (_internalHelperTls = new InternalHelper());
 
+        public static readonly IComparer<UPath> DefaultComparer = new ComparerCaseSensitive();
+        public static readonly IComparer<UPath> DefaultComparerIgnoreCase = new ComparerIgnoreCase();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="UPath"/> struct.
         /// </summary>
@@ -374,6 +377,22 @@ namespace Zio
         public int CompareTo(UPath other)
         {
             return string.Compare(FullName, other.FullName, StringComparison.Ordinal);
+        }
+
+        private class ComparerCaseSensitive : IComparer<UPath>
+        {
+            public int Compare(UPath x, UPath y)
+            {
+                return string.Compare(x.FullName, y.FullName, StringComparison.Ordinal);
+            }
+        }
+
+        private class ComparerIgnoreCase : IComparer<UPath>
+        {
+            public int Compare(UPath x, UPath y)
+            {
+                return string.Compare(x.FullName, y.FullName, StringComparison.OrdinalIgnoreCase);
+            }
         }
     }
 }
