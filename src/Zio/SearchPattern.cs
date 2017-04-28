@@ -10,6 +10,7 @@ namespace Zio
 {
     /// <summary>
     /// Search pattern compiler used for custom <see cref="IFileSystem.EnumeratePaths"/> implementations.
+    /// Use the method <see cref="Parse"/> to create a pattern.
     /// </summary>
     public struct SearchPattern
     {
@@ -18,6 +19,11 @@ namespace Zio
         private readonly string _exactMatch;
         private readonly Regex _regexMatch;
 
+        /// <summary>
+        /// Tries to match the specified path with this instance.
+        /// </summary>
+        /// <param name="path">The path to match.</param>
+        /// <returns><c>true</c> if the path was matched, <c>false</c> otherwise.</returns>
         public bool Match(UPath path)
         {
             path.AssertNotNull();
@@ -26,6 +32,11 @@ namespace Zio
             return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
         }
 
+        /// <summary>
+        /// Tries to match the specified path with this instance.
+        /// </summary>
+        /// <param name="name">The path to match.</param>
+        /// <returns><c>true</c> if the path was matched, <c>false</c> otherwise.</returns>
         public bool Match(string name)
         {
             if (name == null) throw new ArgumentNullException(nameof(name));
@@ -33,11 +44,22 @@ namespace Zio
             return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
         }
 
+        /// <summary>
+        /// Parses and normalize the specified path and <see cref="SearchPattern"/>.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="searchPattern">The search pattern.</param>
+        /// <returns>An instance of <see cref="SearchPattern"/> in order to use <see cref="Match(Zio.UPath)"/> on a path.</returns>
         public static SearchPattern Parse(ref UPath path, ref string searchPattern)
         {
             return new SearchPattern(ref path, ref searchPattern);
         }
 
+        /// <summary>
+        /// Normalizes the specified path and <see cref="SearchPattern"/>.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="searchPattern">The search pattern.</param>
         public static void Normalize(ref UPath path, ref string searchPattern)
         {
             Parse(ref path, ref searchPattern);
