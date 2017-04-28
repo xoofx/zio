@@ -213,6 +213,8 @@ namespace Zio.Tests.FileSystems
             Assert.Throws<IOException>(() => fs.MoveFile("/drive", "/drive2"));
             Assert.Throws<IOException>(() => fs.DeleteFile("/toto.txt"));
             Assert.Throws<IOException>(() => fs.OpenFile("/toto.txt", FileMode.Create, FileAccess.ReadWrite));
+            Assert.Throws<IOException>(() => fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Write));
+            Assert.Throws<IOException>(() => fs.ReplaceFile("/a/a/a.txt", "/A.txt", "/titi.txt", true));
 
             Assert.Throws<IOException>(() => fs.SetAttributes("/toto.txt", FileAttributes.ReadOnly));
             Assert.Throws<IOException>(() => fs.SetCreationTime("/toto.txt", DateTime.Now));
