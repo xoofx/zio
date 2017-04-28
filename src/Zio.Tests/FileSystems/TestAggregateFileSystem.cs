@@ -3,17 +3,16 @@
 // See the license.txt file in the project root for more information.
 
 using Xunit;
-using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
 {
-    public class TestReadOnlyFileSystem : TestFileSystemBase
+    public class TestAggregateFileSystem : TestFileSystemBase
     {
         [Fact]
         public void TestCommonReadOnly()
         {
-            var rofs = new ReadOnlyFileSystem(GetCommonMemoryFileSystem());
-            AssertCommonReadOnly(rofs);
+            var fs = GetCommonAggregateFileSystem();
+            AssertCommonReadOnly(fs);
         }
-    }
+   }
 }

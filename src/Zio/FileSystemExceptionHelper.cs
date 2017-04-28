@@ -4,7 +4,7 @@
 
 using System.IO;
 
-namespace Zio.FileSystems
+namespace Zio
 {
     internal static class FileSystemExceptionHelper
     {

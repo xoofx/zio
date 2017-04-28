@@ -5,22 +5,23 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-using static Zio.FileSystems.FileSystemExceptionHelper;
+using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
 {
     /// <summary>
-    /// Base class for <see cref="IFileSystem"/>. Provides default arguments safety checking and redirecting to safe implementation.
+    /// Abstract class for a <see cref="IFileSystem"/>. Provides default arguments safety checking and redirecting to safe implementation.
+    /// Implements also the <see cref="IDisposable"/> pattern.
     /// </summary>
-    public abstract class FileSystemBase : IFileSystem
+    public abstract class FileSystem : IFileSystem
     {
         // For GetCreationTime...etc. If the file described in a path parameter does not exist
         // the default file time is 12:00 midnight, January 1, 1601 A.D. (C.E.) Coordinated Universal Time (UTC), adjusted to local time.
         public static readonly DateTime DefaultFileTime = new DateTime(1601, 01, 01, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
 
-        ~FileSystemBase()
+        ~FileSystem()
         {
-            Dispose(false);
+            DisposeInternal(false);
         }
 
         public void Dispose()
@@ -51,9 +52,9 @@ namespace Zio.FileSystems
             {
                 throw new UnauthorizedAccessException("Cannot create root directory `/`");
             }
-
             CreateDirectoryImpl(ValidatePath(path));
         }
+       
         protected abstract void CreateDirectoryImpl(UPath path);
 
         /// <inheritdoc />
@@ -149,6 +150,12 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public bool FileExists(UPath path)
         {
+            // Only case where a null path is allowed
+            if (path.IsNull)
+            {
+                return false;
+            }
+
             AssertNotDisposed();
             return FileExistsImpl(ValidatePath(path));
         }

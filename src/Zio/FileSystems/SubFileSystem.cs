@@ -4,14 +4,14 @@
 using System;
 using System.IO;
 
-using static Zio.FileSystems.FileSystemExceptionHelper;
+using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
 {
     /// <summary>
     /// Provides a secure view on a sub folder of another delegate <see cref="IFileSystem"/>
     /// </summary>
-    public class SubFileSystem : DelegateFileSystem
+    public class SubFileSystem : ComposeFileSystem
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SubFileSystem"/> class.
@@ -29,7 +29,7 @@ namespace Zio.FileSystems
         }
 
         /// <summary>
-        /// Gets the sub path relative to the delegate <see cref="DelegateFileSystem.NextFileSystem"/>
+        /// Gets the sub path relative to the delegate <see cref="ComposeFileSystem.NextFileSystem"/>
         /// </summary>
         public UPath SubPath { get; }
 

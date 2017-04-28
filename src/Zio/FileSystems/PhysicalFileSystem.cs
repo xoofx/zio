@@ -8,14 +8,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-using static Zio.FileSystems.FileSystemExceptionHelper;
+using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
 {
     /// <summary>
     /// Provides a <see cref="IFileSystem"/> for the physical filesystem.
     /// </summary>
-    public class PhysicalFileSystem : FileSystemBase
+    public class PhysicalFileSystem : FileSystem
     {
         private const string DrivePrefixOnWindows = "/mnt/";
         private static readonly UPath PathDrivePrefixOnWindows = new UPath(DrivePrefixOnWindows);

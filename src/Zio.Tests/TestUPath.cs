@@ -158,7 +158,7 @@ namespace Zio.Tests
         public void TestGetExtension(string path1, string expectedName)
         {
             var path = (UPath)path1;
-            var result = path.GetDotExtension();
+            var result = path.GetExtensionWithDot();
             Assert.Equal(expectedName, result);
         }
 
@@ -197,13 +197,13 @@ namespace Zio.Tests
         [Fact]
         public void TestSplit()
         {
-            Assert.Equal(new List<string>(), ((UPath)"").Split().ToList());
-            Assert.Equal(new List<string>(), ((UPath)"/").Split().ToList());
-            Assert.Equal(new List<string>() { "a" }, ((UPath)"/a").Split().ToList());
-            Assert.Equal(new List<string>() {"a", "b", "c"}, ((UPath) "/a/b/c").Split().ToList());
-            Assert.Equal(new List<string>() { "a" }, ((UPath)"a").Split().ToList());
-            Assert.Equal(new List<string>() { "a", "b" }, ((UPath)"a/b").Split().ToList());
-            Assert.Equal(new List<string>() { "a", "b", "c" }, ((UPath)"a/b/c").Split().ToList());
+            Assert.Equal(new List<string>(), ((UPath)"").Split());
+            Assert.Equal(new List<string>(), ((UPath)"/").Split());
+            Assert.Equal(new List<string>() { "a" }, ((UPath)"/a").Split());
+            Assert.Equal(new List<string>() {"a", "b", "c"}, ((UPath) "/a/b/c").Split());
+            Assert.Equal(new List<string>() { "a" }, ((UPath)"a").Split());
+            Assert.Equal(new List<string>() { "a", "b" }, ((UPath)"a/b").Split());
+            Assert.Equal(new List<string>() { "a", "b", "c" }, ((UPath)"a/b/c").Split());
         }
 
 
@@ -214,7 +214,7 @@ namespace Zio.Tests
             Assert.Throws<ArgumentException>(() => new UPath("..."));
             Assert.Throws<ArgumentException>(() => new UPath("a/..."));
             Assert.Throws<ArgumentException>(() => new UPath(".../a"));
-            Assert.Throws<InvalidOperationException>(() => UPath.Combine("/", ".."));
+            Assert.Throws<ArgumentException>(() => UPath.Combine("/", ".."));
             Assert.Equal("path1", Assert.Throws<ArgumentNullException>(() => UPath.Combine(null, "")).ParamName);
             Assert.Equal("path2", Assert.Throws<ArgumentNullException>(() => UPath.Combine("", null)).ParamName);
         }

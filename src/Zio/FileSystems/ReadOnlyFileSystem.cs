@@ -10,8 +10,8 @@ namespace Zio.FileSystems
     /// <summary>
     /// Provides a readonly filesystem on top of another <see cref="IFileSystem"/>.
     /// </summary>
-    /// <seealso cref="Zio.FileSystems.DelegateFileSystem" />
-    public class ReadOnlyFileSystem : DelegateFileSystem
+    /// <seealso cref="ComposeFileSystem" />
+    public class ReadOnlyFileSystem : ComposeFileSystem
     {
         protected const string FileSystemIsReadOnly = "This filesystem is read-only";
 

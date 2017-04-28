@@ -94,7 +94,7 @@ namespace Zio.Tests
                 Assert.Equal(new UPath("/a/b/c"), path.GetDirectory());
                 Assert.Equal("d.txt", path.GetName());
                 Assert.Equal("d", path.GetNameWithoutExtension());
-                Assert.Equal(".txt", path.GetDotExtension());
+                Assert.Equal(".txt", path.GetExtensionWithDot());
                 var newPath = path.ChangeExtension(".zip");
                 Assert.Equal("/a/b/c/d.zip", newPath.FullName);
                 Assert.Equal(new UPath("a/b/c/d.txt"), path.ToRelative());
@@ -108,7 +108,7 @@ namespace Zio.Tests
                 Assert.Equal(UPath.Empty, path.GetDirectory());
                 Assert.Equal("d.txt", path.GetName());
                 Assert.Equal("d", path.GetNameWithoutExtension());
-                Assert.Equal(".txt", path.GetDotExtension());
+                Assert.Equal(".txt", path.GetExtensionWithDot());
                 var newPath = path.ChangeExtension(".zip");
                 Assert.Equal("d.zip", newPath.FullName);
                 Assert.Equal(new UPath("d.txt"), path.ToRelative());

@@ -14,6 +14,20 @@ namespace Zio.Tests.FileSystems
     public class TestMountFileSystem : TestFileSystemBase
     {
         [Fact]
+        public void TestCommonReadWithOnlyBackup()
+        {
+            var fs = GetCommonMountFileSystemWithOnlyBackup();
+            AssertCommonRead(fs);
+        }
+
+        [Fact]
+        public void TestCommonReadWithMounts()
+        {
+            var fs = GetCommonMountFileSystemWithMounts();
+            AssertCommonRead(fs);
+        }
+
+        [Fact]
         public void TestMount()
         {
             var fs = new MountFileSystem();

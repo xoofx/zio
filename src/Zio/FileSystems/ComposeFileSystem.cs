@@ -8,15 +8,16 @@ using System.IO;
 namespace Zio.FileSystems
 {
     /// <summary>
-    /// Provides a base FileSystem for delegating to another FileSystem while allowing specific overrides.
+    /// Provides an abstract base <see cref="IFileSystem"/> for composing a filesystem with another FileSystem. 
+    /// This implementation delegates by default its implementation to the filesystem passed to the constructor.
     /// </summary>
-    public abstract class DelegateFileSystem : FileSystemBase
+    public abstract class ComposeFileSystem : FileSystem
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="DelegateFileSystem"/> class.
+        /// Initializes a new instance of the <see cref="ComposeFileSystem"/> class.
         /// </summary>
-        /// <param name="fileSystem">The delegated file system.</param>
-        protected DelegateFileSystem(IFileSystem fileSystem)
+        /// <param name="fileSystem">The delegated file system (can be null).</param>
+        protected ComposeFileSystem(IFileSystem fileSystem)
         {
             NextFileSystem = fileSystem;
         }
@@ -27,7 +28,7 @@ namespace Zio.FileSystems
         protected IFileSystem NextFileSystem { get; }
 
         /// <summary>
-        /// Gets the next delegated file system.
+        /// Gets the next delegated file system or throws an error if it is null.
         /// </summary>
         protected IFileSystem NextFileSystemSafe
         {

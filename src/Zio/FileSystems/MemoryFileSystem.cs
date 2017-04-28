@@ -6,17 +6,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 
-using static Zio.FileSystems.FileSystemExceptionHelper;
+using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
 {
     /// <summary>
-    /// Provides an in-memory <see cref="IFileSystem"/>
+    /// Provides an in-memory <see cref="IFileSystem"/> compatible with the way a real <see cref="PhysicalFileSystem"/> is working.
     /// </summary>
-    public class MemoryFileSystem : FileSystemBase
+    public class MemoryFileSystem : FileSystem
     {
         // The locking strategy is based on https://www.kernel.org/doc/Documentation/filesystems/directory-locking
 
@@ -1062,7 +1061,7 @@ namespace Zio.FileSystems
             var isParentWriting = (flags & (FindNodeFlags.CreatePathIfNotExist | FindNodeFlags.KeepParentNodeExclusive)) != 0;
 
             var parentNode = _rootDirectory;
-            var names = path.Split().ToList();
+            var names = path.Split();
 
             for (var i = 0; i < names.Count && parentNode != null; i++)
             {
@@ -1391,6 +1390,11 @@ namespace Zio.FileSystems
                 }
                 return dir;
             }
+
+            public override string ToString()
+            {
+                return $"Directory Children[{_children.Count}] ({base.ToString()})";
+            }
         }
 
         private class FileNode : FileSystemNode
@@ -1414,6 +1418,11 @@ namespace Zio.FileSystems
                 var copy = (FileNode)base.Clone(newParent);
                 copy.Content = new FileContent(Content);
                 return copy;
+            }
+
+            public override string ToString()
+            {
+                return $"File Content-{Content} ({base.ToString()})";
             }
         }
 
@@ -1495,6 +1504,11 @@ namespace Zio.FileSystems
                         _stream.SetLength(value);
                     }
                 }
+            }
+
+            public override string ToString()
+            {
+                return $"{nameof(Length)}: {Length}";
             }
         }
 

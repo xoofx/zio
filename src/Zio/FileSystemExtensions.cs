@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-using static Zio.FileSystems.FileSystemExceptionHelper;
+using static Zio.FileSystemExceptionHelper;
 
 namespace Zio
 {

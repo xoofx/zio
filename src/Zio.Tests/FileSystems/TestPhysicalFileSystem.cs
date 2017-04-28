@@ -15,6 +15,13 @@ namespace Zio.Tests.FileSystems
     public class TestPhysicalFileSystem : TestFileSystemBase
     {
         [Fact]
+        public void TestCommonRead()
+        {
+            var fs = GetCommonPhysicalFileSystem();
+            AssertCommonRead(fs);
+        }
+
+        [Fact]
         public void TestDirectory()
         {
             var fs = new PhysicalFileSystem();
@@ -33,10 +40,6 @@ namespace Zio.Tests.FileSystems
                 // DirectoryExists
                 Assert.True(fs.DirectoryExists(pathToCreate));
                 Assert.False(fs.DirectoryExists(pathToCreate / "not_found"));
-
-                // EnumerateDirectories
-                var directories = fs.EnumerateDirectories(pathInfo).ToList();
-                Assert.Equal(new List<UPath>() {pathToCreate}, directories);
 
                 // MoveDirectory
                 fs.MoveDirectory(pathToCreate, movedDirectory);

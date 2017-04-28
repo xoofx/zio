@@ -2,6 +2,7 @@
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 using System;
+using System.IO;
 
 namespace Zio
 {
@@ -20,6 +21,8 @@ namespace Zio
 
         public DateTime CreationTime => FileSystem.GetCreationTime(Path);
 
+        public FileAttributes Attributes => FileSystem.GetAttributes(Path);
+
         public bool Exists => FileSystem.FileExists(Path);
 
         public string Extension => System.IO.Path.GetExtension(Path.FullName);
@@ -32,7 +35,7 @@ namespace Zio
         
         public string Name => Path.GetName();
 
-        public string DotExtension => Path.GetDotExtension(); 
+        public string DotExtension => Path.GetExtensionWithDot(); 
 
         public abstract void Delete();
 

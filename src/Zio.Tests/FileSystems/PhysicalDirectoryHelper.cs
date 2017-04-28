@@ -14,7 +14,7 @@ namespace Zio.Tests.FileSystems
 
         public PhysicalDirectoryHelper(string rootPath)
         {
-            _compatDirectory = new DirectoryInfo(Path.Combine(rootPath, "Compat-" + Guid.NewGuid()));
+            _compatDirectory = new DirectoryInfo(Path.Combine(rootPath, "Physical-" + Guid.NewGuid()));
             _compatDirectory.Create();
 
             var pfs = new PhysicalFileSystem();

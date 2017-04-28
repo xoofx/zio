@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
-using static Zio.FileSystems.FileSystemExceptionHelper;
+using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
 {
@@ -15,7 +15,7 @@ namespace Zio.FileSystems
     /// A <see cref="IFileSystem"/> that can mount other filesystems on a root name. 
     /// This mount filesystem supports also an optionnal fallback delegate FileSystem if a path was not found through a mount
     /// </summary>
-    public class MountFileSystem : DelegateFileSystem
+    public class MountFileSystem : ComposeFileSystem
     {
         private readonly Dictionary<string, IFileSystem> _mounts;
 
@@ -536,7 +536,7 @@ namespace Zio.FileSystems
 
             UPath mountSubPath;
 
-            path.ExtractFirstDirectory(out mountName, out mountSubPath);
+            mountName = path.GetFirstDirectory(out mountSubPath);
             IFileSystem mountfs;
             lock (_mounts)
             {
@@ -545,8 +545,7 @@ namespace Zio.FileSystems
 
             if (mountfs != null)
             {
-                path = mountSubPath.IsNull ? UPath.Root : mountSubPath;
-                Debug.Assert(path.IsAbsolute);
+                path = mountSubPath.ToAbsolute();
                 return mountfs;
             }
             else if (NextFileSystem != null)
