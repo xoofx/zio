@@ -411,6 +411,7 @@ namespace Zio
         public static void AppendAllText(this IFileSystem fs, UPath path, string content, Encoding encoding)
         {
             if (content == null) throw new ArgumentNullException(nameof(content));
+            if (encoding == null) throw new ArgumentNullException(nameof(encoding));
             var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream, encoding))
