@@ -38,6 +38,11 @@ namespace Zio.Tests.FileSystems
             var list = fs.GetFileSystems();
             Assert.Equal(1, list.Count);
             Assert.Equal(memfs, list[0]);
+
+            fs.RemoveFileSystem(memfs);
+
+            list = fs.GetFileSystems();
+            Assert.Equal(0, list.Count);
         }
     }
 }

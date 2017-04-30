@@ -261,20 +261,6 @@ namespace Zio.FileSystems
             return path;
         }
 
-        /// <inheritdoc />
-        protected override string ConvertPathToInnerImpl(UPath path)
-        {
-            // TODO: how to implement this correctly?
-            return path.FullName;
-        }
-
-        /// <inheritdoc />
-        protected override UPath ConvertPathFromInnerImpl(string innerPath)
-        {
-            // TODO: how to implement this correctly?
-            return (UPath) innerPath;
-        }
-
         // ----------------------------------------------
         // Internals API
         // Used to retrieve the correct paths
@@ -287,16 +273,6 @@ namespace Zio.FileSystems
             if (!entry.HasValue)
             {
                 throw NewFileNotFoundException(path);
-            }
-            return entry.Value.SystemPath;
-        }
-
-        private FileSystemPath GetDirectory(UPath path)
-        {
-            var entry = TryGetDirectory(path);
-            if (!entry.HasValue)
-            {
-                throw NewDirectoryNotFoundException(path);
             }
             return entry.Value.SystemPath;
         }
