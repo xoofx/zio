@@ -5,6 +5,11 @@ using System.IO;
 
 namespace Zio
 {
+    /// <summary>
+    /// Similar to <see cref="FileInfo"/> but to use with <see cref="IFileSystem"/>, provides properties and instance methods 
+    /// for the creation, copying, deletion, moving, and opening of files, and aids in the creation of FileStream objects. 
+    /// Note that unlike <see cref="FileInfo"/>, this class doesn't cache any data.
+    /// </summary>
     public class FileEntry : FileSystemEntry
     {
         /// <summary>
@@ -17,8 +22,8 @@ namespace Zio
         }
 
         /// <summary>Gets an instance of the parent directory.</summary>
-        /// <returns>A <see cref="T:System.IO.DirectoryInfo" /> object representing the parent directory of this file.</returns>
-        /// <exception cref="T:System.IO.DirectoryNotFoundException">
+        /// <returns>A <see cref="DirectoryEntry" /> object representing the parent directory of this file.</returns>
+        /// <exception cref="DirectoryNotFoundException">
         ///     The specified path is invalid, such as being on an unmapped
         ///     drive.
         /// </exception>
@@ -163,6 +168,10 @@ namespace Zio
             return FileSystem.OpenFile(Path, mode, access, share);
         }
 
+        /// <inheritdoc />
+        public override bool Exists => FileSystem.FileExists(Path);
+
+        /// <inheritdoc />
         public override void Delete()
         {
             FileSystem.DeleteFile(Path);

@@ -3,11 +3,13 @@
 // See the license.txt file in the project root for more information.
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace Zio
 {
 
+    /// <summary>
+    /// Exposes instance methods for creating, moving, and enumerating through directories and subdirectories. 
+    /// </summary>
     public class DirectoryEntry : FileSystemEntry
     {
         /// <summary>
@@ -22,18 +24,10 @@ namespace Zio
         /// <summary>Gets the parent directory of a specified subdirectory.</summary>
         /// <returns>The parent directory, or null if the path is null or if the file path denotes a root (such as "\", "C:", or * "\\server\share").</returns>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        /// <filterpriority>1</filterpriority>
-        /// <PermissionSet>
-        ///   <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />
-        /// </PermissionSet>
-        public DirectoryEntry Parent => Path.FullName == "/" ? null : FileSystem.GetDirectoryEntry(Path / "..");
+        public DirectoryEntry Parent => Path == UPath.Root ? null : FileSystem.GetDirectoryEntry(Path / "..");
 
         /// <summary>Creates a directory.</summary>
         /// <exception cref="T:System.IO.IOException">The directory cannot be created. </exception>
-        /// <filterpriority>1</filterpriority>
-        /// <PermissionSet>
-        ///   <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />
-        /// </PermissionSet>
         public void Create()
         {
             FileSystem.CreateDirectory(Path);
@@ -52,10 +46,6 @@ namespace Zio
         /// <exception cref="T:System.Security.SecurityException">The caller does not have code access permission to create the directory.-or-The caller does not have code access permission to read the directory described by the returned <see cref="T:System.IO.DirectoryInfo" /> object.  This can occur when the <paramref name="path" /> parameter describes an existing directory.</exception>
         /// <exception cref="T:System.NotSupportedException">
         /// <paramref name="path" /> contains a colon character (:) that is not part of a drive label ("C:\").</exception>
-        /// <filterpriority>2</filterpriority>
-        /// <PermissionSet>
-        ///   <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />
-        /// </PermissionSet>
         public DirectoryEntry CreateSubdirectory(UPath path)
         {
             if (!path.IsRelative)
@@ -75,10 +65,6 @@ namespace Zio
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The directory described by this <see cref="T:System.IO.DirectoryInfo" /> object does not exist or could not be found.</exception>
         /// <exception cref="T:System.IO.IOException">The directory is read-only.-or- The directory contains one or more files or subdirectories and <paramref name="recursive" /> is false.-or-The directory is the application's current working directory. -or-There is an open handle on the directory or on one of its files, and the operating system is Windows XP or earlier. This open handle can result from enumerating directories and files. For more information, see How to: Enumerate Directories and Files.</exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        /// <filterpriority>1</filterpriority>
-        /// <PermissionSet>
-        ///   <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />
-        /// </PermissionSet>
         public void Delete(bool recursive)
         {
             FileSystem.DeleteDirectory(Path, recursive);
@@ -117,15 +103,15 @@ namespace Zio
         /// <exception cref="T:System.IO.IOException">An attempt was made to move a directory to a different volume. -or-<paramref name="destDirName" /> already exists.-or-You are not authorized to access this path.-or- The directory being moved and the destination directory have the same name.</exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The destination directory cannot be found.</exception>
-        /// <filterpriority>1</filterpriority>
-        /// <PermissionSet>
-        ///   <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />
-        /// </PermissionSet>
         public void MoveTo(UPath destDirName)
         {
             FileSystem.MoveDirectory(Path, destDirName);
         }
 
+        /// <inheritdoc />
+        public override bool Exists => FileSystem.DirectoryExists(Path);
+
+        /// <inheritdoc />
         public override void Delete()
         {
             Delete(true);
