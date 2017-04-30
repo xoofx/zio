@@ -44,14 +44,15 @@ namespace Zio.FileSystems
         protected override UPath ConvertPathFromDelegate(UPath path)
         {
             var fullPath = path.FullName;
-            if (!fullPath.StartsWith(SubPath.FullName) || fullPath.Length <= SubPath.FullName.Length || fullPath[SubPath.FullName.Length] != UPath.DirectorySeparator)
+            if (!fullPath.StartsWith(SubPath.FullName) || (fullPath.Length > SubPath.FullName.Length && fullPath[SubPath.FullName.Length] != UPath.DirectorySeparator))
             {
                 // More a safe guard, as it should never happen, but if a delegate filesystem doesn't respect its root path
                 // we are throwing an exception here
                 throw new InvalidOperationException($"The path `{path}` returned by the delegate filesystem is not rooted to the subpath `{SubPath}`");
             }
 
-            return new UPath(fullPath.Substring(SubPath.FullName.Length), true);
+            var subPath = fullPath.Substring(SubPath.FullName.Length);
+            return subPath == string.Empty ? UPath.Root : new UPath(subPath, true);
         }
     }
 }

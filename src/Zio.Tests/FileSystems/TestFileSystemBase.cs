@@ -226,6 +226,24 @@ namespace Zio.Tests.FileSystems
 
         protected void AssertCommonRead(IFileSystem fs, bool isReadOnly = false)
         {
+            {
+                var innerPath = fs.ConvertPathToInner("/");
+                var reverseInnerPath = fs.ConvertPathFromInner(innerPath);
+                Assert.Equal(UPath.Root, reverseInnerPath);
+            }
+
+            {
+                var innerPath = fs.ConvertPathToInner("/a/a");
+                var reverseInnerPath = fs.ConvertPathFromInner(innerPath);
+                Assert.Equal("/a/a", reverseInnerPath);
+            }
+
+            {
+                var innerPath = fs.ConvertPathToInner("/b");
+                var reverseInnerPath = fs.ConvertPathFromInner(innerPath);
+                Assert.Equal("/b", reverseInnerPath);
+            }
+
             Assert.True(fs.DirectoryExists("/"));
 
             Assert.True(fs.FileExists("/A.txt"));
@@ -253,6 +271,10 @@ namespace Zio.Tests.FileSystems
             Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/A.txt"));
             Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/b.txt"));
             Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/a/a/a.txt"));
+
+            Assert.True(fs.GetFileLength("/A.txt") > 0);
+            Assert.True(fs.GetFileLength("/b.txt") > 0);
+            Assert.True(fs.GetFileLength("/a/a/a.txt") > 0);
 
             Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a"));
             Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a/a"));
