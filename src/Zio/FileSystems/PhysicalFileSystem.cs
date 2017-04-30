@@ -529,15 +529,15 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override UPath ConvertPathFromInnerImpl(string systemPath)
+        protected override UPath ConvertPathFromInnerImpl(string innerPath)
         {
             if (IsOnWindows)
             {
                 // We currently don't support special Windows files (\\.\ \??\  DosDevices...etc.)
-                if (systemPath.StartsWith(@"\\") || systemPath.StartsWith(@"\?"))
-                    throw new NotSupportedException($"Path starting with `\\\\` or `\\?` are not supported -> `{systemPath}` ");
+                if (innerPath.StartsWith(@"\\") || innerPath.StartsWith(@"\?"))
+                    throw new NotSupportedException($"Path starting with `\\\\` or `\\?` are not supported -> `{innerPath}` ");
 
-                var absolutePath = Path.GetFullPath(systemPath);
+                var absolutePath = Path.GetFullPath(innerPath);
                 var driveIndex = absolutePath.IndexOf(":\\", StringComparison.Ordinal);
                 if (driveIndex != 1)
                     throw new ArgumentException($"Expecting a drive for the path `{absolutePath}`");
@@ -551,7 +551,7 @@ namespace Zio.FileSystems
                 builder.Length = 0;
                 return new UPath(result);
             }
-            return systemPath;
+            return innerPath;
         }
 
         private static bool IsWithinSpecialDirectory(UPath path)

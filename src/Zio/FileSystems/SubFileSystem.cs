@@ -33,12 +33,14 @@ namespace Zio.FileSystems
         /// </summary>
         public UPath SubPath { get; }
 
+        /// <inheritdoc />
         protected override UPath ConvertPathToDelegate(UPath path)
         {
             var safePath = path.ToRelative();
             return SubPath / safePath;
         }
 
+        /// <inheritdoc />
         protected override UPath ConvertPathFromDelegate(UPath path)
         {
             var fullPath = path.FullName;

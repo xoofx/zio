@@ -15,15 +15,22 @@ namespace Zio.FileSystems
     /// </summary>
     public abstract class FileSystem : IFileSystem
     {
-        // For GetCreationTime...etc. If the file described in a path parameter does not exist
-        // the default file time is 12:00 midnight, January 1, 1601 A.D. (C.E.) Coordinated Universal Time (UTC), adjusted to local time.
+        /// <summary>
+        /// The default file time if the file described in a path parameter does not exist.
+        /// The default file time is 12:00 midnight, January 1, 1601 A.D. (C.E.) Coordinated Universal Time (UTC), adjusted to local time.
+        /// </summary>
         public static readonly DateTime DefaultFileTime = new DateTime(1601, 01, 01, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
 
+
+        /// <summary>
+        /// Finalizes an instance of the <see cref="FileSystem"/> class.
+        /// </summary>
         ~FileSystem()
         {
             DisposeInternal(false);
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             DisposeInternal(true);
@@ -54,7 +61,13 @@ namespace Zio.FileSystems
             }
             CreateDirectoryImpl(ValidatePath(path));
         }
-       
+
+        /// <summary>
+        /// Implementation for <see cref="CreateDirectory"/>, paths is guaranteed to be absolute and not the root path `/`
+        /// and validated through <see cref="ValidatePath"/>.
+        /// Creates all directories and subdirectories in the specified path unless they already exist.
+        /// </summary>
+        /// <param name="path">The directory to create.</param>
         protected abstract void CreateDirectoryImpl(UPath path);
 
         /// <inheritdoc />
@@ -63,6 +76,13 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             return DirectoryExistsImpl(ValidatePath(path));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="DirectoryExists"/>, paths is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Determines whether the given path refers to an existing directory on disk.
+        /// </summary>
+        /// <param name="path">The path to test.</param>
+        /// <returns><c>true</c> if the given path refers to an existing directory on disk, <c>false</c> otherwise.</returns>
         protected abstract bool DirectoryExistsImpl(UPath path);
 
         /// <inheritdoc />
@@ -85,6 +105,14 @@ namespace Zio.FileSystems
 
             MoveDirectoryImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="MoveDirectory"/>, <paramref name="srcPath"/> and <paramref name="destPath"/>
+        /// are guaranteed to be absolute, not equal and different from root `/`, and validated through <see cref="ValidatePath"/>.
+        /// Moves a directory and its contents to a new location.
+        /// </summary>
+        /// <param name="srcPath">The path of the directory to move.</param>
+        /// <param name="destPath">The path to the new location for <paramref name="srcPath"/></param>
         protected abstract void MoveDirectoryImpl(UPath srcPath, UPath destPath);
 
         /// <inheritdoc />
@@ -98,6 +126,13 @@ namespace Zio.FileSystems
 
             DeleteDirectoryImpl(ValidatePath(path), isRecursive);
         }
+
+        /// <summary>
+        /// Implementation for <see cref="DeleteDirectory"/>, <paramref name="path"/> is guaranteed to be absolute and different from root path `/` and validated through <see cref="ValidatePath"/>.
+        /// Deletes the specified directory and, if indicated, any subdirectories and files in the directory. 
+        /// </summary>
+        /// <param name="path">The path of the directory to remove.</param>
+        /// <param name="isRecursive"><c>true</c> to remove directories, subdirectories, and files in path; otherwise, <c>false</c>.</param>
         protected abstract void DeleteDirectoryImpl(UPath path, bool isRecursive);
 
         // ----------------------------------------------
@@ -110,6 +145,15 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             CopyFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), overwrite);
         }
+
+        /// <summary>
+        /// Implementation for <see cref="CopyFile"/>, <paramref name="srcPath"/> and <paramref name="destPath"/>
+        /// are guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Copies an existing file to a new file. Overwriting a file of the same name is allowed.
+        /// </summary>
+        /// <param name="srcPath">The path of the file to copy.</param>
+        /// <param name="destPath">The path of the destination file. This cannot be a directory.</param>
+        /// <param name="overwrite"><c>true</c> if the destination file can be overwritten; otherwise, <c>false</c>.</param>
         protected abstract void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite);
 
         /// <inheritdoc />
@@ -137,6 +181,16 @@ namespace Zio.FileSystems
 
             ReplaceFileImpl(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
         }
+
+        /// <summary>
+        /// Implementation for <see cref="ReplaceFile"/>, <paramref name="srcPath"/>, <paramref name="destPath"/> and <paramref name="destBackupPath"/>
+        /// are guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Replaces the contents of a specified file with the contents of another file, deleting the original file, and creating a backup of the replaced file and optionally ignores merge errors.
+        /// </summary>
+        /// <param name="srcPath">The path of a file that replaces the file specified by <paramref name="destPath"/>.</param>
+        /// <param name="destPath">The path of the file being replaced.</param>
+        /// <param name="destBackupPath">The path of the backup file (maybe null, in that case, it doesn't create any backup)</param>
+        /// <param name="ignoreMetadataErrors"><c>true</c> to ignore merge errors (such as attributes and access control lists (ACLs)) from the replaced file to the replacement file; otherwise, <c>false</c>.</param>
         protected abstract void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors);
 
         /// <inheritdoc />
@@ -145,6 +199,13 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             return GetFileLengthImpl(ValidatePath(path));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="GetFileLength"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Gets the size, in bytes, of a file.
+        /// </summary>
+        /// <param name="path">The path of a file.</param>
+        /// <returns>The size, in bytes, of the file</returns>
         protected abstract long GetFileLengthImpl(UPath path);
 
         /// <inheritdoc />
@@ -159,6 +220,16 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             return FileExistsImpl(ValidatePath(path));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="FileExists"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Determines whether the specified file exists.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns><c>true</c> if the caller has the required permissions and path contains the name of an existing file; 
+        /// otherwise, <c>false</c>. This method also returns false if path is null, an invalid path, or a zero-length string. 
+        /// If the caller does not have sufficient permissions to read the specified file, 
+        /// no exception is thrown and the method returns false regardless of the existence of path.</returns>
         protected abstract bool FileExistsImpl(UPath path);
 
         /// <inheritdoc />
@@ -167,6 +238,14 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             MoveFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="CopyFile"/>, <paramref name="srcPath"/> and <paramref name="destPath"/>
+        /// are guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Moves a specified file to a new location, providing the option to specify a new file name.
+        /// </summary>
+        /// <param name="srcPath">The path of the file to move.</param>
+        /// <param name="destPath">The new path and name for the file.</param>
         protected abstract void MoveFileImpl(UPath srcPath, UPath destPath);
 
         /// <inheritdoc />
@@ -175,6 +254,12 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             DeleteFileImpl(ValidatePath(path));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="FileExists"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Deletes the specified file. 
+        /// </summary>
+        /// <param name="path">The path of the file to be deleted.</param>
         protected abstract void DeleteFileImpl(UPath path);
 
         /// <inheritdoc />
@@ -183,6 +268,16 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             return OpenFileImpl(ValidatePath(path), mode, access, share);
         }
+
+        /// <summary>
+        /// Implementation for <see cref="OpenFile"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Opens a file <see cref="Stream"/> on the specified path, having the specified mode with read, write, or read/write access and the specified sharing option.
+        /// </summary>
+        /// <param name="path">The path to the file to open.</param>
+        /// <param name="mode">A <see cref="FileMode"/> value that specifies whether a file is created if one does not exist, and determines whether the contents of existing files are retained or overwritten.</param>
+        /// <param name="access">A <see cref="FileAccess"/> value that specifies the operations that can be performed on the file.</param>
+        /// <param name="share">A <see cref="FileShare"/> value specifying the type of access other threads have to the file.</param>
+        /// <returns>A file <see cref="Stream"/> on the specified path, having the specified mode with read, write, or read/write access and the specified sharing option.</returns>
         protected abstract Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share);
 
         // ----------------------------------------------
@@ -196,6 +291,12 @@ namespace Zio.FileSystems
             return GetAttributesImpl(ValidatePath(path));
         }
 
+        /// <summary>
+        /// Implementation for <see cref="GetAttributes"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Gets the <see cref="FileAttributes"/> of the file or directory on the path.
+        /// </summary>
+        /// <param name="path">The path to the file or directory.</param>
+        /// <returns>The <see cref="FileAttributes"/> of the file or directory on the path.</returns>
         protected abstract FileAttributes GetAttributesImpl(UPath path);
 
         /// <inheritdoc />
@@ -204,6 +305,13 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             SetAttributesImpl(ValidatePath(path), attributes);
         }
+
+        /// <summary>
+        /// Implementation for <see cref="SetAttributes"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Sets the specified <see cref="FileAttributes"/> of the file or directory on the specified path.
+        /// </summary>
+        /// <param name="path">The path to the file or directory.</param>
+        /// <param name="attributes">A bitwise combination of the enumeration values.</param>
         protected abstract void SetAttributesImpl(UPath path, FileAttributes attributes);
 
         /// <inheritdoc />
@@ -213,6 +321,12 @@ namespace Zio.FileSystems
             return GetCreationTimeImpl(ValidatePath(path));
         }
 
+        /// <summary>
+        /// Implementation for <see cref="GetCreationTime"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Returns the creation date and time of the specified file or directory.
+        /// </summary>
+        /// <param name="path">The path to a file or directory for which to obtain creation date and time information.</param>
+        /// <returns>A <see cref="DateTime"/> structure set to the creation date and time for the specified file or directory. This value is expressed in local time.</returns>
         protected abstract DateTime GetCreationTimeImpl(UPath path);
 
         /// <inheritdoc />
@@ -221,6 +335,13 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             SetCreationTimeImpl(ValidatePath(path), time);
         }
+
+        /// <summary>
+        /// Implementation for <see cref="SetCreationTime"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Sets the date and time the file was created.
+        /// </summary>
+        /// <param name="path">The path to a file or directory for which to set the creation date and time.</param>
+        /// <param name="time">A <see cref="DateTime"/> containing the value to set for the creation date and time of path. This value is expressed in local time.</param>
         protected abstract void SetCreationTimeImpl(UPath path, DateTime time);
 
         /// <inheritdoc />
@@ -229,6 +350,13 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             return GetLastAccessTimeImpl(ValidatePath(path));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="GetLastAccessTime"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Returns the last access date and time of the specified file or directory.
+        /// </summary>
+        /// <param name="path">The path to a file or directory for which to obtain creation date and time information.</param>
+        /// <returns>A <see cref="DateTime"/> structure set to the last access date and time for the specified file or directory. This value is expressed in local time.</returns>
         protected abstract DateTime GetLastAccessTimeImpl(UPath path);
 
         /// <inheritdoc />
@@ -237,6 +365,13 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             SetLastAccessTimeImpl(ValidatePath(path), time);
         }
+
+        /// <summary>
+        /// Implementation for <see cref="SetLastAccessTime"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Sets the date and time the file was last accessed.
+        /// </summary>
+        /// <param name="path">The path to a file or directory for which to set the last access date and time.</param>
+        /// <param name="time">A <see cref="DateTime"/> containing the value to set for the last access date and time of path. This value is expressed in local time.</param>
         protected abstract void SetLastAccessTimeImpl(UPath path, DateTime time);
 
         /// <inheritdoc />
@@ -245,6 +380,13 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             return GetLastWriteTimeImpl(ValidatePath(path));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="GetLastWriteTime"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Returns the last write date and time of the specified file or directory.
+        /// </summary>
+        /// <param name="path">The path to a file or directory for which to obtain creation date and time information.</param>
+        /// <returns>A <see cref="DateTime"/> structure set to the last write date and time for the specified file or directory. This value is expressed in local time.</returns>
         protected abstract DateTime GetLastWriteTimeImpl(UPath path);
 
         /// <inheritdoc />
@@ -253,6 +395,13 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             SetLastWriteTimeImpl(ValidatePath(path), time);
         }
+
+        /// <summary>
+        /// Implementation for <see cref="SetLastWriteTime"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Sets the date and time that the specified file was last written to.
+        /// </summary>
+        /// <param name="path">The path to a file or directory for which to set the last write date and time.</param>
+        /// <param name="time">A <see cref="DateTime"/> containing the value to set for the last write date and time of path. This value is expressed in local time.</param>
         protected abstract void SetLastWriteTimeImpl(UPath path, DateTime time);
 
         // ----------------------------------------------
@@ -267,6 +416,15 @@ namespace Zio.FileSystems
             return EnumeratePathsImpl(ValidatePath(path), searchPattern, searchOption, searchTarget);
         }
 
+        /// <summary>
+        /// Implementation for <see cref="EnumeratePaths"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Returns an enumerable collection of file names and/or directory names that match a search pattern in a specified path, and optionally searches subdirectories.
+        /// </summary>
+        /// <param name="path">The path to the directory to search.</param>
+        /// <param name="searchPattern">The search string to match against file-system entries in path. This parameter can contain a combination of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
+        /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory or should include all subdirectories.</param>
+        /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>.</param>
+        /// <returns>An enumerable collection of file-system paths in the directory specified by path and that match the specified search pattern, option and target.</returns>
         protected abstract IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
 
         // ----------------------------------------------
@@ -279,6 +437,14 @@ namespace Zio.FileSystems
             AssertNotDisposed();
             return ConvertPathToInnerImpl(ValidatePath(path));
         }
+
+        /// <summary>
+        /// Implementation for <see cref="ConvertPathToInner"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Converts the specified path to the underlying path used by this <see cref="IFileSystem"/>. In case of a <see cref="Zio.FileSystems.PhysicalFileSystem"/>, it 
+        /// would represent the actual path on the disk.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>The converted system path according to the specified path.</returns>
         protected abstract string ConvertPathToInnerImpl(UPath path);
 
         /// <inheritdoc />
@@ -288,16 +454,37 @@ namespace Zio.FileSystems
             if (systemPath == null) throw new ArgumentNullException(nameof(systemPath));
             return ValidatePath(ConvertPathFromInnerImpl(systemPath));
         }
-        protected abstract UPath ConvertPathFromInnerImpl(string systemPath);
+        /// <summary>
+        /// Implementation for <see cref="ConvertPathToInner"/>, <paramref name="innerPath"/> is guaranteed to be not null and return path to be validated through <see cref="ValidatePath"/>.
+        /// Converts the specified system path to a <see cref="IFileSystem"/> path.
+        /// </summary>
+        /// <param name="innerPath">The system path.</param>
+        /// <returns>The converted path according to the system path.</returns>
+        protected abstract UPath ConvertPathFromInnerImpl(string innerPath);
 
-        protected virtual void ValidatePathImpl(UPath path, string name = "path")
+        /// <summary>
+        /// User overridable implementation for <see cref="ValidatePath"/> to validate the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="name">The name.</param>
+        /// <returns>The path validated</returns>
+        /// <exception cref="System.NotSupportedException">The path cannot contain the `:` character</exception>
+        protected virtual UPath ValidatePathImpl(UPath path, string name = "path")
         {
             if (path.FullName.IndexOf(':') >= 0)
             {
                 throw new NotSupportedException($"The path `{path}` cannot contain the `:` character");
             }
+            return path;
         }
 
+        /// <summary>
+        /// Validates the specified path (Check that it is absolute by default)
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="name">The name.</param>
+        /// <param name="allowNull">if set to <c>true</c> the path is allowed to be null. <c>false</c> otherwise.</param>  
+        /// <returns>The path validated</returns>
         protected UPath ValidatePath(UPath path, string name = "path", bool allowNull = false)
         {
             if (allowNull && path.IsNull)
@@ -306,10 +493,13 @@ namespace Zio.FileSystems
             }
             path.AssertAbsolute(name);
 
-            ValidatePathImpl(path, name);
-            return path;
+            return ValidatePathImpl(path, name);
         }
 
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources.
+        /// </summary>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected virtual void Dispose(bool disposing)
         {
         }

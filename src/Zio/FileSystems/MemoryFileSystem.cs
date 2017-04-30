@@ -60,6 +60,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected virtual MemoryFileSystem CloneImpl()
         {
             return new MemoryFileSystem(this);
@@ -69,6 +70,7 @@ namespace Zio.FileSystems
         // Directory API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override void CreateDirectoryImpl(UPath path)
         {
             EnterFileSystemShared();
@@ -82,6 +84,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override bool DirectoryExistsImpl(UPath path)
         {
             if (path == UPath.Root)
@@ -108,11 +111,13 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             MoveFileOrDirectory(srcPath, destPath, true);
         }
 
+        /// <inheritdoc />
         protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             EnterFileSystemShared();
@@ -179,6 +184,7 @@ namespace Zio.FileSystems
         // File API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             EnterFileSystemShared();
@@ -258,6 +264,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             // Get the directories of src/dest/backup
@@ -361,6 +368,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override long GetFileLengthImpl(UPath path)
         {
             EnterFileSystemShared();
@@ -374,6 +382,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override bool FileExistsImpl(UPath path)
         {
             EnterFileSystemShared();
@@ -389,11 +398,13 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override void MoveFileImpl(UPath srcPath, UPath destPath)
         {
             MoveFileOrDirectory(srcPath, destPath, false);
         }
 
+        /// <inheritdoc />
         protected override void DeleteFileImpl(UPath path)
         {
             EnterFileSystemShared();
@@ -427,6 +438,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share)
         {
             if (mode == FileMode.Append && (access & FileAccess.Read) != 0)
@@ -618,6 +630,7 @@ namespace Zio.FileSystems
         // Metadata API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override FileAttributes GetAttributesImpl(UPath path)
         {
             var node = FindNodeSafe(path, false);
@@ -634,6 +647,7 @@ namespace Zio.FileSystems
             return attributes;
         }
 
+        /// <inheritdoc />
         protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             // We don't store the attributes Normal or directory
@@ -646,31 +660,37 @@ namespace Zio.FileSystems
             node.Attributes = attributes;
         }
 
+        /// <inheritdoc />
         protected override DateTime GetCreationTimeImpl(UPath path)
         {
             return TryFindNodeSafe(path)?.CreationTime ?? DefaultFileTime;
         }
 
+        /// <inheritdoc />
         protected override void SetCreationTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).CreationTime = time;
         }
 
+        /// <inheritdoc />
         protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
             return TryFindNodeSafe(path)?.LastAccessTime ?? DefaultFileTime;
         }
 
+        /// <inheritdoc />
         protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).LastAccessTime = time;
         }
 
+        /// <inheritdoc />
         protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
             return TryFindNodeSafe(path)?.LastWriteTime ?? DefaultFileTime;
         }
 
+        /// <inheritdoc />
         protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).LastWriteTime = time;
@@ -680,6 +700,7 @@ namespace Zio.FileSystems
         // Search API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             var search = SearchPattern.Parse(ref path, ref searchPattern);
@@ -774,14 +795,16 @@ namespace Zio.FileSystems
         // Path API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override string ConvertPathToInnerImpl(UPath path)
         {
             return path.FullName;
         }
 
-        protected override UPath ConvertPathFromInnerImpl(string systemPath)
+        /// <inheritdoc />
+        protected override UPath ConvertPathFromInnerImpl(string innerPath)
         {
-            return new UPath(systemPath);
+            return new UPath(innerPath);
         }
 
         // ----------------------------------------------

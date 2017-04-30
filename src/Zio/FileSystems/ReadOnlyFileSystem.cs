@@ -13,6 +13,9 @@ namespace Zio.FileSystems
     /// <seealso cref="ComposeFileSystem" />
     public class ReadOnlyFileSystem : ComposeFileSystem
     {
+        /// <summary>
+        /// The message "The filesystem is readonly" used to throw an <see cref="IOException"/>.
+        /// </summary>
         protected const string FileSystemIsReadOnly = "This filesystem is read-only";
 
         /// <summary>
@@ -93,6 +96,7 @@ namespace Zio.FileSystems
         // Metadata API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override FileAttributes GetAttributesImpl(UPath path)
         {
             // All paths are readonly

@@ -207,7 +207,7 @@ namespace Zio
         /// <returns>A string containing all lines of the file.</returns>
         /// <remarks>
         ///     This method attempts to automatically detect the encoding of a file based on the presence of byte order marks.
-        ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.</param>
+        ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.
         /// </remarks>
         public static string ReadAllText(this IFileSystem fs, UPath path)
         {
@@ -400,6 +400,7 @@ namespace Zio
         /// <param name="fs">The filesystem.</param>
         /// <param name="path">The path of the file to open for appending.</param>
         /// <param name="content">The content to append.</param>
+        /// <param name="encoding">The encoding to use to encode the text from <paramref name="path" />.</param>
         /// <exception cref="System.ArgumentNullException">content</exception>
         /// <remarks>
         ///     Given a string and a file path, this method opens the specified file, appends the string to the end of the file,
@@ -577,9 +578,6 @@ namespace Zio
         /// <param name="path">The path of the directory to look for files.</param>
         /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
         /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
-        /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
-        /// or should include all subdirectories.
-        /// The default value is TopDirectoryOnly.</param>
         /// <returns>An enumerable collection of <see cref="FileEntry"/> from the specified path.</returns>
         public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
         {

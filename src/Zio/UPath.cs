@@ -33,7 +33,14 @@ namespace Zio
 
         private static InternalHelper InternalHelperTls => _internalHelperTls ?? (_internalHelperTls = new InternalHelper());
 
+        /// <summary>
+        /// The default comparer for a <see cref="UPath"/> that is case sensitive.
+        /// </summary>
         public static readonly IComparer<UPath> DefaultComparer = new ComparerCaseSensitive();
+
+        /// <summary>
+        /// The default comparer for a <see cref="UPath"/> that is case insensitive.
+        /// </summary>
         public static readonly IComparer<UPath> DefaultComparerIgnoreCase = new ComparerIgnoreCase();
 
         /// <summary>
@@ -458,6 +465,7 @@ namespace Zio
             public int Length => End - Start + 1;
         }
 
+        /// <inheritdoc />
         public int CompareTo(UPath other)
         {
             return string.Compare(FullName, other.FullName, StringComparison.Ordinal);

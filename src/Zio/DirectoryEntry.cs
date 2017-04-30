@@ -71,7 +71,7 @@ namespace Zio
         }
 
         /// <summary>Returns an enumerable collection of directory information that matches a specified search pattern and search subdirectory option. </summary>
-        /// <returns>An enumerable collection of directories that matches <paramref name="searchPattern" /> and <paramref name="searchOption" />.</returns>
+        /// <returns>An enumerable collection of directories.</returns>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The path encapsulated in the <see cref="T:System.IO.DirectoryInfo" /> object is invalid (for example, it is on an unmapped drive). </exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
         public IEnumerable<DirectoryEntry> EnumerateDirectories()
@@ -83,7 +83,7 @@ namespace Zio
         }
 
         /// <summary>Returns an enumerable collection of file information that matches a specified search pattern and search subdirectory option.</summary>
-        /// <returns>An enumerable collection of files that matches <paramref name="searchPattern" /> and <paramref name="searchOption" />.</returns>
+        /// <returns>An enumerable collection of files.</returns>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The path encapsulated in the <see cref="T:System.IO.DirectoryInfo" /> object is invalid (for example, it is on an unmapped drive). </exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
         public IEnumerable<FileEntry> EnumerateFiles()

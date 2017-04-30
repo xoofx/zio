@@ -19,15 +19,33 @@ namespace Zio.FileSystems
     {
         private readonly Dictionary<string, IFileSystem> _mounts;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MountFileSystem"/> class.
+        /// </summary>
         public MountFileSystem() : this(null)
         {
         }
 
-        public MountFileSystem(IFileSystem nextFileSystem) : base(nextFileSystem)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MountFileSystem"/> class with a default backup filesystem.
+        /// </summary>
+        /// <param name="defaultBackupFileSystem">The default backup file system.</param>
+        public MountFileSystem(IFileSystem defaultBackupFileSystem) : base(defaultBackupFileSystem)
         {
             _mounts = new Dictionary<string, IFileSystem>();
         }
 
+        /// <summary>
+        /// Mounts a filesystem for the specified mount name.
+        /// </summary>
+        /// <param name="name">The mount name.</param>
+        /// <param name="fileSystem">The file system.</param>
+        /// <exception cref="System.ArgumentNullException">fileSystem</exception>
+        /// <exception cref="System.ArgumentException">
+        /// Cannot recursively mount the filesystem to self - fileSystem
+        /// or
+        /// There is already a mount with the same name: `{mountName}` - name
+        /// </exception>
         public void Mount(UPath name, IFileSystem fileSystem)
         {
             if (fileSystem == null) throw new ArgumentNullException(nameof(fileSystem));
@@ -48,6 +66,11 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <summary>
+        /// Determines whether the specified mount name is mounted.
+        /// </summary>
+        /// <param name="name">The mount name.</param>
+        /// <returns><c>true</c> if the specified name is mounted; otherwise, <c>false</c>.</returns>
         public bool IsMounted(UPath name)
         {
             AssertMountName(name);
@@ -59,6 +82,10 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <summary>
+        /// Gets all the mounts currently mounted
+        /// </summary>
+        /// <returns>A dictionary of mounted filesystems.</returns>
         public Dictionary<UPath, IFileSystem> GetMounts()
         {
             var dict = new Dictionary<UPath, IFileSystem>();
@@ -72,6 +99,11 @@ namespace Zio.FileSystems
             return dict;
         }
 
+        /// <summary>
+        /// Unmounts the specified mount name and its attached filesystem.
+        /// </summary>
+        /// <param name="name">The mount name.</param>
+        /// <exception cref="System.ArgumentException">The mount with the name `{mountName}` was not found</exception>
         public void Unmount(UPath name)
         {
             AssertMountName(name);
@@ -85,6 +117,7 @@ namespace Zio.FileSystems
                 }
             }
         }
+        /// <inheritdoc />
         protected override void CreateDirectoryImpl(UPath path)
         {
             var originalSrcPath = path;
@@ -99,6 +132,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override bool DirectoryExistsImpl(UPath path)
         {
             if (path == UPath.Root)
@@ -113,6 +147,7 @@ namespace Zio.FileSystems
             return false;
         }
 
+        /// <inheritdoc />
         protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             var originalSrcPath = srcPath;
@@ -142,6 +177,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             var originalSrcPath = path;
@@ -162,6 +198,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             var originalSrcPath = srcPath;
@@ -193,6 +230,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             var originalSrcPath = srcPath;
@@ -224,6 +262,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override long GetFileLengthImpl(UPath path)
         {
             var originalSrcPath = path;
@@ -236,12 +275,14 @@ namespace Zio.FileSystems
             throw NewFileNotFoundException(originalSrcPath);
         }
 
+        /// <inheritdoc />
         protected override bool FileExistsImpl(UPath path)
         {
             var mountfs = TryGetMountOrNext(ref path);
             return mountfs?.FileExists(path) ?? false;
         }
 
+        /// <inheritdoc />
         protected override void MoveFileImpl(UPath srcPath, UPath destPath)
         {
             var originalSrcPath = srcPath;
@@ -283,12 +324,14 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override void DeleteFileImpl(UPath path)
         {
             var mountfs = TryGetMountOrNext(ref path);
             mountfs?.DeleteFile(path);
         }
 
+        /// <inheritdoc />
         protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             var originalSrcPath = path;
@@ -307,6 +350,7 @@ namespace Zio.FileSystems
             throw new UnauthorizedAccessException($"The access to path `{originalSrcPath}` is denied");
         }
 
+        /// <inheritdoc />
         protected override FileAttributes GetAttributesImpl(UPath path)
         {
             var originalSrcPath = path;
@@ -318,6 +362,7 @@ namespace Zio.FileSystems
             throw NewFileNotFoundException(originalSrcPath);
         }
 
+        /// <inheritdoc />
         protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             var originalSrcPath = path;
@@ -332,11 +377,13 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override DateTime GetCreationTimeImpl(UPath path)
         {
             return TryGetMountOrNext(ref path)?.GetCreationTime(path) ?? DefaultFileTime;
         }
 
+        /// <inheritdoc />
         protected override void SetCreationTimeImpl(UPath path, DateTime time)
         {
             var originalSrcPath = path;
@@ -351,11 +398,13 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
             return TryGetMountOrNext(ref path)?.GetLastAccessTime(path) ?? DefaultFileTime;
         }
 
+        /// <inheritdoc />
         protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             var originalSrcPath = path;
@@ -370,11 +419,13 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
             return TryGetMountOrNext(ref path)?.GetLastWriteTime(path) ?? DefaultFileTime;
         }
 
+        /// <inheritdoc />
         protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             var originalSrcPath = path;
@@ -389,6 +440,7 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             // Use the search pattern to normalize the path/search pattern
@@ -510,11 +562,13 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
         protected override UPath ConvertPathToDelegate(UPath path)
         {
             return path;
         }
 
+        /// <inheritdoc />
         protected override UPath ConvertPathFromDelegate(UPath path)
         {
             return path;

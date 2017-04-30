@@ -12,6 +12,12 @@ namespace Zio
     /// </summary>
     public abstract class FileSystemEntry
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileSystemEntry"/> class.
+        /// </summary>
+        /// <param name="fileSystem">The file system.</param>
+        /// <param name="path">The path to the file or directory.</param>
+        /// <exception cref="System.ArgumentNullException">fileSystem</exception>
         protected FileSystemEntry(IFileSystem fileSystem, UPath path)
         {
             FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -97,6 +103,10 @@ namespace Zio
         /// </summary>
         public abstract void Delete();
 
+        /// <summary>
+        /// Returns the <see cref="FullName"/> of this instance.
+        /// </summary>
+        /// <returns>The <see cref="FullName"/> of this instance.</returns>
         public override string ToString()
         {
             return Path.FullName;

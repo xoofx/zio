@@ -156,7 +156,7 @@ namespace Zio
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
         /// <exception cref="T:System.IO.FileNotFoundException">The file is not found. </exception>
         /// <exception cref="T:System.UnauthorizedAccessException">
-        ///     <paramref name="path" /> is read-only or is a directory.
+        ///     The path is read-only or is a directory.
         /// </exception>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">
         ///     The specified path is invalid, such as being on an unmapped
