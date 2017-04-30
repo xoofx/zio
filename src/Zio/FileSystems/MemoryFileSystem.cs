@@ -34,9 +34,11 @@ namespace Zio.FileSystems
         /// <summary>
         /// Constructor used for deep cloning.
         /// </summary>
-        /// <param name="copyFrom"></param>
-        private MemoryFileSystem(MemoryFileSystem copyFrom)
+        /// <param name="copyFrom">The MemoryFileStream to clone from</param>
+        protected MemoryFileSystem(MemoryFileSystem copyFrom)
         {
+            if (copyFrom == null) throw new ArgumentNullException(nameof(copyFrom));
+            Debug.Assert(copyFrom._globalLock.IsLocked);
             _rootDirectory = (DirectoryNode)copyFrom._rootDirectory.Clone(null);
             _globalLock = new FileSystemNodeReadWriteLock();
         }
@@ -50,12 +52,17 @@ namespace Zio.FileSystems
             EnterFileSystemExclusive();
             try
             {
-                return new MemoryFileSystem(this);
+                return CloneImpl();
             }
             finally
             {
                 ExitFileSystemExclusive();
             }
+        }
+
+        protected virtual MemoryFileSystem CloneImpl()
+        {
+            return new MemoryFileSystem(this);
         }
 
         // ----------------------------------------------
