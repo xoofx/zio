@@ -291,7 +291,6 @@ namespace Zio.Tests.FileSystems
             new EnumeratePathsResult(fs).Check(_referenceEnumeratePathsResult);
         }
 
-
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         class EnumeratePathsResult
         {
@@ -327,14 +326,29 @@ namespace Zio.Tests.FileSystems
             public EnumeratePathsResult(IFileSystem fs)
             {
                 TopDirs = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.Directory).ToList();
+                // Check extension method
+                Assert.Equal(TopDirs, fs.EnumerateDirectories("/").ToList());
+
                 TopFiles = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.File).ToList();
+                // Check extension method
+                Assert.Equal(TopFiles, fs.EnumerateFiles("/").ToList());
+
                 TopEntries = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.Both).ToList();
+                // Check extension method
+                Assert.Equal(TopEntries, fs.EnumeratePaths("/").ToList());
 
                 AllDirs = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
+
                 AllFiles = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File).ToList();
+                // Check extension method
+                Assert.Equal(AllFiles, fs.EnumerateFiles("/", "*", SearchOption.AllDirectories).ToList());
+
                 AllEntries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList();
 
                 AllFiles_txt = fs.EnumeratePaths("/", "*.txt", SearchOption.AllDirectories, SearchTarget.File).ToList();
+                // Check extension method
+                Assert.Equal(AllFiles_txt, fs.EnumerateFiles("/", "*.txt", SearchOption.AllDirectories).ToList());
+
                 AllDirs_a1 = fs.EnumeratePaths("/", "a/*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
                 AllDirs_a2 = fs.EnumeratePaths("/a", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
                 AllFiles_i = fs.EnumeratePaths("/", "*.i", SearchOption.AllDirectories, SearchTarget.File).ToList();
