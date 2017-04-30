@@ -98,6 +98,15 @@ namespace Zio
             set => FileSystem.SetLastWriteTime(Path, value);
         }
 
+        /// <summary>Gets an instance of the parent directory.</summary>
+        /// <returns>A <see cref="DirectoryEntry" /> object representing the parent directory of this file.</returns>
+        /// <exception cref="DirectoryNotFoundException">
+        ///     The specified path is invalid, such as being on an unmapped
+        ///     drive.
+        /// </exception>
+        /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
+        public DirectoryEntry Directory => Path == UPath.Root ? null : FileSystem.GetDirectoryEntry(Path / "..");
+
         /// <summary>
         /// Deletes a file or directory.
         /// </summary>

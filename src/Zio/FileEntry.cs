@@ -21,15 +21,6 @@ namespace Zio
         {
         }
 
-        /// <summary>Gets an instance of the parent directory.</summary>
-        /// <returns>A <see cref="DirectoryEntry" /> object representing the parent directory of this file.</returns>
-        /// <exception cref="DirectoryNotFoundException">
-        ///     The specified path is invalid, such as being on an unmapped
-        ///     drive.
-        /// </exception>
-        /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public DirectoryEntry Directory => FileSystem.GetDirectoryEntry(Path / "..");
-
         /// <summary>Gets or sets a value that determines if the current file is read only.</summary>
         /// <returns>true if the current file is read only; otherwise, false.</returns>
         /// <exception cref="T:System.IO.FileNotFoundException">
