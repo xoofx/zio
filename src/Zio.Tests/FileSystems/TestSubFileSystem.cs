@@ -15,7 +15,7 @@ namespace Zio.Tests.FileSystems
         public void TestBasic()
         {
             var fs = new PhysicalFileSystem();
-            var path = fs.ConvertFromSystem(SystemPath);
+            var path = fs.ConvertPathFromInner(SystemPath);
 
             // Create a filesystem / on the current folder of this assembly
             var subfs = new SubFileSystem(fs, path);

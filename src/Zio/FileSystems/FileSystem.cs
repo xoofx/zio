@@ -274,21 +274,21 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public string ConvertToSystem(UPath path)
+        public string ConvertPathToInner(UPath path)
         {
             AssertNotDisposed();
-            return ConvertToSystemImpl(ValidatePath(path));
+            return ConvertPathToInnerImpl(ValidatePath(path));
         }
-        protected abstract string ConvertToSystemImpl(UPath path);
+        protected abstract string ConvertPathToInnerImpl(UPath path);
 
         /// <inheritdoc />
-        public UPath ConvertFromSystem(string systemPath)
+        public UPath ConvertPathFromInner(string systemPath)
         {
             AssertNotDisposed();
             if (systemPath == null) throw new ArgumentNullException(nameof(systemPath));
-            return ValidatePath(ConvertFromSystemImpl(systemPath));
+            return ValidatePath(ConvertPathFromInnerImpl(systemPath));
         }
-        protected abstract UPath ConvertFromSystemImpl(string systemPath);
+        protected abstract UPath ConvertPathFromInnerImpl(string systemPath);
 
         protected virtual void ValidatePathImpl(UPath path, string name = "path")
         {

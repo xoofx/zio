@@ -262,14 +262,14 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override string ConvertToSystemImpl(UPath path)
+        protected override string ConvertPathToInnerImpl(UPath path)
         {
             // TODO: how to implement this correctly?
             return path.FullName;
         }
 
         /// <inheritdoc />
-        protected override UPath ConvertFromSystemImpl(string systemPath)
+        protected override UPath ConvertPathFromInnerImpl(string systemPath)
         {
             // TODO: how to implement this correctly?
             return (UPath) systemPath;

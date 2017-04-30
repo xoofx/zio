@@ -184,17 +184,18 @@ namespace Zio
         // ----------------------------------------------
 
         /// <summary>
-        /// Converts the specified path to the underlying system path.
+        /// Converts the specified path to the underlying path used by this <see cref="IFileSystem"/>. In case of a <see cref="Zio.FileSystems.PhysicalFileSystem"/>, it 
+        /// would represent the actual path on the disk.
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns>The converted system path according to the specified path.</returns>
-        string ConvertToSystem(UPath path);
+        string ConvertPathToInner(UPath path);
 
         /// <summary>
         /// Converts the specified system path to a <see cref="IFileSystem"/> path.
         /// </summary>
         /// <param name="systemPath">The system path.</param>
         /// <returns>The converted path according to the system path.</returns>
-        UPath ConvertFromSystem(string systemPath);
+        UPath ConvertPathFromInner(string systemPath);
     }
 }

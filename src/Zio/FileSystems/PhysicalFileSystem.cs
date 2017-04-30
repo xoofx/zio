@@ -51,13 +51,13 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"Cannot create a directory in the path `{path}`");
             }
 
-            Directory.CreateDirectory(ConvertToSystem(path));
+            Directory.CreateDirectory(ConvertPathToInner(path));
         }
 
         /// <inheritdoc />
         protected override bool DirectoryExistsImpl(UPath path)
         {
-            return IsWithinSpecialDirectory(path) ? SpecialDirectoryExists(path) : Directory.Exists(ConvertToSystem(path));
+            return IsWithinSpecialDirectory(path) ? SpecialDirectoryExists(path) : Directory.Exists(ConvertPathToInner(path));
         }
 
         /// <inheritdoc />
@@ -85,8 +85,8 @@ namespace Zio.FileSystems
                 }
             }
 
-            var systemSrcPath = ConvertToSystem(srcPath);
-            var systemDestPath = ConvertToSystem(destPath);
+            var systemSrcPath = ConvertPathToInner(srcPath);
+            var systemDestPath = ConvertPathToInner(destPath);
 
             // If the souce path is a file
             var fileInfo = new FileInfo(systemSrcPath);
@@ -110,7 +110,7 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"Cannot delete directory `{path}`");
             }
 
-            Directory.Delete(ConvertToSystem(path), isRecursive);
+            Directory.Delete(ConvertPathToInner(path), isRecursive);
         }
 
         // ----------------------------------------------
@@ -129,7 +129,7 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"The access to `{destPath}` is denied");
             }
 
-            File.Copy(ConvertToSystem(srcPath), ConvertToSystem(destPath), overwrite);
+            File.Copy(ConvertPathToInner(srcPath), ConvertPathToInner(destPath), overwrite);
         }
 
         /// <inheritdoc />
@@ -165,13 +165,13 @@ namespace Zio.FileSystems
             {
                 throw new UnauthorizedAccessException($"The access to `{path}` is denied");
             }
-            return new FileInfo(ConvertToSystem(path)).Length;
+            return new FileInfo(ConvertPathToInner(path)).Length;
         }
 
         /// <inheritdoc />
         protected override bool FileExistsImpl(UPath path)
         {
-            return !IsWithinSpecialDirectory(path) && File.Exists(ConvertToSystem(path));
+            return !IsWithinSpecialDirectory(path) && File.Exists(ConvertPathToInner(path));
         }
 
         /// <inheritdoc />
@@ -185,7 +185,7 @@ namespace Zio.FileSystems
             {
                 throw new UnauthorizedAccessException($"The access to `{destPath}` is denied");
             }
-            File.Move(ConvertToSystem(srcPath), ConvertToSystem(destPath));
+            File.Move(ConvertPathToInner(srcPath), ConvertPathToInner(destPath));
         }
 
         /// <inheritdoc />
@@ -195,7 +195,7 @@ namespace Zio.FileSystems
             {
                 throw new UnauthorizedAccessException($"The access to `{path}` is denied");
             }
-            File.Delete(ConvertToSystem(path));
+            File.Delete(ConvertPathToInner(path));
         }
 
         /// <inheritdoc />
@@ -206,7 +206,7 @@ namespace Zio.FileSystems
             {
                 throw new UnauthorizedAccessException($"The access to `{path}` is denied");
             }
-            return File.Open(ConvertToSystem(path), mode, access, share);
+            return File.Open(ConvertPathToInner(path), mode, access, share);
         }
 
         /// <inheritdoc />
@@ -228,7 +228,7 @@ namespace Zio.FileSystems
                 // Otherwise let the File.GetAttributes returns the proper attributes for root drive (e.g /drive/c)
             }
 
-            return File.GetAttributes(ConvertToSystem(path));
+            return File.GetAttributes(ConvertPathToInner(path));
         }
 
         // ----------------------------------------------
@@ -248,7 +248,7 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"Cannot set attributes on system directory `{path}`");
             }
 
-            File.SetAttributes(ConvertToSystem(path), attributes);
+            File.SetAttributes(ConvertPathToInner(path), attributes);
         }
 
         /// <inheritdoc />
@@ -280,7 +280,7 @@ namespace Zio.FileSystems
                 }
             }
 
-            return File.GetCreationTime(ConvertToSystem(path));
+            return File.GetCreationTime(ConvertPathToInner(path));
         }
 
         /// <inheritdoc />
@@ -296,7 +296,7 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"Cannot set creation time on system directory `{path}`");
             }
 
-            File.SetCreationTime(ConvertToSystem(path), time);
+            File.SetCreationTime(ConvertPathToInner(path), time);
         }
 
         /// <inheritdoc />
@@ -329,7 +329,7 @@ namespace Zio.FileSystems
                 // otherwise let the regular function running
             }
 
-            return File.GetLastAccessTime(ConvertToSystem(path));
+            return File.GetLastAccessTime(ConvertPathToInner(path));
         }
 
         /// <inheritdoc />
@@ -344,7 +344,7 @@ namespace Zio.FileSystems
                 }
                 throw new UnauthorizedAccessException($"Cannot set last access time on system directory `{path}`");
             }
-            File.SetLastAccessTime(ConvertToSystem(path), time);
+            File.SetLastAccessTime(ConvertPathToInner(path), time);
         }
 
         /// <inheritdoc />
@@ -377,7 +377,7 @@ namespace Zio.FileSystems
                 // otherwise let the regular function running
             }
 
-            return File.GetLastWriteTime(ConvertToSystem(path));
+            return File.GetLastWriteTime(ConvertPathToInner(path));
         }
 
         /// <inheritdoc />
@@ -393,7 +393,7 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"Cannot set last write time on system directory `{path}`");
             }
 
-            File.SetLastWriteTime(ConvertToSystem(path), time);
+            File.SetLastWriteTime(ConvertPathToInner(path), time);
         }
 
         // ----------------------------------------------
@@ -480,16 +480,16 @@ namespace Zio.FileSystems
             switch (searchTarget)
             {
                 case SearchTarget.File:
-                    foreach (var subPath in Directory.EnumerateFiles(ConvertToSystem(path), searchPattern, searchOption))
-                        yield return ConvertFromSystem(subPath);
+                    foreach (var subPath in Directory.EnumerateFiles(ConvertPathToInner(path), searchPattern, searchOption))
+                        yield return ConvertPathFromInner(subPath);
                     break;
                 case SearchTarget.Directory:
-                    foreach (var subPath in Directory.EnumerateDirectories(ConvertToSystem(path), searchPattern, searchOption))
-                        yield return ConvertFromSystem(subPath);
+                    foreach (var subPath in Directory.EnumerateDirectories(ConvertPathToInner(path), searchPattern, searchOption))
+                        yield return ConvertPathFromInner(subPath);
                     break;
                 case SearchTarget.Both:
-                    foreach (var subPath in Directory.EnumerateFileSystemEntries(ConvertToSystem(path), searchPattern, searchOption))
-                        yield return ConvertFromSystem(subPath);
+                    foreach (var subPath in Directory.EnumerateFileSystemEntries(ConvertPathToInner(path), searchPattern, searchOption))
+                        yield return ConvertPathFromInner(subPath);
                     break;
             }
         }
@@ -499,7 +499,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override string ConvertToSystemImpl(UPath path)
+        protected override string ConvertPathToInnerImpl(UPath path)
         {
             var absolutePath = path.FullName;
 
@@ -529,7 +529,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override UPath ConvertFromSystemImpl(string systemPath)
+        protected override UPath ConvertPathFromInnerImpl(string systemPath)
         {
             if (IsOnWindows)
             {
@@ -601,19 +601,19 @@ namespace Zio.FileSystems
     //            switch (searchTarget)
     //            {
     //                case SearchTarget.File:
-    //                    foreach (var subPath in Directory.GetFiles(ConvertToSystem(path), searchPattern))
-    //                        yield return ConvertFromSystem(subPath);
+    //                    foreach (var subPath in Directory.GetFiles(ConvertPathToInner(path), searchPattern))
+    //                        yield return ConvertPathFromInner(subPath);
     //                    break;
     //                case SearchTarget.Directory:
-    //                    foreach (var subPath in Directory.GetDirectories(ConvertToSystem(path), searchPattern, searchOption))
-    //                        yield return ConvertFromSystem(subPath);
+    //                    foreach (var subPath in Directory.GetDirectories(ConvertPathToInner(path), searchPattern, searchOption))
+    //                        yield return ConvertPathFromInner(subPath);
     //                    break;
     //                case SearchTarget.Both:
-    //                    foreach (var subDirectory in Directory.GetDirectories(ConvertToSystem(path), searchPattern, searchOption))
+    //                    foreach (var subDirectory in Directory.GetDirectories(ConvertPathToInner(path), searchPattern, searchOption))
     //                    {
-    //                        yield return ConvertFromSystemImpl(subDirectory);
+    //                        yield return ConvertPathFromInnerImpl(subDirectory);
     //                        foreach (var filePath in Directory.GetFiles(subDirectory, searchPattern))
-    //                            yield return ConvertFromSystem(filePath);
+    //                            yield return ConvertPathFromInner(filePath);
     //                    }
     //                    break;
     //            }

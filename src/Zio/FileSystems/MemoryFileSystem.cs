@@ -767,12 +767,12 @@ namespace Zio.FileSystems
         // Path API
         // ----------------------------------------------
 
-        protected override string ConvertToSystemImpl(UPath path)
+        protected override string ConvertPathToInnerImpl(UPath path)
         {
             return path.FullName;
         }
 
-        protected override UPath ConvertFromSystemImpl(string systemPath)
+        protected override UPath ConvertPathFromInnerImpl(string systemPath)
         {
             return new UPath(systemPath);
         }
