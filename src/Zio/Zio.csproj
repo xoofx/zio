@@ -26,4 +26,8 @@
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net35'">
     <DefineConstants>$(AdditionalConstants);NET35</DefineConstants>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 </Project>
