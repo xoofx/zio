@@ -53,7 +53,7 @@ namespace Zio.FileSystems
         /// <param name="fs">The filesystem to add to this aggregate.</param>
         /// <exception cref="System.ArgumentNullException">fs</exception>
         /// <exception cref="System.ArgumentException">Cannot add this instance as an aggregate delegate of itself</exception>
-        /// <exception cref="System.InvalidOperationException">The filesystem is already added</exception>
+        /// <exception cref="System.ArgumentException">The filesystem is already added</exception>
         public virtual void AddFileSystem(IFileSystem fs)
         {
             if (fs == null) throw new ArgumentNullException(nameof(fs));
@@ -67,7 +67,7 @@ namespace Zio.FileSystems
                 }
                 else
                 {
-                    throw new InvalidOperationException("The filesystem is already added");
+                    throw new ArgumentException("The filesystem is already added");
                 }
             }
         }
@@ -83,7 +83,7 @@ namespace Zio.FileSystems
             if (fs == null) throw new ArgumentNullException(nameof(fs));
             lock (_fileSystems)
             {
-                if (!_fileSystems.Contains(fs))
+                if (_fileSystems.Contains(fs))
                 {
                     _fileSystems.Remove(fs);
                 }
