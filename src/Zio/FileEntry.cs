@@ -168,6 +168,17 @@ namespace Zio
             return FileSystem.OpenFile(Path, mode, access, share);
         }
 
+        /// <summary>
+        /// Replaces the contents of this file with the contents of another file, deleting the original file, and creating a backup of the replaced file and optionally ignores merge errors.
+        /// </summary>
+        /// <param name="destPath">The path of the file being replaced.</param>
+        /// <param name="destBackupPath">The path of the backup file (maybe null, in that case, it doesn't create any backup)</param>
+        /// <param name="ignoreMetadataErrors"><c>true</c> to ignore merge errors (such as attributes and access control lists (ACLs)) from the replaced file to the replacement file; otherwise, <c>false</c>.</param>
+        public void ReplaceTo(UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
+        {
+            FileSystem.ReplaceFile(Path, destPath, destBackupPath, ignoreMetadataErrors);
+        }
+
         /// <inheritdoc />
         public override bool Exists => FileSystem.FileExists(Path);
 

@@ -3,6 +3,7 @@
 // See the license.txt file in the project root for more information.
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Zio
 {
@@ -71,27 +72,46 @@ namespace Zio
         }
 
         /// <summary>Returns an enumerable collection of directory information that matches a specified search pattern and search subdirectory option. </summary>
+        /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+        /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
+        /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+        /// or should include all subdirectories.
+        /// The default value is TopDirectoryOnly.</param>
         /// <returns>An enumerable collection of directories.</returns>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The path encapsulated in the <see cref="T:System.IO.DirectoryInfo" /> object is invalid (for example, it is on an unmapped drive). </exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public IEnumerable<DirectoryEntry> EnumerateDirectories()
+        public IEnumerable<DirectoryEntry> EnumerateDirectories(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
         {
-            foreach (var path in FileSystem.EnumerateDirectories(Path))
-            {
-                yield return new DirectoryEntry(FileSystem, path);
-            }
+            return FileSystem.EnumerateDirectoryEntries(Path, searchPattern, searchOption);
         }
 
         /// <summary>Returns an enumerable collection of file information that matches a specified search pattern and search subdirectory option.</summary>
+        /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+        /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
+        /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+        /// or should include all subdirectories.
+        /// The default value is TopDirectoryOnly.</param>
         /// <returns>An enumerable collection of files.</returns>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The path encapsulated in the <see cref="T:System.IO.DirectoryInfo" /> object is invalid (for example, it is on an unmapped drive). </exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public IEnumerable<FileEntry> EnumerateFiles()
+        public IEnumerable<FileEntry> EnumerateFiles(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
         {
-            foreach (var path in FileSystem.EnumerateFiles(Path))
-            {
-                yield return new FileEntry(FileSystem, path);
-            }
+            return FileSystem.EnumerateFileEntries(Path, searchPattern, searchOption);
+        }
+
+        /// <summary>
+        /// Returns an enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.
+        /// </summary>
+        /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+        /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
+        /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+        /// or should include all subdirectories.
+        /// The default value is TopDirectoryOnly.</param>
+        /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>.</param>
+        /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
+        public IEnumerable<FileSystemEntry> EnumerateEntries(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly, SearchTarget searchTarget = SearchTarget.Both)
+        {
+            return FileSystem.EnumerateFileSystemEntries(Path, searchPattern, searchOption, searchTarget);
         }
 
         /// <summary>Moves a <see cref="T:System.IO.DirectoryInfo" /> instance and its contents to a new path.</summary>

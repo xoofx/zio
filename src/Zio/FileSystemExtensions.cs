@@ -685,14 +685,59 @@ namespace Zio
         /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
         /// or should include all subdirectories.
         /// The default value is TopDirectoryOnly.</param>
+        /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>. Default is <see cref="SearchTarget.Both"/></param>
         /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
-        public static IEnumerable<FileSystemEntry> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
+        public static IEnumerable<FileSystemEntry> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget = SearchTarget.Both)
         {
             if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
-            foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Both))
+            foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, searchTarget))
             {
                 yield return fileSystem.DirectoryExists(subPath) ? (FileSystemEntry) new DirectoryEntry(fileSystem, subPath) : new FileEntry(fileSystem, subPath);
             }
+        }
+
+        /// <summary>
+        /// Gets a <see cref="FileSystemEntry"/> for the specified path. If the file or directory does no exist, throws a <see cref="FileNotFoundException"/>
+        /// </summary>
+        /// <param name="fileSystem">The file system.</param>
+        /// <param name="path">The file or directory path.</param>
+        /// <returns>A new <see cref="FileSystemEntry"/> from the specified path.</returns>
+        public static FileSystemEntry GetFileSystemEntry(this IFileSystem fileSystem, UPath path)
+        {
+            var fileExists = fileSystem.FileExists(path);
+            if (fileExists)
+            {
+                return new FileEntry(fileSystem, path);
+            }
+            var directoryExists = fileSystem.DirectoryExists(path);
+            if (directoryExists)
+            {
+                return new DirectoryEntry(fileSystem, path);
+            }
+
+            throw NewFileNotFoundException(path);
+        }
+
+        /// <summary>
+        /// Tries to get a <see cref="FileSystemEntry"/> for the specified path. If the file or directory does no exist, returns null.
+        /// </summary>
+        /// <param name="fileSystem">The file system.</param>
+        /// <param name="path">The file or directory path.</param>
+        /// <returns>A new <see cref="FileSystemEntry"/> from the specified path.</returns>
+        public static FileSystemEntry TryGetFileSystemEntry(this IFileSystem fileSystem, UPath path)
+        {
+            var fileExists = fileSystem.FileExists(path);
+            if (fileExists)
+            {
+                return new FileEntry(fileSystem, path);
+            }
+            var directoryExists = fileSystem.DirectoryExists(path);
+            if (directoryExists)
+            {
+                return new DirectoryEntry(fileSystem, path);
+            }
+
+            return null;
         }
 
         /// <summary>
