@@ -254,7 +254,7 @@ namespace Zio
         public static void WriteAllBytes(this IFileSystem fs, UPath path, byte[] content)
         {
             if (content == null) throw new ArgumentNullException(nameof(content));
-            using (var stream = fs.OpenFile(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+            using (var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
                 stream.Write(content, 0, content.Length);
             }
@@ -329,7 +329,7 @@ namespace Zio
         public static void WriteAllText(this IFileSystem fs, UPath path, string content)
         {
             if (content == null) throw new ArgumentNullException(nameof(content));
-            var stream = fs.OpenFile(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+            var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream))
                 {
@@ -357,7 +357,7 @@ namespace Zio
         {
             if (content == null) throw new ArgumentNullException(nameof(content));
             if (encoding == null) throw new ArgumentNullException(nameof(encoding));
-            var stream = fs.OpenFile(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+            var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream, encoding))
                 {
