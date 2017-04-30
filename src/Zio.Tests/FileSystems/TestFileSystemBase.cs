@@ -328,26 +328,31 @@ namespace Zio.Tests.FileSystems
                 TopDirs = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.Directory).ToList();
                 // Check extension method
                 Assert.Equal(TopDirs, fs.EnumerateDirectories("/").ToList());
+                Assert.Equal(TopDirs, fs.EnumerateDirectoryEntries("/").Select(e => (UPath)e.FullName).ToList());
 
                 TopFiles = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.File).ToList();
                 // Check extension method
                 Assert.Equal(TopFiles, fs.EnumerateFiles("/").ToList());
+                Assert.Equal(TopFiles, fs.EnumerateFileEntries("/").Select(e => (UPath)e.FullName).ToList());
 
                 TopEntries = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.Both).ToList();
                 // Check extension method
                 Assert.Equal(TopEntries, fs.EnumeratePaths("/").ToList());
+                Assert.Equal(TopEntries, fs.EnumerateFileSystemEntries("/").Select(e => (UPath)e.FullName).ToList());
 
                 AllDirs = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
 
                 AllFiles = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File).ToList();
                 // Check extension method
                 Assert.Equal(AllFiles, fs.EnumerateFiles("/", "*", SearchOption.AllDirectories).ToList());
+                Assert.Equal(AllFiles, fs.EnumerateFileEntries("/", "*", SearchOption.AllDirectories).Select(e => (UPath)e.FullName).ToList());
 
                 AllEntries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList();
 
                 AllFiles_txt = fs.EnumeratePaths("/", "*.txt", SearchOption.AllDirectories, SearchTarget.File).ToList();
                 // Check extension method
                 Assert.Equal(AllFiles_txt, fs.EnumerateFiles("/", "*.txt", SearchOption.AllDirectories).ToList());
+                Assert.Equal(AllFiles_txt, fs.EnumerateFileEntries("/", "*.txt", SearchOption.AllDirectories).Select(e => (UPath)e.FullName).ToList());
 
                 AllDirs_a1 = fs.EnumeratePaths("/", "a/*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
                 AllDirs_a2 = fs.EnumeratePaths("/a", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();

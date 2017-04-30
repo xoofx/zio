@@ -514,6 +514,7 @@ namespace Zio
         /// <returns>An enumerable collection of the full names (including paths) for the files in the directory specified by path.</returns>
         public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
+            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
             foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.File))
                 yield return subPath;
         }
