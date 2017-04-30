@@ -6,7 +6,10 @@ using System;
 
 namespace Zio
 {
-    public struct FileSystemPath : IEquatable<FileSystemPath>
+    /// <summary>
+    /// Tuple between a <see cref="IFileSystem"/> and an associated <see cref="UPath"/>
+    /// </summary>
+    internal struct FileSystemPath : IEquatable<FileSystemPath>
     {
         public static readonly FileSystemPath Empty = new FileSystemPath();
 
