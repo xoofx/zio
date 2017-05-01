@@ -1,8 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard1.3</TargetFramework>
-    <!--<TargetFrameworks>net35;net40;net45;netstandard1.3</TargetFrameworks>-->
+    <Description>An abstract/virtual filesystem framework with many built-ins filesystems for .NET</Description>
+    <Copyright>Alexandre Mutel</Copyright>
+    <AssemblyTitle>Zio</AssemblyTitle>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Authors>Alexandre Mutel</Authors>
+    <TargetFrameworks>net40;net45;netstandard1.3</TargetFrameworks>
+    <AssemblyName>Zio</AssemblyName>
+    <PackageId>Zio</PackageId>
+    <PackageTags>filesystem;vfs;VirtualFileSystem;virtual;abstract;directory;files;io;mock</PackageTags>
+    <PackageReleaseNotes>
+      &gt; 0.1.0
+      - Initial version
+    </PackageReleaseNotes>
+    <PackageIconUrl>https://raw.githubusercontent.com/xoofx/zio/master/img/zio.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/xoofx/zio</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/xoofx/zio/blob/master/license.txt</PackageLicenseUrl>
   </PropertyGroup>
+  
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3'">
     <PackageReference Include="System.IO.FileSystem.DriveInfo" Version="4.3.0" />
   </ItemGroup>
@@ -21,10 +37,6 @@
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net40'">
     <DefineConstants>$(AdditionalConstants);NET40</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net35'">
-    <DefineConstants>$(AdditionalConstants);NET35</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
