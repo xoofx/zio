@@ -67,6 +67,7 @@ In order to build Zio, you need to install Visual Studio 2017 with latest [.NET 
 ## TODO
 
 - [ ] Add support for ZipArchive (readonly, readwrite)
+- [ ] Add support for Git FileSystem (readonly)
 - [ ] Add support for a filesystem watcher abstraction `IFileSystemWatcher`
 
 ## License
