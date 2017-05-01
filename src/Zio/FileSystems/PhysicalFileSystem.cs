@@ -493,7 +493,6 @@ namespace Zio.FileSystems
                     break;
             }
         }
-
         // ----------------------------------------------
         // Path API
         // ----------------------------------------------
@@ -595,27 +594,4 @@ namespace Zio.FileSystems
             return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z';
         }
     }
-
-
-    //#if NET35
-    //            switch (searchTarget)
-    //            {
-    //                case SearchTarget.File:
-    //                    foreach (var subPath in Directory.GetFiles(ConvertPathToInner(path), searchPattern))
-    //                        yield return ConvertPathFromInner(subPath);
-    //                    break;
-    //                case SearchTarget.Directory:
-    //                    foreach (var subPath in Directory.GetDirectories(ConvertPathToInner(path), searchPattern, searchOption))
-    //                        yield return ConvertPathFromInner(subPath);
-    //                    break;
-    //                case SearchTarget.Both:
-    //                    foreach (var subDirectory in Directory.GetDirectories(ConvertPathToInner(path), searchPattern, searchOption))
-    //                    {
-    //                        yield return ConvertPathFromInnerImpl(subDirectory);
-    //                        foreach (var filePath in Directory.GetFiles(subDirectory, searchPattern))
-    //                            yield return ConvertPathFromInner(filePath);
-    //                    }
-    //                    break;
-    //            }
-    //#else
 }
