@@ -20,8 +20,13 @@ namespace Zio.Tests.FileSystems
 
             Assert.Throws<ArgumentNullException>(() => fs.AppendAllText("/a.txt", null));
             Assert.Throws<ArgumentNullException>(() => fs.WriteAllText("/a.txt", null));
+            Assert.Throws<ArgumentNullException>(() => fs.WriteAllText("/a.txt", "content", null));
+            Assert.Throws<ArgumentNullException>(() => fs.WriteAllText("/a.txt", null, null));
             Assert.Throws<ArgumentNullException>(() => fs.ReadAllText("/a.txt", null));
             Assert.Throws<ArgumentNullException>(() => fs.ReadAllLines("/a.txt", null));
+            Assert.Throws<ArgumentNullException>(() => fs.WriteAllBytes("/a", null));
+            Assert.Throws<ArgumentNullException>(() => fs.AppendAllText("/a", null, null));
+            Assert.Throws<ArgumentNullException>(() => fs.AppendAllText("/a", "content", null));
             Assert.Throws<ArgumentNullException>(() => fs.EnumeratePaths("*", null).First());
             Assert.Throws<ArgumentNullException>(() => fs.EnumeratePaths("*", null, SearchOption.AllDirectories).First());
             Assert.Throws<ArgumentNullException>(() => fs.EnumerateFiles("*", null).First());
@@ -55,6 +60,21 @@ namespace Zio.Tests.FileSystems
 
             Assert.Equal(new[] {"test1test2"}, fs.ReadAllLines("/a.txt"));
             Assert.Equal(new[] { "test1test2" }, fs.ReadAllLines("/a.txt", Encoding.UTF8));
+        }
+
+        [Fact]
+        public void TestReadWriteAllBytes()
+        {
+            var fs = new MemoryFileSystem();
+
+            fs.WriteAllBytes("/toto.txt", new byte[] {1,2,3});
+            Assert.Equal(new byte[]{1,2,3}, fs.ReadAllBytes("/toto.txt"));
+
+            fs.WriteAllBytes("/toto.txt", new byte[] { 5 });
+            Assert.Equal(new byte[] { 5 }, fs.ReadAllBytes("/toto.txt"));
+
+            fs.WriteAllBytes("/toto.txt", new byte[] { });
+            Assert.Equal(new byte[] { }, fs.ReadAllBytes("/toto.txt"));
         }
     }
 }
