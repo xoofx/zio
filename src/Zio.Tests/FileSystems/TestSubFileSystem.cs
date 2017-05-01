@@ -2,6 +2,7 @@
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
+using System;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -29,6 +30,8 @@ namespace Zio.Tests.FileSystems
 
             // Check that SubFileSystem is actually checking that the directory exists in the delegate filesystem
             Assert.Throws<DirectoryNotFoundException>(() => new SubFileSystem(fs, path / "does_not_exist"));
+
+            Assert.Throws<InvalidOperationException>(() => subfs.ConvertPathFromInner(@"C:\"));
 
             // TODO: We could add another test just to make sure that files can be created...etc. But the test above should already cover the code provided in SubFileSystem
         }
