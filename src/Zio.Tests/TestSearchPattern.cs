@@ -59,6 +59,15 @@ namespace Zio.Tests
             var pathInfo = new UPath(path);
             var pathInfoCopy = pathInfo;
             var search = SearchPattern.Parse(ref pathInfoCopy, ref searchPattern);
+
+            {
+                var pathInfoCopy2 = pathInfoCopy;
+                var searchPattern2 = searchPattern;
+                SearchPattern.Normalize(ref pathInfoCopy2, ref searchPattern2);
+                Assert.Equal(pathInfoCopy, pathInfoCopy2);
+                Assert.Equal(searchPattern, searchPattern2);
+            }
+
             var pathToSearchInfo = new UPath(pathToSearch);
             Assert.Equal(match, search.Match(pathToSearchInfo));
         }
@@ -84,6 +93,12 @@ namespace Zio.Tests
                 string searchPattern = "/notvalid";
                 SearchPattern.Parse(ref path, ref searchPattern);
             });
+
+            {
+                var searchPattern = "*";
+                var search = SearchPattern.Parse(ref path, ref searchPattern);
+                Assert.Throws<ArgumentNullException>(() => search.Match(null));
+            }
         }
 
         [Fact]
