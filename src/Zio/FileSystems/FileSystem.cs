@@ -211,13 +211,14 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         public bool FileExists(UPath path)
         {
+            AssertNotDisposed();
+
             // Only case where a null path is allowed
             if (path.IsNull)
             {
                 return false;
             }
 
-            AssertNotDisposed();
             return FileExistsImpl(ValidatePath(path));
         }
 
