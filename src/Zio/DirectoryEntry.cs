@@ -22,11 +22,6 @@ namespace Zio
         {
         }
 
-        /// <summary>Gets the parent directory of a specified subdirectory.</summary>
-        /// <returns>The parent directory, or null if the path is null or if the file path denotes a root (such as "\", "C:", or * "\\server\share").</returns>
-        /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public DirectoryEntry Parent => Path == UPath.Root ? null : FileSystem.GetDirectoryEntry(Path / "..");
-
         /// <summary>Creates a directory.</summary>
         /// <exception cref="T:System.IO.IOException">The directory cannot be created. </exception>
         public void Create()

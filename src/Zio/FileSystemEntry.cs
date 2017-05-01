@@ -104,8 +104,7 @@ namespace Zio
         ///     The specified path is invalid, such as being on an unmapped
         ///     drive.
         /// </exception>
-        /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public DirectoryEntry Directory => Path == UPath.Root ? null : FileSystem.GetDirectoryEntry(Path / "..");
+        public DirectoryEntry Parent => Path == UPath.Root ? null : FileSystem.GetDirectoryEntry(Path / "..");
 
         /// <summary>
         /// Deletes a file or directory.

@@ -44,7 +44,7 @@ namespace Zio.Tests.FileSystems
             Assert.NotNull(dir);
             Assert.Equal("/a/a", dir.FullName);
 
-            Assert.Null(new DirectoryEntry(memfs, "/").Directory);
+            Assert.Null(new DirectoryEntry(memfs, "/").Parent);
 
 
             using (var file1 = new FileEntry(memfs, "/a/yoyo.txt").Create())
