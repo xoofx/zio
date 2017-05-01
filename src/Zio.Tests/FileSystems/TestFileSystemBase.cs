@@ -245,6 +245,10 @@ namespace Zio.Tests.FileSystems
             }
 
             Assert.True(fs.DirectoryExists("/"));
+            Assert.False(fs.FileExists(new UPath()));
+
+            Assert.Throws<ArgumentNullException>(() => fs.EnumeratePaths("/", null));
+            Assert.Throws<ArgumentNullException>(() => fs.ConvertPathFromInner(null));
 
             Assert.True(fs.FileExists("/A.txt"));
             Assert.True(fs.FileExists("/b.txt"));
