@@ -9,8 +9,8 @@ Zio provides a simple, powerful, cross-platform **filesystem abstraction for .NE
 - Compatible with `.NET 4.0`, `4.5+` and the cross platform `.NET Core/Standard 1.3+`
 - API providing all operations provided by the regular System.IO API (e.g File.Move, Directory.Delete... etc.)
   - Allowing atomic filesystem operations (e.g File.Replace...)
-- A simple interface abstraction [`IFileSystem`](https://github.com/xoofx/zio/blob/master/src/Zio/IFileSystem.cs)
-- All paths are normalized through a lightweight uniform path struct [`UPath`](https://github.com/xoofx/zio/blob/master/src/Zio/UPath.cs)
+- A simple interface abstraction [`IFileSystem`](src/Zio/IFileSystem.cs)
+- All paths are normalized through a lightweight uniform path struct [`UPath`](src/Zio/UPath.cs)
 - Multiple built-ins filesystems:
   - `PhysicalFileSystem` to access the physical disks, directories and folders.
     - With uniform paths, this filesystem on Windows is working like on a Windows Subsystem Linux (WSL), by remapping drives to mount directory (e.g path `/mnt/c/Windows` equivalent to `C:\Windows`)
@@ -54,7 +54,7 @@ The following documentation provides more information about the API and how to u
 
 ## Documentation
 
-The [documentation](https://github.com/xoofx/zio/blob/master/doc) is directly available as part of this repository in the [`/doc`](https://github.com/xoofx/zio/blob/master/doc) folder.
+The [documentation](doc) is directly available as part of this repository in the [`/doc`](doc) folder.
 
 ## Download
 
@@ -71,7 +71,7 @@ In order to build Zio, you need to install Visual Studio 2017 with latest [.NET 
 
 ## License
 
-This software is released under the [BSD-Clause 2 license](https://github.com/xoofx/zio/blob/master/license.txt).
+This software is released under the [BSD-Clause 2 license](license.txt).
 
 ## Credits
 
