@@ -1,4 +1,4 @@
-# Zio [![NuGet](https://img.shields.io/nuget/v/Zio.svg)](https://www.nuget.org/packages/Zio/)
+# Zio [![Build status](https://ci.appveyor.com/api/projects/status/u9yk21g904ijnyl7?svg=true)](https://ci.appveyor.com/project/xoofx/zio) [![NuGet](https://img.shields.io/nuget/v/Zio.svg)](https://www.nuget.org/packages/Zio/)
 
 <img align="right" width="160px" height="160px" src="img/zio.png">
 
