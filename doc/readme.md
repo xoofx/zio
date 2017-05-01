@@ -264,7 +264,7 @@ These methods are also useful for composite filesystems (e.g `SubFileSystem` tha
 
 #### `MemoryFileSystem`
 
-This filesystem provides an implementation of `IFileSystem` that tries to mimic the behavior ot a real `PhysicalFileSystem`, while performing all operations in memory.
+This filesystem provides an implementation of `IFileSystem` that tries to mimic the behavior of a real `PhysicalFileSystem`, while performing all operations in memory.
 
 ```C#
 var fs = new MemoryFileSystem();
