@@ -433,35 +433,35 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public string ConvertPathToInner(UPath path)
+        public string ConvertPathToInternal(UPath path)
         {
             AssertNotDisposed();
-            return ConvertPathToInnerImpl(ValidatePath(path));
+            return ConvertPathToInternalImpl(ValidatePath(path));
         }
 
         /// <summary>
-        /// Implementation for <see cref="ConvertPathToInner"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Implementation for <see cref="ConvertPathToInternal"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
         /// Converts the specified path to the underlying path used by this <see cref="IFileSystem"/>. In case of a <see cref="Zio.FileSystems.PhysicalFileSystem"/>, it 
         /// would represent the actual path on the disk.
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns>The converted system path according to the specified path.</returns>
-        protected abstract string ConvertPathToInnerImpl(UPath path);
+        protected abstract string ConvertPathToInternalImpl(UPath path);
 
         /// <inheritdoc />
-        public UPath ConvertPathFromInner(string systemPath)
+        public UPath ConvertPathFromInternal(string systemPath)
         {
             AssertNotDisposed();
             if (systemPath == null) throw new ArgumentNullException(nameof(systemPath));
-            return ValidatePath(ConvertPathFromInnerImpl(systemPath));
+            return ValidatePath(ConvertPathFromInternalImpl(systemPath));
         }
         /// <summary>
-        /// Implementation for <see cref="ConvertPathToInner"/>, <paramref name="innerPath"/> is guaranteed to be not null and return path to be validated through <see cref="ValidatePath"/>.
+        /// Implementation for <see cref="ConvertPathToInternal"/>, <paramref name="innerPath"/> is guaranteed to be not null and return path to be validated through <see cref="ValidatePath"/>.
         /// Converts the specified system path to a <see cref="IFileSystem"/> path.
         /// </summary>
         /// <param name="innerPath">The system path.</param>
         /// <returns>The converted path according to the system path.</returns>
-        protected abstract UPath ConvertPathFromInnerImpl(string innerPath);
+        protected abstract UPath ConvertPathFromInternalImpl(string innerPath);
 
         /// <summary>
         /// User overridable implementation for <see cref="ValidatePath"/> to validate the specified path.

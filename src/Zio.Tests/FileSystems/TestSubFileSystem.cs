@@ -16,7 +16,7 @@ namespace Zio.Tests.FileSystems
         public void TestBasic()
         {
             var fs = new PhysicalFileSystem();
-            var path = fs.ConvertPathFromInner(SystemPath);
+            var path = fs.ConvertPathFromInternal(SystemPath);
 
             // Create a filesystem / on the current folder of this assembly
             var subfs = new SubFileSystem(fs, path);
@@ -31,7 +31,7 @@ namespace Zio.Tests.FileSystems
             // Check that SubFileSystem is actually checking that the directory exists in the delegate filesystem
             Assert.Throws<DirectoryNotFoundException>(() => new SubFileSystem(fs, path / "does_not_exist"));
 
-            Assert.Throws<InvalidOperationException>(() => subfs.ConvertPathFromInner(@"C:\"));
+            Assert.Throws<InvalidOperationException>(() => subfs.ConvertPathFromInternal(@"C:\"));
 
             // TODO: We could add another test just to make sure that files can be created...etc. But the test above should already cover the code provided in SubFileSystem
         }

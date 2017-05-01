@@ -189,13 +189,13 @@ namespace Zio
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns>The converted system path according to the specified path.</returns>
-        string ConvertPathToInner(UPath path);
+        string ConvertPathToInternal(UPath path);
 
         /// <summary>
         /// Converts the specified system path to a <see cref="IFileSystem"/> path.
         /// </summary>
         /// <param name="systemPath">The system path.</param>
         /// <returns>The converted path according to the system path.</returns>
-        UPath ConvertPathFromInner(string systemPath);
+        UPath ConvertPathFromInternal(string systemPath);
     }
 }

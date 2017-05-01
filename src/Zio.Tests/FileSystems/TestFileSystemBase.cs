@@ -227,20 +227,20 @@ namespace Zio.Tests.FileSystems
         protected void AssertCommonRead(IFileSystem fs, bool isReadOnly = false)
         {
             {
-                var innerPath = fs.ConvertPathToInner("/");
-                var reverseInnerPath = fs.ConvertPathFromInner(innerPath);
+                var innerPath = fs.ConvertPathToInternal("/");
+                var reverseInnerPath = fs.ConvertPathFromInternal(innerPath);
                 Assert.Equal(UPath.Root, reverseInnerPath);
             }
 
             {
-                var innerPath = fs.ConvertPathToInner("/a/a");
-                var reverseInnerPath = fs.ConvertPathFromInner(innerPath);
+                var innerPath = fs.ConvertPathToInternal("/a/a");
+                var reverseInnerPath = fs.ConvertPathFromInternal(innerPath);
                 Assert.Equal("/a/a", reverseInnerPath);
             }
 
             {
-                var innerPath = fs.ConvertPathToInner("/b");
-                var reverseInnerPath = fs.ConvertPathFromInner(innerPath);
+                var innerPath = fs.ConvertPathToInternal("/b");
+                var reverseInnerPath = fs.ConvertPathFromInternal(innerPath);
                 Assert.Equal("/b", reverseInnerPath);
             }
 
@@ -248,7 +248,7 @@ namespace Zio.Tests.FileSystems
             Assert.False(fs.FileExists(new UPath()));
 
             Assert.Throws<ArgumentNullException>(() => fs.EnumeratePaths("/", null));
-            Assert.Throws<ArgumentNullException>(() => fs.ConvertPathFromInner(null));
+            Assert.Throws<ArgumentNullException>(() => fs.ConvertPathFromInternal(null));
 
             Assert.True(fs.FileExists("/A.txt"));
             Assert.True(fs.FileExists("/b.txt"));

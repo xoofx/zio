@@ -187,15 +187,15 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override string ConvertPathToInnerImpl(UPath path)
+        protected override string ConvertPathToInternalImpl(UPath path)
         {
-            return NextFileSystemSafe.ConvertPathToInner(ConvertPathToDelegate(path));
+            return NextFileSystemSafe.ConvertPathToInternal(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override UPath ConvertPathFromInnerImpl(string innerPath)
+        protected override UPath ConvertPathFromInternalImpl(string innerPath)
         {
-            return ConvertPathFromDelegate(NextFileSystemSafe.ConvertPathFromInner(innerPath));
+            return ConvertPathFromDelegate(NextFileSystemSafe.ConvertPathFromInternal(innerPath));
         }
 
         /// <summary>

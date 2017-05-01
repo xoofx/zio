@@ -796,13 +796,13 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override string ConvertPathToInnerImpl(UPath path)
+        protected override string ConvertPathToInternalImpl(UPath path)
         {
             return path.FullName;
         }
 
         /// <inheritdoc />
-        protected override UPath ConvertPathFromInnerImpl(string innerPath)
+        protected override UPath ConvertPathFromInternalImpl(string innerPath)
         {
             return new UPath(innerPath);
         }

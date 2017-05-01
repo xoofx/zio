@@ -25,11 +25,11 @@ namespace Zio.Tests.FileSystems
         public void TestDirectory()
         {
             var fs = new PhysicalFileSystem();
-            var pathInfo = fs.ConvertPathFromInner(SystemPath);
+            var pathInfo = fs.ConvertPathFromInternal(SystemPath);
             var pathToCreate = pathInfo / "TestCreateDirectory";
-            var systemPathToCreate = fs.ConvertPathToInner(pathToCreate);
+            var systemPathToCreate = fs.ConvertPathToInternal(pathToCreate);
             var movedDirectory = pathInfo / "TestCreateDirectoryMoved";
-            var systemMovedDirectory = fs.ConvertPathToInner(movedDirectory);
+            var systemMovedDirectory = fs.ConvertPathToInternal(movedDirectory);
             try
             {
                 // CreateDirectory
@@ -122,14 +122,14 @@ namespace Zio.Tests.FileSystems
         public void TestFile()
         {
             var fs = new PhysicalFileSystem();
-            var path = fs.ConvertPathFromInner(SystemPath);
+            var path = fs.ConvertPathFromInternal(SystemPath);
             var fileName = $"toto-{Guid.NewGuid()}.txt";
             var filePath = path / fileName;
             var filePathDest = path / Path.ChangeExtension(fileName, "dest");
             var filePathBack = path / Path.ChangeExtension(fileName, "bak");
             var systemFilePath = Path.Combine(SystemPath, fileName);
-            var systemFilePathDest = fs.ConvertPathToInner(filePathDest);
-            var systemFilePathBack = fs.ConvertPathToInner(filePathBack);
+            var systemFilePathDest = fs.ConvertPathToInternal(filePathDest);
+            var systemFilePathBack = fs.ConvertPathToInternal(filePathBack);
             try
             {
                 // CreateFile / OpenFile
@@ -243,17 +243,17 @@ namespace Zio.Tests.FileSystems
         public void TestEnumerate()
         {
             var fs = new PhysicalFileSystem();
-            var path = fs.ConvertPathFromInner(SystemPath);
+            var path = fs.ConvertPathFromInternal(SystemPath);
 
-            var files = fs.EnumerateFiles(path).Select(p => fs.ConvertPathToInner(p)).ToList();
+            var files = fs.EnumerateFiles(path).Select(p => fs.ConvertPathToInternal(p)).ToList();
             var expectedfiles = Directory.EnumerateFiles(SystemPath).ToList();
             Assert.Equal(expectedfiles, files);
 
-            var dirs = fs.EnumerateDirectories(path / "../../..").Select(p => fs.ConvertPathToInner(p)).ToList();
+            var dirs = fs.EnumerateDirectories(path / "../../..").Select(p => fs.ConvertPathToInternal(p)).ToList();
             var expecteddirs = Directory.EnumerateDirectories(Path.GetFullPath(Path.Combine(SystemPath, "..\\..\\.."))).ToList();
             Assert.Equal(expecteddirs, dirs);
 
-            var paths = fs.EnumeratePaths(path / "../..").Select(p => fs.ConvertPathToInner(p)).ToList();
+            var paths = fs.EnumeratePaths(path / "../..").Select(p => fs.ConvertPathToInternal(p)).ToList();
             var expectedPaths = Directory.EnumerateFileSystemEntries(Path.GetFullPath(Path.Combine(SystemPath, "..\\.."))).ToList();
             Assert.Equal(expectedPaths, paths);
         }
@@ -262,7 +262,7 @@ namespace Zio.Tests.FileSystems
         public void TestFileExceptions()
         {
             var fs = new PhysicalFileSystem();
-            var path = fs.ConvertPathFromInner(SystemPath);
+            var path = fs.ConvertPathFromInternal(SystemPath);
             var fileName = $"toto-{Guid.NewGuid()}.txt";
             var filePath = path / fileName;
             fs.CreateFile(filePath).Dispose();
@@ -278,12 +278,12 @@ namespace Zio.Tests.FileSystems
                 // Length
                 Assert.Throws<UnauthorizedAccessException>(() => fs.GetFileLength("/toto.txt"));
 
-                // ConvertPathFromInner / ConvertPathToInner
-                Assert.Throws<NotSupportedException>(() => fs.ConvertPathFromInner(@"\\network\toto.txt"));
-                Assert.Throws<NotSupportedException>(() => fs.ConvertPathFromInner(@"zx:\toto.txt"));
+                // ConvertPathFromInternal / ConvertPathToInternal
+                Assert.Throws<NotSupportedException>(() => fs.ConvertPathFromInternal(@"\\network\toto.txt"));
+                Assert.Throws<NotSupportedException>(() => fs.ConvertPathFromInternal(@"zx:\toto.txt"));
 
-                Assert.Throws<ArgumentException>(() => fs.ConvertPathToInner(@"/toto.txt"));
-                Assert.Throws<ArgumentException>(() => fs.ConvertPathToInner(@"/mnt/yo/toto.txt"));
+                Assert.Throws<ArgumentException>(() => fs.ConvertPathToInternal(@"/toto.txt"));
+                Assert.Throws<ArgumentException>(() => fs.ConvertPathToInternal(@"/mnt/yo/toto.txt"));
 
                 // LastWriteTime, LastAccessTime, CreationTime
                 Assert.Throws<DirectoryNotFoundException>(() => fs.GetLastWriteTime("/toto.txt"));

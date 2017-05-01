@@ -127,14 +127,14 @@ namespace Zio.Tests.FileSystems
             return _fs.GetDirectoryEntry(path).EnumerateEntries(searchPattern, searchOption, searchTarget).Select(e => e.Path);
         }
 
-        protected override string ConvertPathToInnerImpl(UPath path)
+        protected override string ConvertPathToInternalImpl(UPath path)
         {
-            return _fs.ConvertPathToInner(path);
+            return _fs.ConvertPathToInternal(path);
         }
 
-        protected override UPath ConvertPathFromInnerImpl(string innerPath)
+        protected override UPath ConvertPathFromInternalImpl(string innerPath)
         {
-            return _fs.ConvertPathFromInner(innerPath);
+            return _fs.ConvertPathFromInternal(innerPath);
         }
     }
 }

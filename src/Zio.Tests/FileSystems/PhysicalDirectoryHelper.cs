@@ -18,7 +18,7 @@ namespace Zio.Tests.FileSystems
             _compatDirectory.Create();
 
             var pfs = new PhysicalFileSystem();
-            PhysicalFileSystem = new SubFileSystem(pfs, pfs.ConvertPathFromInner(_compatDirectory.FullName));
+            PhysicalFileSystem = new SubFileSystem(pfs, pfs.ConvertPathFromInternal(_compatDirectory.FullName));
         }
 
         public IFileSystem PhysicalFileSystem { get; }
