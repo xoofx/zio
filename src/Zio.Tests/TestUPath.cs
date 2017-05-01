@@ -87,6 +87,8 @@ namespace Zio.Tests
             Assert.False(path.IsRelative);
             Assert.True(path.IsAbsolute);
 
+            Assert.Equal(path, path.ToAbsolute());
+
             path = new UPath();
             Assert.True(path.IsNull);
         }
@@ -217,6 +219,50 @@ namespace Zio.Tests
             Assert.Throws<ArgumentException>(() => UPath.Combine("/", ".."));
             Assert.Equal("path1", Assert.Throws<ArgumentNullException>(() => UPath.Combine(null, "")).ParamName);
             Assert.Equal("path2", Assert.Throws<ArgumentNullException>(() => UPath.Combine("", null)).ParamName);
+        }
+
+
+        [Fact]
+        public void TestComparers()
+        {
+            {
+                var list = new SortedSet<UPath>(UPath.DefaultComparer)
+                {
+                    "/C.txt",
+                    "/b.txt",
+                    "/do.txt",
+                    "/A.txt",
+                    "/a.txt"
+                };
+                Assert.Equal(new List<UPath>()
+                {
+                    "/A.txt",
+                    "/C.txt",
+                    "/a.txt",
+                    "/b.txt",
+                    "/do.txt"
+                }, list.ToList());
+            }
+
+            {
+                var list = new List<UPath>()
+                {
+                    "/C.txt",
+                    "/b.txt",
+                    "/do.txt",
+                    "/A.txt",
+                    "/a.txt"
+                };
+                list.Sort(UPath.DefaultComparerIgnoreCase);
+                Assert.Equal(new List<UPath>()
+                {
+                    "/A.txt",
+                    "/a.txt",
+                    "/b.txt",
+                    "/C.txt",
+                    "/do.txt"
+                }, list.ToList());
+            }
         }
     }
 }
