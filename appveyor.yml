@@ -37,15 +37,15 @@ artifacts:
   name: Zio Nugets
 test_script:
  - cd Zio.Tests
- - dotnet xunit -configuration Release -parallel none -serialize
+ - dotnet xunit -configuration Release -parallel none -serialize -maxthreads 1 -verbose
 after_test:
  - ps: >-
      if (-Not $env:APPVEYOR_PULL_REQUEST_NUMBER) {
        mkdir "$env:APPVEYOR_BUILD_FOLDER\tools"
        nuget install -OutputDirectory "$env:APPVEYOR_BUILD_FOLDER\tools" OpenCover -version 4.6.519
        nuget install -OutputDirectory "$env:APPVEYOR_BUILD_FOLDER\tools" coveralls.net -version  0.8.0-beta0001
-       ..\..\tools\OpenCover.4.6.519\tools\OpenCover.Console.exe -register:user -returntargetcode -target:"dotnet.exe" -targetdir:"$env:APPVEYOR_BUILD_FOLDER\src\Zio.Tests" -targetargs:"xunit -configuration Release -parallel none -serialize" -filter:"+[Zio*]*-[Zio.Tests*]*" -output:"./coverage.xml" -mergeoutput -oldstyle
-       if (Test-Path "./coverage.xml") {
+       ..\..\tools\OpenCover.4.6.519\tools\OpenCover.Console.exe -register:user -returntargetcode -target:"dotnet.exe" -targetdir:"$env:APPVEYOR_BUILD_FOLDER\src\Zio.Tests" -targetargs:"xunit -configuration Release -parallel none -serialize -maxthreads 1 -verbose" -filter:"+[Zio*]*-[Zio.Tests*]*" -output:"./coverage.xml" -mergeoutput -oldstyle
+       if ($? -and Test-Path "./coverage.xml") {
          ..\..\tools\coveralls.net.0.8.0-beta0001\tools\csmacnz.Coveralls.exe --opencover --repoToken $env:COVERALLS_REPO_TOKEN --basePath "$env:APPVEYOR_BUILD_FOLDER" -i "./coverage.xml" --useRelativePath --commitId $env:APPVEYOR_REPO_COMMIT --commitBranch $env:APPVEYOR_REPO_BRANCH --commitAuthor $env:APPVEYOR_REPO_COMMIT_AUTHOR --commitEmail $env:APPVEYOR_REPO_COMMIT_AUTHOR_EMAIL --commitMessage $env:APPVEYOR_REPO_COMMIT_MESSAGE --jobId $env:APPVEYOR_BUILD_NUMBER --serviceName appveyor
        }
      }
