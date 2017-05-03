@@ -32,7 +32,9 @@ before_package:
 artifacts:
 - path: src\Zio\Bin\Release\*.nupkg
   name: Zio Nugets
-test: off
+test_script:
+ - cd Zio.Tests
+ - dotnet test -c Release Zio.Tests.csproj
 deploy:
 - provider: NuGet
   api_key:
