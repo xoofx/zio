@@ -37,7 +37,7 @@ artifacts:
   name: Zio Nugets
 test_script:
  - cd Zio.Tests
- - dotnet test -c Release Zio.Tests.csproj
+ - dotnet xunit -configuration Release -parallel none -serialize
 after_test:
  - ps: >-
      mkdir "$env:APPVEYOR_BUILD_FOLDER\tools"
