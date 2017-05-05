@@ -95,7 +95,9 @@ namespace Zio.FileSystems
             EnterFileSystemShared();
             try
             {
-                var result = EnterFindNode(path, FindNodeFlags.None);
+                // NodeCheck doesn't take a lock, on the return node
+                // but allows us to check if it is a directory or a file
+                var result = EnterFindNode(path, FindNodeFlags.NodeCheck);
                 try
                 {
                     return result.Node is DirectoryNode;
@@ -190,7 +192,7 @@ namespace Zio.FileSystems
             EnterFileSystemShared();
             try
             {
-                var srcResult = EnterFindNode(srcPath, FindNodeFlags.None);
+                var srcResult = EnterFindNode(srcPath, FindNodeFlags.NodeShared);
                 try
                 {
                     // The source file must exist
@@ -314,6 +316,10 @@ namespace Zio.FileSystems
                         {
                             flags |= FindNodeFlags.NodeExclusive;
                         }
+                        else
+                        {
+                            flags |= FindNodeFlags.NodeShared;
+                        }
                         results[pathPair.Value] = EnterFindNode(pathPair.Key, flags, results);
                     }
 
@@ -388,7 +394,9 @@ namespace Zio.FileSystems
             EnterFileSystemShared();
             try
             {
-                var result = EnterFindNode(path, FindNodeFlags.None);
+                // NodeCheck doesn't take a lock, on the return node
+                // but allows us to check if it is a directory or a file
+                var result = EnterFindNode(path, FindNodeFlags.NodeCheck);
                 ExitFindNode(result);
                 return result.Node is FileNode;
             }
@@ -455,7 +463,7 @@ namespace Zio.FileSystems
             FileNode fileNodeToRelease = null;
             try
             {
-                var result = EnterFindNode(path, (isExclusive ? FindNodeFlags.NodeExclusive : FindNodeFlags.None) | FindNodeFlags.KeepParentNodeExclusive, share);
+                var result = EnterFindNode(path, (isExclusive ? FindNodeFlags.NodeExclusive : FindNodeFlags.NodeShared) | FindNodeFlags.KeepParentNodeExclusive, share);
                 if (result.Directory == null)
                 {
                     ExitFindNode(result);
@@ -725,7 +733,7 @@ namespace Zio.FileSystems
                 EnterFileSystemShared();
                 try
                 {
-                    var result = EnterFindNode(directoryPath, FindNodeFlags.None);
+                    var result = EnterFindNode(directoryPath, FindNodeFlags.NodeShared);
                     try
                     {
                         if (directoryPath == path)
@@ -873,13 +881,13 @@ namespace Zio.FileSystems
                 {
                     if (isLockInverted)
                     {
-                        destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeExclusive);
+                        destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.NodeShared);
                         srcResult = EnterFindNode(srcPath, FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.NodeExclusive, destResult);
                     }
                     else
                     {
                         srcResult = EnterFindNode(srcPath, FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.NodeExclusive);
-                        destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeExclusive, srcResult);
+                        destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.NodeShared, srcResult);
                     }
 
                     if (expectDirectory)
@@ -950,7 +958,7 @@ namespace Zio.FileSystems
             EnterFileSystemShared();
             try
             {
-                var result = EnterFindNode(path, FindNodeFlags.None);
+                var result = EnterFindNode(path, FindNodeFlags.NodeShared);
                 try
                 {
                     var node = result.Node;
@@ -993,7 +1001,7 @@ namespace Zio.FileSystems
 
         private void CreateDirectoryNode(UPath path)
         {
-            ExitFindNode(EnterFindNode(path, FindNodeFlags.CreatePathIfNotExist));
+            ExitFindNode(EnterFindNode(path, FindNodeFlags.CreatePathIfNotExist | FindNodeFlags.NodeShared));
         }
 
         private struct NodeResult
@@ -1018,15 +1026,17 @@ namespace Zio.FileSystems
         [Flags]
         private enum FindNodeFlags
         {
-            None = 0,
-
             CreatePathIfNotExist = 1 << 1,
 
-            NodeExclusive = 1 << 2,
+            NodeCheck = 1 << 2,
 
-            KeepParentNodeExclusive = 1 << 3,
+            NodeShared = 1 << 3,
 
-            KeepParentNodeShared = 1 << 4,
+            NodeExclusive = 1 << 4,
+
+            KeepParentNodeExclusive = 1 << 5,
+
+            KeepParentNodeShared = 1 << 6,
         }
 
         private void ExitFindNode(NodeResult nodeResult)
@@ -1040,7 +1050,7 @@ namespace Zio.FileSystems
                 {
                     ExitExclusive(nodeResult.Node);
                 }
-                else
+                else if ((flags & FindNodeFlags.NodeShared) != 0)
                 {
                     ExitShared(nodeResult.Node);
                 }
@@ -1070,70 +1080,73 @@ namespace Zio.FileSystems
 
         private NodeResult EnterFindNode(UPath path, FindNodeFlags flags, FileShare? share, params NodeResult[] existingNodes)
         {
+            // TODO: Split the flags between parent and node to make the code more clear
             var result = new NodeResult();
 
-            var sharePath = share ?? FileShare.Read;
+            // This method should be always called with at least one of these
+            Debug.Assert((flags & (FindNodeFlags.NodeExclusive|FindNodeFlags.NodeShared|FindNodeFlags.NodeCheck)) != 0);
 
+            var sharePath = share ?? FileShare.Read;
+            bool isLockOnRootAlreadyTaken = IsNodeAlreadyLocked(_rootDirectory, existingNodes);
+
+            // Even if it is not valid, the EnterFindNode may be called with a root directory
+            // So we handle it as a special case here
             if (path == UPath.Root)
             {
-                if ((flags & FindNodeFlags.NodeExclusive) != 0)
+                if (!isLockOnRootAlreadyTaken)
                 {
-                    EnterExclusive(_rootDirectory, path);
+                    if ((flags & FindNodeFlags.NodeExclusive) != 0)
+                    {
+                        EnterExclusive(_rootDirectory, path);
+                    }
+                    else if ((flags & FindNodeFlags.NodeShared) != 0)
+                    {
+                        EnterShared(_rootDirectory, path, sharePath);
+                    }
                 }
                 else
                 {
-                    EnterShared(_rootDirectory, path, sharePath);
+                    // If the lock was already taken, we make sure that NodeResult
+                    // will not try to release it
+                    flags &= ~(FindNodeFlags.NodeExclusive | FindNodeFlags.NodeShared);
                 }
                 result = new NodeResult(null, _rootDirectory, null, flags);
                 return result;
             }
 
-            var isParentWriting = (flags & (FindNodeFlags.CreatePathIfNotExist | FindNodeFlags.KeepParentNodeExclusive)) != 0;
+            var isRequiringExclusiveLockForParent = (flags & (FindNodeFlags.CreatePathIfNotExist | FindNodeFlags.KeepParentNodeExclusive)) != 0;
 
             var parentNode = _rootDirectory;
             var names = path.Split();
+
+            // Walking down the nodes in locking order:
+            // /a/b/c.txt
+            //
+            // Lock /
+            // Lock /a
+            // Unlock /
+            // Lock /a/b
+            // Unlock /a
+            // Lock /a/b/c.txt
+
+            // Start by locking the parent directory (only if it is not already locked)
+            bool isParentLockTaken = false;
+            if (!isLockOnRootAlreadyTaken)
+            {
+                EnterExclusiveOrSharedDirectoryOrBlock(_rootDirectory, path, isRequiringExclusiveLockForParent);
+                isParentLockTaken = true;
+            }
 
             for (var i = 0; i < names.Count && parentNode != null; i++)
             {
                 var name = names[i];
                 bool isLast = i + 1 == names.Count;
 
-                bool isParentAlreadylocked = false;
-
-                if (existingNodes.Length > 0)
-                {
-                    foreach (var existingNode in existingNodes)
-                    {
-                        if (existingNode.Directory == parentNode || existingNode.Node == parentNode)
-                        {
-                            // The parent is already locked, so clear the flags
-                            if (isLast)
-                            {
-                                flags = flags & ~(FindNodeFlags.KeepParentNodeShared | FindNodeFlags.KeepParentNodeExclusive);
-                            }
-                            isParentAlreadylocked = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!isParentAlreadylocked)
-                {
-                    // TODO: Make it Read lock until last one instead of write lock on all path
-                    if (isParentWriting)
-                    {
-                        EnterExclusiveDirectoryOrBlock(parentNode, path);
-                    }
-                    else
-                    {
-                        EnterSharedDirectoryOrBlock(parentNode, path);
-                    }
-                }
-
-                FileSystemNode subNode;
-                bool releaseParent = !isParentAlreadylocked;
+                DirectoryNode nextParent = null;
+                bool isNextParentLockTaken = false;
                 try
                 {
+                    FileSystemNode subNode;
                     if (!parentNode.Children.TryGetValue(name, out subNode))
                     {
                         if ((flags & FindNodeFlags.CreatePathIfNotExist) != 0)
@@ -1144,53 +1157,88 @@ namespace Zio.FileSystems
                     }
                     else
                     {
+                        // If we are trying to create a directory and one of the node on the way is a file
+                        // this is an error
                         if ((flags & FindNodeFlags.CreatePathIfNotExist) != 0 && subNode is FileNode)
                         {
                             throw new IOException($"Cannot create directory `{path}` on an existing file");
                         }
                     }
 
+                    // Special case of the last entry
                     if (isLast)
                     {
+                        // If the lock was not taken by the parent, modify the flags 
+                        // so that Exit(NodeResult) will not try to release the lock on the parent
+                        if (!isParentLockTaken)
+                        {
+                            flags &= ~(FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.KeepParentNodeShared);
+                        }
+
                         result = new NodeResult(parentNode, subNode, name, flags);
+
+                        // The last subnode may be null but we still want to return a valid parent
+                        // otherwise, lock the final node if necessary
                         if (subNode != null)
                         {
                             if ((flags & FindNodeFlags.NodeExclusive) != 0)
                             {
                                 EnterExclusive(subNode, path);
                             }
-                            else
+                            else if ((flags & FindNodeFlags.NodeShared) != 0)
                             {
                                 EnterShared(subNode, path, sharePath);
                             }
                         }
 
+                        // After we have taken the lock, and we need to keep a lock on the parent, make sure
+                        // that the finally {} below will not unlock the parent
+                        // This is important to perform this here, as the previous EnterExclusive/EnterShared
+                        // could have failed (e.g trying to lock exclusive on a file already locked)
+                        // and thus, we would have to release the lock of the parent in finally
                         if ((flags & (FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.KeepParentNodeShared)) != 0)
                         {
-                            releaseParent = false;
+                            parentNode = null;
                             break;
+                        }
+                    }
+                    else
+                    {
+                        // Going down the directory, 
+                        nextParent = subNode as DirectoryNode;
+                        if (nextParent != null && !IsNodeAlreadyLocked(nextParent, existingNodes))
+                        {
+                            EnterExclusiveOrSharedDirectoryOrBlock(nextParent, path, isRequiringExclusiveLockForParent);
+                            isNextParentLockTaken = true;
                         }
                     }
                 }
                 finally
                 {
-                    if (releaseParent)
+                    // We unlock the parent only if it was taken
+                    if (isParentLockTaken && parentNode != null)
                     {
-                        if (isParentWriting)
-                        {
-                            ExitExclusive(parentNode);
-                        }
-                        else
-                        {
-                            ExitShared(parentNode);
-                        }
+                        ExitExclusiveOrShared(parentNode, isRequiringExclusiveLockForParent);
                     }
                 }
 
-                parentNode = subNode as DirectoryNode;
+                parentNode = nextParent;
+                isParentLockTaken = isNextParentLockTaken;
             }
 
             return result;
+        }
+
+        private static bool IsNodeAlreadyLocked(DirectoryNode directoryNode, NodeResult[] existingNodes)
+        {
+            foreach (var existingNode in existingNodes)
+            {
+                if (existingNode.Directory == directoryNode || existingNode.Node == directoryNode)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // ----------------------------------------------
@@ -1222,6 +1270,18 @@ namespace Zio.FileSystems
             EnterShared(node, context, true, FileShare.Read);
         }
 
+        private void EnterExclusiveOrSharedDirectoryOrBlock(DirectoryNode node, UPath context, bool isExclusive)
+        {
+            if (isExclusive)
+            {
+                EnterExclusiveDirectoryOrBlock(node, context);
+            }
+            else
+            {
+                EnterSharedDirectoryOrBlock(node, context);
+            }
+        }
+
         private void EnterExclusiveDirectoryOrBlock(DirectoryNode node, UPath context)
         {
             EnterExclusive(node, context, true);
@@ -1246,7 +1306,7 @@ namespace Zio.FileSystems
             else if (!node.TryEnterShared(share))
             {
                 var pathType = node is FileNode ? "file" : "directory";
-                throw new IOException($"The {pathType} `{context}` is already used for writing by another thread");
+                throw new IOException($"The {pathType} `{context}` is already used for writing by another thread.");
             }
         }
 
@@ -1264,7 +1324,19 @@ namespace Zio.FileSystems
             else if(!node.TryEnterExclusive())
             {
                 var pathType = node is FileNode ? "file" : "directory";
-                throw new IOException($"The {pathType} `{context}` is already locked");
+                throw new IOException($"The {pathType} `{context}` is already locked.");
+            }
+        }
+
+        private void ExitExclusiveOrShared(FileSystemNode node, bool isExclusive)
+        {
+            if (isExclusive)
+            {
+                node.ExitExclusive();
+            }
+            else
+            {
+                node.ExitShared();
             }
         }
 
@@ -1813,7 +1885,6 @@ namespace Zio.FileSystems
                     {
                         _shared = share;
                     }
-
                     _sharedCount++;
                     Monitor.PulseAll(this);
                 }

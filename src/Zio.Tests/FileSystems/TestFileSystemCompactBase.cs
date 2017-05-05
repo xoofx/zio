@@ -387,6 +387,10 @@ namespace Zio.Tests.FileSystems
             // We try to write back on the same file before closing
             Assert.Throws<IOException>(() => fs.WriteAllText("/toto.txt", "content2"));
 
+            // Make sure that checking for a file exists or directory exists doesn't throw an exception "being used"
+            Assert.True(fs.FileExists("/toto.txt"));
+            Assert.False(fs.DirectoryExists("/toto.txt"));
+
             stream1.Dispose();
         }
 
