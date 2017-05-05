@@ -4,13 +4,15 @@
     <Copyright>Alexandre Mutel</Copyright>
     <AssemblyTitle>Zio</AssemblyTitle>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.2.0</VersionPrefix>
     <Authors>Alexandre Mutel</Authors>
     <TargetFrameworks>net40;net45;netstandard1.3</TargetFrameworks>
     <AssemblyName>Zio</AssemblyName>
     <PackageId>Zio</PackageId>
     <PackageTags>filesystem;vfs;VirtualFileSystem;virtual;abstract;directory;files;io;mock</PackageTags>
     <PackageReleaseNotes>
+      &gt; 0.2.0
+      - Fix directory/file locking issue in MemoryFileSystem
       &gt; 0.1.0
       - Initial version
     </PackageReleaseNotes>
