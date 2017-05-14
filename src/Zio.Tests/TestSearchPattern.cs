@@ -12,48 +12,48 @@ namespace Zio.Tests
 
         [Theory]
         // Test any-alone '*' match
-        [InlineData("/a/b/c", "*", "x")]
-        [InlineData("/a/b/c", "*", "x/y")]
+        [InlineData("/a/b/c", "*", "x", true)]
+        [InlineData("/a/b/c", "*", "x/y", true)]
 
-        [InlineData("/a/b/c", "d/*", "x")]
-        [InlineData("/a/b/c", "d/*", "x/y")]
+        [InlineData("/a/b/c", "d/*", "x", true)]
+        [InlineData("/a/b/c", "d/*", "x/y", true)]
 
-        [InlineData("/a/b/c", "d/x", "x")]
+        [InlineData("/a/b/c", "d/x", "x", true)]
 
         // Test exact match
-        [InlineData("/a/b/c", "x", "x")]
-        [InlineData("/a/b/c", "d/x", "x")]
-        [InlineData("/a/b/c", "x", "d/x")]
-        [InlineData("/a/b/c", "x", "d/e/x")]
+        [InlineData("/a/b/c", "x", "x", true)]
+        [InlineData("/a/b/c", "d/x", "x", true)]
+        [InlineData("/a/b/c", "x", "d/x", true)]
+        [InlineData("/a/b/c", "x", "d/e/x", true)]
 
         // Test regex match: ? pattern
-        [InlineData("/a/b/c", "?", "x")]
-        [InlineData("/a/b/c", "x?z", "xyz")]
-        [InlineData("/a/b/c", "x?z", "d/xyz")]
+        [InlineData("/a/b/c", "?", "x", true)]
+        [InlineData("/a/b/c", "x?z", "xyz", true)]
+        [InlineData("/a/b/c", "x?z", "d/xyz", true)]
 
-        [InlineData("/a/b/c", "?yz", "xyz")]
-        [InlineData("/a/b/c", "xy?", "xyz")]
-        [InlineData("/a/b/c", "??", "ab")]
+        [InlineData("/a/b/c", "?yz", "xyz", true)]
+        [InlineData("/a/b/c", "xy?", "xyz", true)]
+        [InlineData("/a/b/c", "??", "ab", true)]
         [InlineData("/a/b/c", "??", "c", false)]
         [InlineData("/a/b/c", "?", "abc", false)]
 
         // Test regex match: * pattern
-        [InlineData("/a/b/c", "x*", "x")]
-        [InlineData("/a/b/c", "x*", "xyz")]
-        [InlineData("/a/b/c", "*z", "z")]
-        [InlineData("/a/b/c", "*z", "xyz")]
-        [InlineData("/a/b/c", "x*z", "xyz")]
-        [InlineData("/a/b/c", "x*z", "xblablaz")]
+        [InlineData("/a/b/c", "x*", "x", true)]
+        [InlineData("/a/b/c", "x*", "xyz", true)]
+        [InlineData("/a/b/c", "*z", "z", true)]
+        [InlineData("/a/b/c", "*z", "xyz", true)]
+        [InlineData("/a/b/c", "x*z", "xyz", true)]
+        [InlineData("/a/b/c", "x*z", "xblablaz", true)]
         [InlineData("/a/b/c", "x*z", "axyz", false)]
         [InlineData("/a/b/c", "x*z", "xyza", false)]
-        [InlineData("/a/b/c", "x*.txt", "xyoyo.txt")]
-        [InlineData("/a/b/c", "x*.txt", "x.txt")]
-        [InlineData("/a/b/c", "*.txt", "x.txt")]
-        [InlineData("/a/b/c", "*.txt", "x.txt1")]
-        [InlineData("/a/b/c", "*.i", "x.i")]
+        [InlineData("/a/b/c", "x*.txt", "xyoyo.txt", true)]
+        [InlineData("/a/b/c", "x*.txt", "x.txt", true)]
+        [InlineData("/a/b/c", "*.txt", "x.txt", true)]
+        [InlineData("/a/b/c", "*.txt", "x.txt1", true)]
+        [InlineData("/a/b/c", "*.i", "x.i", true)]
         [InlineData("/a/b/c", "*.i", "x.i1", false)]
         [InlineData("/a/b/c", "x*.txt", "x_txt", false)]
-        [InlineData("/a/b/c", "x?z", "d/xyz")]
+        [InlineData("/a/b/c", "x?z", "d/xyz", true)]
         public void TestMatch(string path, string searchPattern, string pathToSearch, bool match = true)
         {
             var pathInfo = new UPath(path);
