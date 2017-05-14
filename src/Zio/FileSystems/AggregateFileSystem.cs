@@ -47,6 +47,42 @@ namespace Zio.FileSystems
         }
 
         /// <summary>
+        /// Clears the registered file systems.
+        /// </summary>
+        public void ClearFileSystems()
+        {
+            lock (_fileSystems)
+            {
+                _fileSystems.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Sets the filesystems by clearing all previously registered filesystems, from the lowest to highest priority filesystem.
+        /// </summary>
+        /// <param name="fileSystems">The file systems.</param>
+        /// <exception cref="System.ArgumentNullException">fileSystems</exception>
+        /// <exception cref="System.ArgumentException">
+        /// A null filesystem is invalid
+        /// or
+        /// Cannot add this instance as an aggregate delegate of itself
+        /// </exception>
+        public void SetFileSystems(IEnumerable<IFileSystem> fileSystems)
+        {
+            if (fileSystems == null) throw new ArgumentNullException(nameof(fileSystems));
+            lock (_fileSystems)
+            {
+                _fileSystems.Clear();
+                foreach (var fileSystem in fileSystems)
+                {
+                    if (fileSystem == null) throw new ArgumentException("A null filesystem is invalid");
+                    if (fileSystem == this) throw new ArgumentException("Cannot add this instance as an aggregate delegate of itself");
+                    _fileSystems.Add(fileSystem);
+                }
+            }
+        }
+
+        /// <summary>
         /// Adds a filesystem to this aggregate view. The Last filesystem as more priority than the previous one when an overrides
         /// of a file occurs. 
         /// </summary>
@@ -92,6 +128,41 @@ namespace Zio.FileSystems
                     throw new ArgumentException("FileSystem was not found", nameof(fs));
                 }
             }
+        }
+
+        /// <summary>
+        /// Finds the list of <see cref="FileSystemEntry"/> for each file or directory found at the specified path for each registered filesystems (in order).
+        /// The type of the first entry (file or directory) dictates the type of the following entries in the list (e.g if a file is coming first, only files will be showned for the specified path).
+        /// </summary>
+        /// <param name="path">To check for an entry</param>
+        /// <returns>A list of file entries for the specified path</returns>
+        public List<FileSystemEntry> FindFileSystemEntries(UPath path)
+        {
+            path.AssertAbsolute();
+            var paths = FindPaths(path, SearchTarget.Both);
+            var result = new List<FileSystemEntry>(paths.Count);
+            if (paths.Count == 0)
+            {
+                return result;
+            }
+
+            var isFile = paths[0].IsFile;
+
+            foreach (var pathItem in paths)
+            {
+                if (pathItem.IsFile == isFile)
+                {
+                    if (isFile)
+                    {
+                        result.Add(new FileEntry(pathItem.FileSystem, pathItem.Path));
+                    }
+                    else
+                    {
+                        result.Add(new DirectoryEntry(pathItem.FileSystem, pathItem.Path));
+                    }
+                }
+            }
+            return result;
         }
 
         // ----------------------------------------------
@@ -155,21 +226,21 @@ namespace Zio.FileSystems
         protected override DateTime GetCreationTimeImpl(UPath path)
         {
             var entry = TryGetPath(path);
-            return entry.HasValue ? entry.Value.SystemPath.FileSystem.GetCreationTime(path) : DefaultFileTime;
+            return entry.HasValue ? entry.Value.FileSystem.GetCreationTime(path) : DefaultFileTime;
         }
 
         /// <inheritdoc />
         protected override DateTime GetLastAccessTimeImpl(UPath path)
         {
             var entry = TryGetPath(path);
-            return entry.HasValue ? entry.Value.SystemPath.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
+            return entry.HasValue ? entry.Value.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
         }
 
         /// <inheritdoc />
         protected override DateTime GetLastWriteTimeImpl(UPath path)
         {
             var entry = TryGetPath(path);
-            return entry.HasValue ? entry.Value.SystemPath.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
+            return entry.HasValue ? entry.Value.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
         }
 
         // ----------------------------------------------
@@ -274,19 +345,19 @@ namespace Zio.FileSystems
             {
                 throw NewFileNotFoundException(path);
             }
-            return entry.Value.SystemPath;
+            return entry.Value;
         }
 
-        private FileSystemPathExtended? TryGetFile(UPath path)
+        private FileSystemPath? TryGetFile(UPath path)
         {
             var entries = FindPaths(path, SearchTarget.File);
-            return entries.Count > 0 ? (FileSystemPathExtended?)entries[0] : null;
+            return entries.Count > 0 ? (FileSystemPath?)entries[0] : null;
         }
 
-        private FileSystemPathExtended? TryGetDirectory(UPath path)
+        private FileSystemPath? TryGetDirectory(UPath path)
         {
             var entries = FindPaths(path, SearchTarget.Directory);
-            return entries.Count > 0 ? (FileSystemPathExtended?)entries[0] : null;
+            return entries.Count > 0 ? (FileSystemPath?)entries[0] : null;
         }
 
         private FileSystemPath GetPath(UPath path)
@@ -296,18 +367,18 @@ namespace Zio.FileSystems
             {
                 throw NewFileNotFoundException(path);
             }
-            return entry.Value.SystemPath;
+            return entry.Value;
         }
 
-        private FileSystemPathExtended? TryGetPath(UPath path)
+        private FileSystemPath? TryGetPath(UPath path)
         {
             var entries = FindPaths(path, SearchTarget.Both);
-            return entries.Count > 0 ? (FileSystemPathExtended?)entries[0] : null;
+            return entries.Count > 0 ? (FileSystemPath?)entries[0] : null;
         }
 
-        private List<FileSystemPathExtended> FindPaths(UPath path, SearchTarget searchTarget)
+        private List<FileSystemPath> FindPaths(UPath path, SearchTarget searchTarget)
         {
-            var paths = new List<FileSystemPathExtended>();
+            var paths = new List<FileSystemPath>();
 
             bool queryDirectory = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.Directory;
             bool queryFile = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.File;
@@ -326,7 +397,7 @@ namespace Zio.FileSystems
                     bool isFile = false;
                     if ((queryDirectory && fileSystem.DirectoryExists(path)) || (queryFile && (isFile = fileSystem.FileExists(path))))
                     {
-                        paths.Add(new FileSystemPathExtended(new FileSystemPath(fileSystem, path), isFile));
+                        paths.Add(new FileSystemPath(fileSystem, path, isFile));
                     }
                 }
             }
@@ -334,15 +405,18 @@ namespace Zio.FileSystems
             return paths;
         }
 
-        private struct FileSystemPathExtended
+        private struct FileSystemPath
         {
-            public FileSystemPathExtended(FileSystemPath systemPath, bool isFile)
+            public FileSystemPath(IFileSystem fileSystem, UPath path, bool isFile)
             {
-                SystemPath = systemPath;
+                FileSystem = fileSystem;
+                Path = path;
                 IsFile = isFile;
             }
 
-            public readonly FileSystemPath SystemPath;
+            public readonly IFileSystem FileSystem;
+
+            public readonly UPath Path;
 
             public readonly bool IsFile;
         }
