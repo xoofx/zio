@@ -324,7 +324,7 @@ namespace Zio
         ///     This method uses UTF-8 encoding without a Byte-Order Mark (BOM), so using the GetPreamble method will return an
         ///     empty byte array.
         ///     If it is necessary to include a UTF-8 identifier, such as a byte order mark, at the beginning of a file,
-        ///     use the <see cref="WriteAllText(Zio.IFileSystem,Zio.UPath,string)" /> method overload with UTF8 encoding.
+        ///     use the <see cref="WriteAllText(Zio.IFileSystem,Zio.UPath,string, Encoding)" /> method overload with UTF8 encoding.
         /// </remarks>
         public static void WriteAllText(this IFileSystem fs, UPath path, string content)
         {

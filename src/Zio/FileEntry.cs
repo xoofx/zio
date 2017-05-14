@@ -2,6 +2,7 @@
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 using System.IO;
+using System.Text;
 
 namespace Zio
 {
@@ -176,6 +177,144 @@ namespace Zio
         public void ReplaceTo(UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             FileSystem.ReplaceFile(Path, destPath, destBackupPath, ignoreMetadataErrors);
+        }
+
+        /// <summary>
+        ///     Opens a file, reads all lines of the file with the specified encoding, and then closes the file.
+        /// </summary>
+        /// <returns>A string containing all lines of the file.</returns>
+        /// <remarks>
+        ///     This method attempts to automatically detect the encoding of a file based on the presence of byte order marks.
+        ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.
+        /// </remarks>
+        public string ReadAllText()
+        {
+            return FileSystem.ReadAllText(Path);
+        }
+
+        /// <summary>
+        ///     Opens a file, reads all lines of the file with the specified encoding, and then closes the file.
+        /// </summary>
+        /// <param name="encoding">The encoding to use to decode the text from <see cref="Path" />.</param>
+        /// <returns>A string containing all lines of the file.</returns>
+        public string ReadAllText(Encoding encoding)
+        {
+            return FileSystem.ReadAllText(Path, encoding);
+        }
+
+        /// <summary>
+        ///     Creates a new file, writes the specified string to the file, and then closes the file.
+        ///     If the target file already exists, it is overwritten.
+        /// </summary>
+        /// <param name="content">The content.</param>
+        /// <exception cref="System.ArgumentNullException">content</exception>
+        /// <remarks>
+        ///     This method uses UTF-8 encoding without a Byte-Order Mark (BOM), so using the GetPreamble method will return an
+        ///     empty byte array.
+        ///     If it is necessary to include a UTF-8 identifier, such as a byte order mark, at the beginning of a file,
+        ///     use the <see cref="WriteAllText(string, Encoding)" /> method overload with UTF8 encoding.
+        /// </remarks>
+        public void WriteAllText(string content)
+        {
+            FileSystem.WriteAllText(Path, content);
+        }
+
+        /// <summary>
+        ///     Creates a new file, writes the specified string to the file using the specified encoding, and then
+        ///     closes the file. If the target file already exists, it is overwritten.
+        /// </summary>
+        /// <param name="content">The content.</param>
+        /// <param name="encoding">The encoding to use to decode the text from <paramref name="path" />. </param>
+        /// <exception cref="System.ArgumentNullException">content</exception>
+        /// <remarks>
+        ///     Given a string and a file path, this method opens the specified file, writes the string to the file using the
+        ///     specified encoding, and then closes the file.
+        ///     The file handle is guaranteed to be closed by this method, even if exceptions are raised.
+        /// </remarks>
+        public void WriteAllText(string content, Encoding encoding)
+        {
+            FileSystem.WriteAllText(Path, content, encoding);
+        }
+
+        /// <summary>
+        ///     Opens a file, appends the specified string to the file, and then closes the file. If the file does not exist,
+        ///     this method creates a file, writes the specified string to the file, then closes the file.
+        /// </summary>
+        /// <param name="content">The content to append.</param>
+        /// <exception cref="System.ArgumentNullException">content</exception>
+        /// <remarks>
+        ///     Given a string and a file path, this method opens the specified file, appends the string to the end of the file,
+        ///     and then closes the file. The file handle is guaranteed to be closed by this method, even if exceptions are raised.
+        ///     The method creates the file if it doesn’t exist, but it doesn't create new directories. Therefore, the value of the
+        ///     path parameter must contain existing directories.
+        /// </remarks>
+        public void AppendAllText(string content)
+        {
+            FileSystem.AppendAllText(Path, content);
+        }
+
+        /// <summary>
+        ///     Appends the specified string to the file, creating the file if it does not already exist.
+        /// </summary>
+        /// <param name="content">The content to append.</param>
+        /// <param name="encoding">The encoding to use to encode the text from <paramref name="path" />.</param>
+        /// <exception cref="System.ArgumentNullException">content</exception>
+        /// <remarks>
+        ///     Given a string and a file path, this method opens the specified file, appends the string to the end of the file,
+        ///     and then closes the file. The file handle is guaranteed to be closed by this method, even if exceptions are raised.
+        ///     The method creates the file if it doesn’t exist, but it doesn't create new directories. Therefore, the value of the
+        ///     path parameter must contain existing directories.
+        /// </remarks>
+        public void AppendAllText(string content, Encoding encoding)
+        {
+            FileSystem.AppendAllText(Path, content, encoding);
+        }
+
+        /// <summary>
+        ///     Opens a file, reads all lines of the file with the specified encoding, and then closes the file.
+        /// </summary>
+        /// <returns>An array of strings containing all lines of the file.</returns>
+        public string[] ReadAllLines()
+        {
+            return FileSystem.ReadAllLines(Path);
+        }
+
+        /// <summary>
+        ///     Opens a file, reads all lines of the file with the specified encoding, and then closes the file.
+        /// </summary>
+        /// <param name="encoding">The encoding to use to decode the text from <paramref name="path" />.</param>
+        /// <remarks>
+        ///     This method attempts to automatically detect the encoding of a file based on the presence of byte order marks.
+        ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.
+        /// </remarks>
+        /// <returns>An array of strings containing all lines of the file.</returns>
+        public string[] ReadAllLines(Encoding encoding)
+        {
+            return FileSystem.ReadAllLines(Path, encoding);
+        }
+
+        /// <summary>
+        ///     Opens a binary file, reads the contents of the file into a byte array, and then closes the file.
+        /// </summary>
+        /// <returns>A byte array containing the contents of the file.</returns>
+        public byte[] ReadAllBytes()
+        {
+            return FileSystem.ReadAllBytes(Path);
+        }
+
+        /// <summary>
+        ///     Creates a new file, writes the specified byte array to the file, and then closes the file.
+        ///     If the target file already exists, it is overwritten.
+        /// </summary>
+        /// <param name="content">The content.</param>
+        /// <exception cref="System.ArgumentNullException">content</exception>
+        /// <remarks>
+        ///     Given a byte array and a file path, this method opens the specified file, writes the
+        ///     contents of the byte array to the file, and then closes the file.
+        /// </remarks>
+        public void WriteAllBytes(byte[] content)
+        {
+            FileSystem.WriteAllBytes(Path, content);
         }
 
         /// <inheritdoc />

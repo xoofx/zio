@@ -5,6 +5,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Xunit;
 
 namespace Zio.Tests.FileSystems
@@ -49,8 +50,8 @@ namespace Zio.Tests.FileSystems
 
             Assert.Null(new DirectoryEntry(memfs, "/").Parent);
 
-
-            using (var file1 = new FileEntry(memfs, "/a/yoyo.txt").Create())
+            var yoyo = new FileEntry(memfs, "/a/yoyo.txt");
+            using (var file1 = yoyo.Create())
             {
                 file1.WriteByte(1);
                 file1.WriteByte(2);
@@ -89,6 +90,31 @@ namespace Zio.Tests.FileSystems
 
             Assert.False(mydir.Exists);
             Assert.False(subFolder.Exists);
+
+            // Test ReadAllText/WriteAllText/AppendAllText/ReadAllBytes/WriteAllBytes
+            Assert.True(file.ReadAllText().Length > 0);
+            Assert.True(file.ReadAllText(Encoding.UTF8).Length > 0);
+            file.WriteAllText("abc");
+            Assert.Equal("abc", file.ReadAllText());
+            file.WriteAllText("abc", Encoding.UTF8);
+            Assert.Equal("abc", file.ReadAllText(Encoding.UTF8));
+
+            file.AppendAllText("def");
+            Assert.Equal("abcdef", file.ReadAllText());
+            file.AppendAllText("ghi", Encoding.UTF8);
+            Assert.Equal("abcdefghi", file.ReadAllText());
+
+            var lines = file.ReadAllLines();
+            Assert.Equal(1, lines.Length);
+            Assert.Equal("abcdefghi", lines[0]);
+
+            lines = file.ReadAllLines(Encoding.UTF8);
+            Assert.Equal(1, lines.Length);
+            Assert.Equal("abcdefghi", lines[0]);
+
+            Assert.Equal(new byte[] { 1, 2, 3 }, yoyo.ReadAllBytes());
+            yoyo.WriteAllBytes(new byte[] {1, 2, 3, 4});
+            Assert.Equal(new byte[] { 1, 2, 3, 4}, yoyo.ReadAllBytes());
         }
     }
 }
