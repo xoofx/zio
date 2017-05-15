@@ -10,7 +10,7 @@ namespace Zio
     /// Similar to <see cref="FileSystemInfo"/> but to use with <see cref="IFileSystem"/>, provides the base class 
     /// for both <see cref="FileEntry"/> and <see cref="DirectoryEntry"/> objects.
     /// </summary>
-    public abstract class FileSystemEntry
+    public abstract class FileSystemEntry : IEquatable<FileSystemEntry>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystemEntry"/> class.
@@ -118,6 +118,32 @@ namespace Zio
         public override string ToString()
         {
             return Path.FullName;
+        }
+
+        /// <inheritdoc />
+        public bool Equals(FileSystemEntry other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Path.Equals(other.Path) && FileSystem.Equals(other.FileSystem);
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((FileSystemEntry) obj);
+        }
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Path.GetHashCode() * 397) ^ FileSystem.GetHashCode();
+            }
         }
     }
 }
