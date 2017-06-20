@@ -117,6 +117,64 @@ namespace Zio.Tests
         }
 
         [Theory]
+        [InlineData("", "", "", "")]
+        [InlineData("a", "b", "c", "a/b/c")]
+        [InlineData("a/b", "c", "d", "a/b/c/d")]
+        [InlineData("", "b", "", "b")]
+        [InlineData("a", "", "", "a")]
+        [InlineData("a/b", "", "", "a/b")]
+        [InlineData("/a", "b/", "c/", "/a/b/c")]
+        [InlineData("/a", "/b", "/c", "/c")]
+        public void TestCombine3(string path1, string path2, string path3, string expectedResult)
+        {
+            var path = UPath.Combine(path1, path2, path3);
+            Assert.Equal(expectedResult, (string)path);
+
+            // Compare path info directly
+            var expectedPath = new UPath(expectedResult);
+            Assert.Equal(expectedPath, path);
+            Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
+        }
+
+        [Theory]
+        [InlineData("", "", "", "", "")]
+        [InlineData("a", "b", "c", "d", "a/b/c/d")]
+        [InlineData("a/b", "c", "d/e", "f", "a/b/c/d/e/f")]
+        [InlineData("", "b", "", "", "b")]
+        [InlineData("a", "", "", "", "a")]
+        [InlineData("a/b", "", "", "", "a/b")]
+        [InlineData("/a", "b/", "c/", "", "/a/b/c")]
+        [InlineData("/a", "/b", "/c", "/d", "/d")]
+        [InlineData("a", "b", "..", "c", "a/c")]
+        public void TestCombine4(string path1, string path2, string path3, string path4, string expectedResult)
+        {
+            var path = UPath.Combine(path1, path2, path3, path4);
+            Assert.Equal(expectedResult, (string)path);
+
+            // Compare path info directly
+            var expectedPath = new UPath(expectedResult);
+            Assert.Equal(expectedPath, path);
+            Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
+        }
+
+        [Theory]
+        [InlineData(new[] { "", "" }, "")]
+        [InlineData(new[] { "a", "b", "c", "d", "e" }, "a/b/c/d/e")]
+        [InlineData(new[] { "a", "..", "c", "..", "e" }, "e")]
+        [InlineData(new[] { "a", "b", "c", "/d", "e" }, "/d/e")]
+        [InlineData(new[] { "a", "", "", "", "e" }, "a/e")]
+        public void TestCombineN(string[] parts, string expectedResult)
+        {
+            var path = UPath.Combine(parts.Select(a => (UPath)a).ToArray());
+            Assert.Equal(expectedResult, (string)path);
+
+            // Compare path info directly
+            var expectedPath = new UPath(expectedResult);
+            Assert.Equal(expectedPath, path);
+            Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
+        }
+
+        [Theory]
         [InlineData("", "")]
         [InlineData("/", "")]
         [InlineData("/a", "a")]

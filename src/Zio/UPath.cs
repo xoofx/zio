@@ -168,6 +168,26 @@ namespace Zio
             }
         }
 
+        public static UPath Combine(UPath path1, UPath path2, UPath path3)
+        {
+            return UPath.Combine(UPath.Combine(path1, path2), path3);
+        }
+
+        public static UPath Combine(UPath path1, UPath path2, UPath path3, UPath path4)
+        {
+            return UPath.Combine(Combine(path1, path2), Combine(path3, path4));
+        }
+
+        public static UPath Combine(params UPath[] paths)
+        {
+            var path = paths[0];
+
+            for (var i = 1; i < paths.Length; i++)
+                path = Combine(path, paths[i]);
+
+            return path;
+        }
+
         /// <summary>
         /// Implements the / operator equivalent of <see cref="Combine"/>
         /// </summary>
