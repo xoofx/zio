@@ -26,6 +26,7 @@ namespace Zio.Tests.FileSystems
         public void TestDirectory()
         {
             Assert.True(fs.DirectoryExists("/"));
+            Assert.False(fs.DirectoryExists(null));
 
             // Test CreateDirectory
             fs.CreateDirectory("/test");
@@ -106,6 +107,7 @@ namespace Zio.Tests.FileSystems
             stream.Dispose();
 
             // Test FileExists
+            Assert.False(fs.FileExists(null));
             Assert.False(fs.FileExists("/titi.txt"));
             Assert.True(fs.FileExists("/toto.txt"));
 

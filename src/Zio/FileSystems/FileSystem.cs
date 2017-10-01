@@ -74,6 +74,13 @@ namespace Zio.FileSystems
         public bool DirectoryExists(UPath path)
         {
             AssertNotDisposed();
+
+            // With FileExists, case where a null path is allowed
+            if (path.IsNull)
+            {
+                return false;
+            }
+
             return DirectoryExistsImpl(ValidatePath(path));
         }
 
