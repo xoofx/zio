@@ -330,7 +330,7 @@ namespace Zio
                         if (c == '\\')
                             processParts = true;
 
-                        var previousIndex = i - 1;
+                        var endIndex = i - 1;
                         for (i++; i < path.Length; i++)
                         {
                             c = path[i];
@@ -343,9 +343,9 @@ namespace Zio
                             break;
                         }
 
-                        if (previousIndex >= lastIndex || previousIndex == -1)
+                        if (endIndex >= lastIndex || endIndex == -1)
                         {
-                            var part = new TextSlice(lastIndex, previousIndex);
+                            var part = new TextSlice(lastIndex, endIndex);
                             parts.Add(part);
 
                             // If the previous part had only dots, we need to process it
@@ -431,6 +431,12 @@ namespace Zio
                             }
                         }
                     }
+                }
+
+                // If we have a single part and it is empty, it is a root
+                if (parts.Count == 1 && parts[0].Start == 0 && parts[0].End < 0)
+                {
+                    return "/";
                 }
 
                 for (i = 0; i < parts.Count; i++)
