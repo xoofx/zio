@@ -145,5 +145,15 @@ namespace Zio
                 return (Path.GetHashCode() * 397) ^ FileSystem.GetHashCode();
             }
         }
+
+        public static bool operator ==(FileSystemEntry left, FileSystemEntry right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(FileSystemEntry left, FileSystemEntry right)
+        {
+            return !Equals(left, right);
+        }
     }
 }
