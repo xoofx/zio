@@ -1,6 +1,8 @@
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
+
+using System;
 using System.IO;
 using System.Text;
 
@@ -96,6 +98,44 @@ namespace Zio
         {
             FileSystem.CopyFile(Path, destFileName, overwrite);
             return new FileEntry(FileSystem, destFileName);
+        }
+
+        /// <summary>Copies an existing file to a new file on another <see cref="IFileSystem"/>, allowing the overwriting of an existing file.</summary>
+        /// <returns>
+        ///     A new file, or an overwrite of an existing file if <paramref name="overwrite" /> is true. If the file exists
+        ///     and <paramref name="overwrite" /> is false, an <see cref="T:System.IO.IOException" /> is thrown.
+        /// </returns>
+        /// <param name="destFile">The file entry to copy to. </param>
+        /// <param name="overwrite">true to allow an existing file to be overwritten; otherwise, false. </param>
+        /// <exception cref="T:System.ArgumentException">
+        ///     <paramref name="destFile" /> is null.
+        /// </exception>
+        /// <exception cref="T:System.IO.IOException">
+        ///     An error occurs, or the destination file already exists and
+        ///     <paramref name="overwrite" /> is false.
+        /// </exception>
+        /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
+        /// <exception cref="T:System.IO.DirectoryNotFoundException">
+        ///     The directory specified in <paramref name="destFile" />
+        ///     does not exist.
+        /// </exception>
+        /// <exception cref="T:System.UnauthorizedAccessException">
+        ///     A directory path is passed in, or the file is being moved to a
+        ///     different drive.
+        /// </exception>
+        /// <exception cref="T:System.IO.PathTooLongException">
+        ///     The specified path, file name, or both exceed the system-defined
+        ///     maximum length. For example, on Windows-based platforms, paths must be less than 248 characters, and file names
+        ///     must be less than 260 characters.
+        /// </exception>
+        /// <exception cref="T:System.NotSupportedException">
+        ///     <paramref name="destFile" /> contains a colon (:) in the middle of the string.
+        /// </exception>
+        public FileEntry CopyTo(FileEntry destFile, bool overwrite)
+        {
+            if (destFile == null) throw new ArgumentNullException(nameof(destFile));
+            FileSystem.CopyFileCross(destFile.FileSystem, Path, destFile.Path, overwrite);
+            return destFile;
         }
 
         /// <summary>Creates a file.</summary>
