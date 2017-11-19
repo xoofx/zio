@@ -78,9 +78,12 @@ namespace Zio
                         sourceStream.CopyTo(destStream);
                     }
 
+                    // NOTE: For some reasons, we can sometimes get an Unauthorized access if we try to set the LastWriteTime after the SetAttributes
+                    // So we setup it here.
+                    destFileSystem.SetLastWriteTime(destPath, fs.GetLastWriteTime(srcPath));
+
                     // Preserve attributes and LastWriteTime as a regular File.Copy
                     destFileSystem.SetAttributes(destPath, fs.GetAttributes(srcPath));
-                    destFileSystem.SetLastWriteTime(destPath, fs.GetLastWriteTime(srcPath));
 
                     copied = true;
                 }

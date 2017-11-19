@@ -21,6 +21,29 @@ namespace Zio.Tests.FileSystems
             AssertCommonRead(fs);
         }
 
+
+        [Fact]
+        public void TestCopyFileCross()
+        {
+            // TODO: Add more tests
+            var from = new MemoryFileSystem();
+            from.WriteAllText("/test.txt", "test");
+            var fs = new PhysicalFileSystem();
+            var outputfs = new SubFileSystem(fs, fs.ConvertPathFromInternal(SystemPath));
+            var outputPath = (UPath)"/test.txt";
+            try
+            {
+                outputfs.WriteAllText(outputPath, "toto");
+                from.CopyFileCross(outputfs, "/test.txt", outputPath, true);
+                var content = outputfs.ReadAllText(outputPath);
+                Assert.Equal("test", content);
+            }
+            finally
+            {
+                outputfs.DeleteFile(outputPath);
+            }
+        }
+
         [Fact]
         public void TestDirectory()
         {
