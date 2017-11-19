@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.6 (19 Nov 2017)
+- Try to fix a sporadic Unauthorized access when using CopyFileCross with a PhysicalFileSystem as a destination
+
 ## 0.3.5 (19 Nov 2017)
 - Add FileEntry.CopyTo across filesystems
 
