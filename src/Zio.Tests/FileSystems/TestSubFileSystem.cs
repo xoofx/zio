@@ -32,8 +32,19 @@ namespace Zio.Tests.FileSystems
             Assert.Throws<DirectoryNotFoundException>(() => new SubFileSystem(fs, path / "does_not_exist"));
 
             Assert.Throws<InvalidOperationException>(() => subfs.ConvertPathFromInternal(@"C:\"));
-
             // TODO: We could add another test just to make sure that files can be created...etc. But the test above should already cover the code provided in SubFileSystem
+        }
+
+        [Fact]
+        public void TestGetOrCreateFileSystem()
+        {
+            var fs = new MemoryFileSystem();
+            const string subFolder = "/sub";
+            var subFileSystem = fs.GetOrCreateSubFileSystem(subFolder);
+            Assert.True(fs.DirectoryExists(subFolder));
+            subFileSystem.WriteAllText("/test.txt", "yo");
+            var text = fs.ReadAllText(subFolder + "/test.txt");
+            Assert.Equal("yo", text);
         }
     }
 }

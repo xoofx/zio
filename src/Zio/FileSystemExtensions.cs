@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Zio.FileSystems;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio
@@ -15,6 +16,21 @@ namespace Zio
     /// </summary>
     public static class FileSystemExtensions
     {
+        /// <summary>
+        /// Gets or create a <see cref="SubFileSystem"/> from an existing filesystem and the specified sub folder
+        /// </summary>
+        /// <param name="fs">The filesystem to derive a new sub-filesystem from it</param>
+        /// <param name="subFolder">The folder of the sub-filesystem</param>
+        /// <returns>A sub-filesystem</returns>
+        public static SubFileSystem GetOrCreateSubFileSystem(this IFileSystem fs, UPath subFolder)
+        {
+            if (!fs.DirectoryExists(subFolder))
+            {
+                fs.CreateDirectory(subFolder);
+            }
+            return new SubFileSystem(fs, subFolder);
+        }
+
         /// <summary>
         ///     Copies a file between two filesystems.
         /// </summary>
