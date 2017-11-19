@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.3 (19 Nov 2017)
+- Add extension method IFileSystem.GetOrCreateSubFileSystem
+
 ## 0.3.2 (14 Nov 2017)
 - Fix issue when combining a root path `/` with an empty path (#7)
 - Add == operator to FileSystemEntrty
