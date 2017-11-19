@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.5 (19 Nov 2017)
+- Add FileEntry.CopyTo across filesystems
+
 ## 0.3.4 (19 Nov 2017)
 - Fix FileSystemEntry.Parent (FileEntry.Directory). Should return a DirectoryEntry even if it does not exist instead of throwing an exception
 
