@@ -104,7 +104,7 @@ namespace Zio
         ///     The specified path is invalid, such as being on an unmapped
         ///     drive.
         /// </exception>
-        public DirectoryEntry Parent => Path == UPath.Root ? null : FileSystem.GetDirectoryEntry(Path / "..");
+        public DirectoryEntry Parent => Path == UPath.Root ? null : new DirectoryEntry(FileSystem, Path / "..");
 
         /// <summary>
         /// Deletes a file or directory.

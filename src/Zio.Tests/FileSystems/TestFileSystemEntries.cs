@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Xunit;
+using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
 {
@@ -23,6 +24,17 @@ namespace Zio.Tests.FileSystems
             var memfs = GetCommonMemoryFileSystem();
             var fsEntries = new FileSystemEntryRedirect(memfs);
             AssertCommonRead(fsEntries);            
+        }
+
+        [Fact]
+        public void TestGetParentDirectory()
+        {
+            var fs = new MemoryFileSystem();
+            var fileEntry = new FileEntry(fs, "/test/tata/titi.txt");
+            // Shoud not throw an error
+            var directory = fileEntry.Directory;
+            Assert.False(directory.Exists);
+            Assert.Equal(UPath.Root / "test/tata", directory.Path);
         }
 
         [Fact]
