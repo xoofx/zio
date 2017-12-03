@@ -4,6 +4,10 @@ using System.Text.RegularExpressions;
 
 namespace Zio
 {
+    /// <summary>
+    /// Filter pattern compiler used for <see cref="Zio.Watcher.IFileSystemWatcher"/> implementation.
+    /// Use the method <see cref="Parse"/> to create a pattern.
+    /// </summary>
     public struct FilterPattern
     {
         private static readonly char[] SpecialChars = {'.', '*', '?'};

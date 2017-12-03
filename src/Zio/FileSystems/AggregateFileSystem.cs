@@ -366,6 +366,7 @@ namespace Zio.FileSystems
         // Watch API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override IFileSystemWatcher WatchImpl(UPath path)
         {
             lock (_fileSystems)

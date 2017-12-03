@@ -184,6 +184,12 @@ namespace Zio
         // Watch API
         // ----------------------------------------------
 
+        /// <summary>
+        /// Returns an <see cref="IFileSystemWatcher"/> instance that can be used to watch for changes to files and directories in the given path. The instance must be
+        /// configured before events are called.
+        /// </summary>
+        /// <param name="path">The path to watch for changes.</param>
+        /// <returns>An <see cref="IFileSystemWatcher"/> instance that watches the given path.</returns>
         IFileSystemWatcher Watch(UPath path);
 
         // ----------------------------------------------

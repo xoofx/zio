@@ -59,6 +59,10 @@ namespace Zio.Watcher
             _dispatchQueue.Dispose();
         }
 
+        /// <summary>
+        /// Adds a <see cref="FileSystemWatcher"/> instance to dispatch events to.
+        /// </summary>
+        /// <param name="watcher">Instance to add.</param>
         public void Add(T watcher)
         {
             lock (_watchers)
@@ -67,6 +71,10 @@ namespace Zio.Watcher
             }
         }
 
+        /// <summary>
+        /// Removes a <see cref="FileSystemWatcher"/> instance to stop dispatching events.
+        /// </summary>
+        /// <param name="watcher">Instance to remove.</param>
         public void Remove(T watcher)
         {
             lock (_watchers)
@@ -75,30 +83,51 @@ namespace Zio.Watcher
             }
         }
 
+        /// <summary>
+        /// Raise the <see cref="IFileSystemWatcher.Changed"/> event on watchers.
+        /// </summary>
+        /// <param name="path">Absolute path to the changed file or directory.</param>
         public void RaiseChange(UPath path)
         {
             var args = new FileChangedEventArgs(WatcherChangeTypes.Changed, path);
             Dispatch(args, (w, a) => w.RaiseChanged(a));
         }
 
+        /// <summary>
+        /// Raise the <see cref="IFileSystemWatcher.Created"/> event on watchers.
+        /// </summary>
+        /// <param name="path">Absolute path to the new file or directory.</param>
         public void RaiseCreated(UPath path)
         {
             var args = new FileChangedEventArgs(WatcherChangeTypes.Created, path);
             Dispatch(args, (w, a) => w.RaiseCreated(a));
         }
-
+        
+        /// <summary>
+        /// Raise the <see cref="IFileSystemWatcher.Deleted"/> event on watchers.
+        /// </summary>
+        /// <param name="path">Absolute path to the changed file or directory.</param>
         public void RaiseDeleted(UPath path)
         {
             var args = new FileChangedEventArgs(WatcherChangeTypes.Deleted, path);
             Dispatch(args, (w, a) => w.RaiseDeleted(a));
         }
 
+        /// <summary>
+        /// Raise the <see cref="IFileSystemWatcher.Renamed"/> event on watchers.
+        /// </summary>
+        /// <param name="newPath">Absolute path to the new file or directory.</param>
+        /// <param name="oldPath">Absolute path to the old file or directory.</param>
         public void RaiseRenamed(UPath newPath, UPath oldPath)
         {
             var args = new FileRenamedEventArgs(WatcherChangeTypes.Renamed, newPath, oldPath);
             Dispatch(args, (w, a) => w.RaiseRenamed(a));
         }
 
+        /// <summary>
+        /// Raise the <see cref="IFileSystemWatcher.Error"/> event on watchers.
+        /// </summary>
+        /// <param name="exception">Exception that occurred.</param>
         public void RaiseError(Exception exception)
         {
             var args = new FileSystemErrorEventArgs(exception);
@@ -137,6 +166,7 @@ namespace Zio.Watcher
             });
         }
 
+        // Worker runs on dedicated thread to call events
         private void DispatchWorker()
         {
             var ct = _dispatchCts.Token;

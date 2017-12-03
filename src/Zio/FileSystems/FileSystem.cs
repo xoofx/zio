@@ -439,12 +439,19 @@ namespace Zio.FileSystems
         // Watch API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         public IFileSystemWatcher Watch(UPath path)
         {
             AssertNotDisposed();
             return WatchImpl(ValidatePath(path));
         }
 
+        /// <summary>
+        /// Implementation for <see cref="Watch"/>, <paramref name="path"/> is guaranteed to be absolute and valudated through <see cref="ValidatePath"/>.
+        /// Returns an <see cref="IFileSystemWatcher"/> instance that can be used to watch for changes to files and directories in the given path.
+        /// </summary>
+        /// <param name="path">The path to watch for changes.</param>
+        /// <returns>An <see cref="IFileSystemWatcher"/> instance that can be used to watch for changes.</returns>
         protected abstract IFileSystemWatcher WatchImpl(UPath path);
 
         // ----------------------------------------------

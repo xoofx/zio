@@ -69,8 +69,7 @@ namespace Zio.FileSystems
                 ExitFileSystemExclusive();
             }
         }
-
-        /// <inheritdoc />
+        
         protected virtual MemoryFileSystem CloneImpl()
         {
             return new MemoryFileSystem(this);
@@ -842,6 +841,7 @@ namespace Zio.FileSystems
         // Watch API
         // ----------------------------------------------
 
+        /// <inheritdoc />
         protected override IFileSystemWatcher WatchImpl(UPath path)
         {
             var watcher = new Watcher(this, path);

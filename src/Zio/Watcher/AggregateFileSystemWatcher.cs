@@ -16,6 +16,10 @@ namespace Zio.Watcher
             _children = new List<IFileSystemWatcher>();
         }
 
+        /// <summary>
+        /// Adds an <see cref="IFileSystemWatcher"/> instance to aggregate events from.
+        /// </summary>
+        /// <param name="watcher">The <see cref="IFileSystemWatcher"/> instance to add.</param>
         public void Add(IFileSystemWatcher watcher)
         {
             if (watcher == null)
@@ -35,11 +39,15 @@ namespace Zio.Watcher
             }
         }
 
-        public void RemoveFrom(IFileSystem fs)
+        /// <summary>
+        /// Removes <see cref="IFileSystemWatcher"/> instances from this instance.
+        /// </summary>
+        /// <param name="fileSystem">The <see cref="IFileSystem"/> to stop aggregating events from.</param>
+        public void RemoveFrom(IFileSystem fileSystem)
         {
-            if (fs == null)
+            if (fileSystem == null)
             {
-                throw new ArgumentNullException(nameof(fs));
+                throw new ArgumentNullException(nameof(fileSystem));
             }
 
             lock (_children)
@@ -47,7 +55,7 @@ namespace Zio.Watcher
                 for (var i = _children.Count - 1; i >= 0; i--)
                 {
                     var watcher = _children[i];
-                    if (watcher.FileSystem != fs)
+                    if (watcher.FileSystem != fileSystem)
                     {
                         continue;
                     }
@@ -55,11 +63,13 @@ namespace Zio.Watcher
                     UnregisterEvents(watcher);
                     _children.Remove(watcher);
                     watcher.Dispose();
-                    break;
                 }
             }
         }
 
+        /// <summary>
+        /// Removes all <see cref="IFileSystemWatcher"/> instances from this instance.
+        /// </summary>
         public void Clear()
         {
             lock (_children)

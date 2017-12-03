@@ -7,25 +7,41 @@ namespace Zio.Watcher
         private string _filter;
         private FilterPattern _filterPattern;
 
+        /// <inheritdoc />
         public event EventHandler<FileChangedEventArgs> Changed;
+
+        /// <inheritdoc />
         public event EventHandler<FileChangedEventArgs> Created;
+
+        /// <inheritdoc />
         public event EventHandler<FileChangedEventArgs> Deleted;
+
+        /// <inheritdoc />
         public event EventHandler<FileSystemErrorEventArgs> Error;
+
+        /// <inheritdoc />
         public event EventHandler<FileRenamedEventArgs> Renamed;
-        
+
+        /// <inheritdoc />
         public IFileSystem FileSystem { get; }
+
+        /// <inheritdoc />
         public UPath Path { get; }
 
+        /// <inheritdoc />
         public virtual int InternalBufferSize
         {
             get => 0;
             set { }
         }
 
+        /// <inheritdoc />
         public virtual NotifyFilters NotifyFilter { get; set; }
 
+        /// <inheritdoc />
         public virtual bool EnableRaisingEvents { get; set; }
 
+        /// <inheritdoc />
         public virtual string Filter
         {
             get => _filter;
@@ -46,6 +62,7 @@ namespace Zio.Watcher
             }
         }
 
+        /// <inheritdoc />
         public virtual bool IncludeSubdirectories { get; set; }
 
         public FileSystemWatcher(IFileSystem fileSystem, UPath path)
@@ -59,7 +76,7 @@ namespace Zio.Watcher
             FileSystem = fileSystem;
             Path = path;
             NotifyFilter = NotifyFilters.Default;
-            Filter = "*";
+            Filter = "*.*";
         }
 
         ~FileSystemWatcher()
@@ -77,6 +94,10 @@ namespace Zio.Watcher
         {
         }
 
+        /// <summary>
+        /// Raises the <see cref="Changed"/> event. 
+        /// </summary>
+        /// <param name="args">Arguments for the event.</param>
         public void RaiseChanged(FileChangedEventArgs args)
         {
             if (!ShouldRaiseEvent(args))
@@ -87,6 +108,10 @@ namespace Zio.Watcher
             Changed?.Invoke(this, args);
         }
 
+        /// <summary>
+        /// Raises the <see cref="Created"/> event. 
+        /// </summary>
+        /// <param name="args">Arguments for the event.</param>
         public void RaiseCreated(FileChangedEventArgs args)
         {
             if (!ShouldRaiseEvent(args))
@@ -97,6 +122,10 @@ namespace Zio.Watcher
             Created?.Invoke(this, args);
         }
 
+        /// <summary>
+        /// Raises the <see cref="Deleted"/> event. 
+        /// </summary>
+        /// <param name="args">Arguments for the event.</param>
         public void RaiseDeleted(FileChangedEventArgs args)
         {
             if (!ShouldRaiseEvent(args))
@@ -107,6 +136,10 @@ namespace Zio.Watcher
             Deleted?.Invoke(this, args);
         }
 
+        /// <summary>
+        /// Raises the <see cref="Error"/> event. 
+        /// </summary>
+        /// <param name="args">Arguments for the event.</param>
         public void RaiseError(FileSystemErrorEventArgs args)
         {
             if (!EnableRaisingEvents)
@@ -117,6 +150,10 @@ namespace Zio.Watcher
             Error?.Invoke(this, args);
         }
 
+        /// <summary>
+        /// Raises the <see cref="Renamed"/> event. 
+        /// </summary>
+        /// <param name="args">Arguments for the event.</param>
         public void RaiseRenamed(FileRenamedEventArgs args)
         {
             if (!ShouldRaiseEvent(args))
@@ -134,11 +171,22 @@ namespace Zio.Watcher
                    ShouldRaiseEventImpl(args);
         }
 
+        /// <summary>
+        /// Checks if the event should be raised for the given arguments. Default implementation
+        /// checks if the <see cref="FileChangedEventArgs.FullPath"/> is contained in <see cref="Path"/>.
+        /// </summary>
+        /// <param name="args">Arguments for the event.</param>
+        /// <returns>True if the event should be raised, false to ignore it.</returns>
         protected virtual bool ShouldRaiseEventImpl(FileChangedEventArgs args)
         {
             return args.FullPath.IsInDirectory(Path, IncludeSubdirectories);
         }
 
+        /// <summary>
+        /// Listens to events from another <see cref="IFileSystemWatcher"/> instance to forward them
+        /// into this instance.
+        /// </summary>
+        /// <param name="watcher">Other instance to listen to.</param>
         protected void RegisterEvents(IFileSystemWatcher watcher)
         {
             watcher.Changed += OnChanged;
@@ -148,40 +196,50 @@ namespace Zio.Watcher
             watcher.Renamed += OnRenamed;
         }
 
+        /// <summary>
+        /// Stops listening to events from another <see cref="IFileSystemWatcher"/>.
+        /// </summary>
+        /// <param name="watcher">Instance to remove event handlers from.</param>
         protected void UnregisterEvents(IFileSystemWatcher watcher)
         {
             watcher.Changed -= OnChanged;
         }
 
+        /// <summary>
+        /// Converts paths from an existing event in another <see cref="IFileSystem"/> into
+        /// this <see cref="FileSystem"/>.
+        /// </summary>
+        /// <param name="pathFromEvent">Path from the other filesystem.</param>
+        /// <returns>Path in this filesystem.</returns>
         protected virtual UPath ConvertPath(UPath pathFromEvent)
         {
             return pathFromEvent;
         }
 
-        protected void OnChanged(object sender, FileChangedEventArgs args)
+        private void OnChanged(object sender, FileChangedEventArgs args)
         {
             var newArgs = new FileChangedEventArgs(args.ChangeType, ConvertPath(args.FullPath));
             RaiseChanged(newArgs);
         }
 
-        protected void OnCreated(object sender, FileChangedEventArgs args)
+        private void OnCreated(object sender, FileChangedEventArgs args)
         {
             var newArgs = new FileChangedEventArgs(args.ChangeType, ConvertPath(args.FullPath));
             RaiseCreated(newArgs);
         }
 
-        protected void OnDeleted(object sender, FileChangedEventArgs args)
+        private void OnDeleted(object sender, FileChangedEventArgs args)
         {
             var newArgs = new FileChangedEventArgs(args.ChangeType, ConvertPath(args.FullPath));
             RaiseDeleted(newArgs);
         }
 
-        protected void OnError(object sender, FileSystemErrorEventArgs args)
+        private void OnError(object sender, FileSystemErrorEventArgs args)
         {
             RaiseError(args);
         }
 
-        protected void OnRenamed(object sender, FileRenamedEventArgs args)
+        private void OnRenamed(object sender, FileRenamedEventArgs args)
         {
             var newArgs = new FileRenamedEventArgs(
                 args.ChangeType, ConvertPath(args.FullPath), ConvertPath(args.OldFullPath));
