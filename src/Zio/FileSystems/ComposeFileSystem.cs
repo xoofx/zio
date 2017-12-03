@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Zio.Watcher;
 
 namespace Zio.FileSystems
 {
@@ -180,6 +181,16 @@ namespace Zio.FileSystems
             {
                 yield return ConvertPathFromDelegate(subPath);
             }
+        }
+
+        // ----------------------------------------------
+        // Watch API
+        // ----------------------------------------------
+
+        /// <inheritdoc />
+        protected override IFileSystemWatcher WatchImpl(UPath path)
+        {
+            return NextFileSystemSafe.Watch(ConvertPathToDelegate(path));
         }
 
         // ----------------------------------------------

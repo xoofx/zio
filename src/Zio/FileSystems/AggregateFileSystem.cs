@@ -5,7 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-
+using Zio.Watcher;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -16,6 +16,7 @@ namespace Zio.FileSystems
     public class AggregateFileSystem : ReadOnlyFileSystem
     {
         private readonly List<IFileSystem> _fileSystems;
+        private readonly List<AggregateFileSystemWatcher> _watchers;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AggregateFileSystem"/> class.
@@ -32,6 +33,7 @@ namespace Zio.FileSystems
         public AggregateFileSystem(IFileSystem fileSystem) : base(fileSystem)
         {
             _fileSystems = new List<IFileSystem>();
+            _watchers = new List<AggregateFileSystemWatcher>();
         }
 
         /// <summary>
@@ -54,6 +56,11 @@ namespace Zio.FileSystems
             lock (_fileSystems)
             {
                 _fileSystems.Clear();
+
+                foreach (var watcher in _watchers)
+                {
+                    watcher.Clear();
+                }
             }
         }
 
@@ -73,11 +80,23 @@ namespace Zio.FileSystems
             lock (_fileSystems)
             {
                 _fileSystems.Clear();
+
+                foreach (var watcher in _watchers)
+                {
+                    watcher.Clear();
+                }
+
                 foreach (var fileSystem in fileSystems)
                 {
                     if (fileSystem == null) throw new ArgumentException("A null filesystem is invalid");
                     if (fileSystem == this) throw new ArgumentException("Cannot add this instance as an aggregate delegate of itself");
                     _fileSystems.Add(fileSystem);
+
+                    foreach (var watcher in _watchers)
+                    {
+                        var newWatcher = fileSystem.Watch(watcher.Path);
+                        watcher.Add(newWatcher);
+                    }
                 }
             }
         }
@@ -100,6 +119,12 @@ namespace Zio.FileSystems
                 if (!_fileSystems.Contains(fs))
                 {
                     _fileSystems.Add(fs);
+
+                    foreach (var watcher in _watchers)
+                    {
+                        var newWatcher = fs.Watch(watcher.Path);
+                        watcher.Add(newWatcher);
+                    }
                 }
                 else
                 {
@@ -122,6 +147,11 @@ namespace Zio.FileSystems
                 if (_fileSystems.Contains(fs))
                 {
                     _fileSystems.Remove(fs);
+
+                    foreach (var watcher in _watchers)
+                    {
+                        watcher.RemoveFrom(fs);
+                    }
                 }
                 else
                 {
@@ -330,6 +360,25 @@ namespace Zio.FileSystems
         protected override UPath ConvertPathFromDelegate(UPath path)
         {
             return path;
+        }
+
+        // ----------------------------------------------
+        // Watch API
+        // ----------------------------------------------
+
+        protected override IFileSystemWatcher WatchImpl(UPath path)
+        {
+            lock (_fileSystems)
+            {
+                var watcher = new AggregateFileSystemWatcher(this, path);
+                foreach (var fs in _fileSystems)
+                {
+                    watcher.Add(fs.Watch(path));
+                }
+
+                _watchers.Add(watcher);
+                return watcher;
+            }
         }
 
         // ----------------------------------------------

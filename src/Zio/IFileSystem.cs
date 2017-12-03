@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Zio.Watcher;
 
 namespace Zio
 {
@@ -178,6 +179,12 @@ namespace Zio
         /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>.</param>
         /// <returns>An enumerable collection of file-system paths in the directory specified by path and that match the specified search pattern, option and target.</returns>
         IEnumerable<UPath> EnumeratePaths(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
+
+        // ----------------------------------------------
+        // Watch API
+        // ----------------------------------------------
+
+        IFileSystemWatcher Watch(UPath path);
 
         // ----------------------------------------------
         // Path API

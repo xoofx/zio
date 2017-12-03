@@ -277,6 +277,29 @@ namespace Zio.Tests
             Assert.Equal(expectedPath, result);
         }
 
+        [Theory]
+        // Test automatic separator insertion
+        [InlineData("/a/b/c", "/a/b", false, true)]
+        [InlineData("/a/bc", "/a/b", false, false)]
+
+        // Test trailing separator
+        [InlineData("/a/b/", "/a", false, true)]
+        [InlineData("/a/b", "/a/", false, true)]
+        [InlineData("/a/b/", "/a/", false, true)]
+
+        // Test recursive option
+        [InlineData("/a/b/c", "/a", true, true)]
+        [InlineData("/a/b/c", "/a", false, false)]
+        
+        // Test relative paths
+        [InlineData("a/b", "a", false, true)]
+        public void TestIsInDirectory(string path1, string directory, bool recursive, bool expected)
+        {
+            var path = (UPath)path1;
+            var result = path.IsInDirectory(directory, recursive);
+            Assert.Equal(expected, result);
+        }
+
         [Fact]
         public void TestSplit()
         {
@@ -300,6 +323,8 @@ namespace Zio.Tests
             Assert.Throws<ArgumentException>(() => UPath.Combine("/", ".."));
             Assert.Equal("path1", Assert.Throws<ArgumentNullException>(() => UPath.Combine(null, "")).ParamName);
             Assert.Equal("path2", Assert.Throws<ArgumentNullException>(() => UPath.Combine("", null)).ParamName);
+            Assert.Throws<ArgumentException>(() => UPathExtensions.IsInDirectory("/a", "b", true));
+            Assert.Throws<ArgumentException>(() => UPathExtensions.IsInDirectory("a", "/b", true));
         }
 
 

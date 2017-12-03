@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-
+using Zio.Watcher;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -18,6 +18,8 @@ namespace Zio.FileSystems
     public class MountFileSystem : ComposeFileSystem
     {
         private readonly Dictionary<string, IFileSystem> _mounts;
+        private readonly List<AggregateFileSystemWatcher> _aggregateWatchers;
+        private readonly List<Watcher> _watchers;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MountFileSystem"/> class.
@@ -33,6 +35,8 @@ namespace Zio.FileSystems
         public MountFileSystem(IFileSystem defaultBackupFileSystem) : base(defaultBackupFileSystem)
         {
             _mounts = new Dictionary<string, IFileSystem>();
+            _aggregateWatchers = new List<AggregateFileSystemWatcher>();
+            _watchers = new List<Watcher>();
         }
 
         /// <summary>
@@ -59,10 +63,19 @@ namespace Zio.FileSystems
             lock (_mounts)
             {
                 if (_mounts.ContainsKey(mountName))
-                {                    
-                    throw new ArgumentException("There is already a mount with the same name: `{mountName}`", nameof(name));
+                {
+                    throw new ArgumentException($"There is already a mount with the same name: `{mountName}`", nameof(name));
                 }
                 _mounts.Add(mountName, fileSystem);
+
+                lock (_aggregateWatchers)
+                {
+                    foreach (var watcher in _aggregateWatchers)
+                    {
+                        var internalWatcher = fileSystem.Watch(UPath.Root);
+                        watcher.Add(new Watcher(this, mountName, UPath.Root, internalWatcher));
+                    }
+                }
             }
         }
 
@@ -108,15 +121,40 @@ namespace Zio.FileSystems
         {
             AssertMountName(name);
             var mountName = name.GetName();
+            IFileSystem mountFileSystem = null;
 
             lock (_mounts)
             {
-                if (!_mounts.Remove(mountName))
+                if (!_mounts.TryGetValue(mountName, out mountFileSystem))
                 {
-                    throw new ArgumentException("The mount with the name `{mountName}` was not found");
+                    throw new ArgumentException($"The mount with the name `{mountName}` was not found");
+                }
+
+                _mounts.Remove(mountName);
+            }
+
+            lock (_aggregateWatchers)
+            {
+                foreach (var watcher in _aggregateWatchers)
+                {
+                    watcher.RemoveFrom(mountFileSystem);
+                }
+            }
+
+            lock (_watchers)
+            {
+                for (var i = _watchers.Count - 1; i >= 0; i--)
+                {
+                    var watcher = _watchers[i];
+
+                    if (watcher.MountFileSystem == mountFileSystem)
+                    {
+                        _watchers.RemoveAt(i);
+                    }
                 }
             }
         }
+
         /// <inheritdoc />
         protected override void CreateDirectoryImpl(UPath path)
         {
@@ -558,6 +596,79 @@ namespace Zio.FileSystems
                 foreach (var entry in EnumeratePathFromFileSystem(path, true))
                 {
                     yield return entry;
+                }
+            }
+        }
+
+        /// <inheritdoc />
+        protected override IFileSystemWatcher WatchImpl(UPath path)
+        {
+            if (path == UPath.Root)
+            {
+                // watch on all
+                // TODO: create/delete events when mounts are added/removed
+
+                var watcher = new AggregateFileSystemWatcher(this, path);
+
+                lock (_mounts)
+                lock (_aggregateWatchers)
+                {
+                    foreach (var kvp in _mounts)
+                    {
+                        var internalWatcher = kvp.Value.Watch(UPath.Root);
+                        watcher.Add(new Watcher(this, kvp.Key, UPath.Root, internalWatcher));
+                    }
+
+                    _aggregateWatchers.Add(watcher);
+                }
+
+                return watcher;
+            }
+            else
+            {
+                // watch only one mount point
+                var internalPath = path;
+                var fs = TryGetMountOrNext(ref internalPath, out var mountName);
+                if (fs == null)
+                {
+                    throw NewFileNotFoundException(path);
+                }
+
+                var internalWatcher = fs.Watch(internalPath);
+                var watcher = new Watcher(this, mountName, path, internalWatcher);
+
+                lock (_watchers)
+                {
+                    _watchers.Add(watcher);
+                }
+
+                return watcher;
+            }
+        }
+
+        private class Watcher : WrapFileSystemWatcher
+        {
+            private readonly string _mountName;
+
+            public IFileSystem MountFileSystem { get; }
+
+            public Watcher(MountFileSystem fileSystem, string mountName, UPath path, IFileSystemWatcher watcher)
+                : base(fileSystem, path, watcher)
+            {
+                _mountName = mountName;
+
+                MountFileSystem = watcher.FileSystem;
+            }
+
+            protected override UPath ConvertPath(UPath pathFromEvent)
+            {
+                if (_mountName != null)
+                {
+                    return UPath.Root / _mountName / pathFromEvent.ToRelative();
+                }
+                else
+                {
+                    return pathFromEvent;
                 }
             }
         }

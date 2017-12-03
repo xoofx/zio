@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Zio.FileSystems;
+using Zio.Watcher;
 
 namespace Zio.Tests.FileSystems
 {
@@ -125,6 +126,11 @@ namespace Zio.Tests.FileSystems
         protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             return _fs.GetDirectoryEntry(path).EnumerateEntries(searchPattern, searchOption, searchTarget).Select(e => e.Path);
+        }
+
+        protected override IFileSystemWatcher WatchImpl(UPath path)
+        {
+            return _fs.Watch(path);
         }
 
         protected override string ConvertPathToInternalImpl(UPath path)
