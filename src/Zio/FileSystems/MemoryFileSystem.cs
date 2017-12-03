@@ -156,7 +156,7 @@ namespace Zio.FileSystems
                         // Check that files are not readonly
                         foreach (var lockFile in locks)
                         {
-                            var node = lockFile.Node;
+                            var node = lockFile.Value;
 
                             if (node.IsReadOnly)
                             {
@@ -169,10 +169,10 @@ namespace Zio.FileSystems
                         {
                             var lockFile = locks[i];
                             locks.RemoveAt(i);
-                            lockFile.Node.DetachFromParent();
-                            lockFile.Node.Dispose();
+                            lockFile.Value.DetachFromParent();
+                            lockFile.Value.Dispose();
 
-                            ExitExclusive(lockFile.Node);
+                            ExitExclusive(lockFile.Value);
                         }
                     }
                     deleteRootDirectory = true;
@@ -1429,7 +1429,7 @@ namespace Zio.FileSystems
                         EnterExclusive(child.Value, context);
 
                         var path = context / child.Key;
-                        locks.Add((child.Key, child.Value));
+                        locks.Add(child);
 
                         TryLockExclusive(child.Value, locks, true, path);
                     }
@@ -1531,11 +1531,10 @@ namespace Zio.FileSystems
             }
         }
 
-        private class ListFileSystemNodes : List<(string Name, FileSystemNode Node)>, IDisposable
+        private class ListFileSystemNodes : List<KeyValuePair<string, FileSystemNode>>, IDisposable
         {
             private readonly MemoryFileSystem _fs;
-
-
+            
             public ListFileSystemNodes(MemoryFileSystem fs)
             {
                 Debug.Assert(fs != null);
@@ -1547,7 +1546,7 @@ namespace Zio.FileSystems
                 for (var i = this.Count - 1; i >= 0; i--)
                 {
                     var entry = this[i];
-                    _fs.ExitExclusive(entry.Node);
+                    _fs.ExitExclusive(entry.Value);
                 }
                 Clear();
             }

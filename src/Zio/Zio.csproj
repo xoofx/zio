@@ -26,10 +26,6 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45'">
     <Reference Include="System.IO.Compression" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
-  </ItemGroup>
   
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.3'">
     <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE</DefineConstants>
