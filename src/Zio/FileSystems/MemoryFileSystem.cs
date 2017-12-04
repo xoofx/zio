@@ -44,6 +44,7 @@ namespace Zio.FileSystems
             Debug.Assert(copyFrom._globalLock.IsLocked);
             _rootDirectory = (DirectoryNode)copyFrom._rootDirectory.Clone(null, null);
             _globalLock = new FileSystemNodeReadWriteLock();
+            _dispatcher = new FileSystemEventDispatcher<Watcher>();
         }
 
         protected override void Dispose(bool disposing)
