@@ -21,6 +21,28 @@ namespace Zio.Tests.FileSystems
             AssertCommonRead(fs);
         }
 
+        [Fact]
+        public void TestWatcher()
+        {
+            var fs = GetCommonPhysicalFileSystem();
+            var watcher = fs.Watch("/a");
+
+            var gotChange = false;
+            watcher.Created += (sender, args) =>
+            {
+                if (args.FullPath == "/a/watched.txt")
+                {
+                    gotChange = true;
+                }
+            };
+
+            watcher.IncludeSubdirectories = true;
+            watcher.EnableRaisingEvents = true;
+
+            fs.WriteAllText("/a/watched.txt", "test");
+            System.Threading.Thread.Sleep(100);
+            Assert.True(gotChange);
+        }
 
         [Fact]
         public void TestCopyFileCross()

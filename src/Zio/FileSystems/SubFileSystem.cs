@@ -50,14 +50,13 @@ namespace Zio.FileSystems
                 _fileSystem = fileSystem;
             }
 
-            protected override bool ShouldRaiseEventImpl(FileChangedEventArgs args)
+            protected override UPath? TryConvertPath(UPath pathFromEvent)
             {
-                return args.FullPath.IsInDirectory(_fileSystem.SubPath, true) &&
-                       ConvertPath(args.FullPath).IsInDirectory(Path, IncludeSubdirectories);
-            }
+                if (!pathFromEvent.IsInDirectory(_fileSystem.SubPath, true))
+                {
+                    return null;
+                }
 
-            protected override UPath ConvertPath(UPath pathFromEvent)
-            {
                 return _fileSystem.ConvertPathFromDelegate(pathFromEvent);
             }
         }

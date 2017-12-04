@@ -660,7 +660,7 @@ namespace Zio.FileSystems
                 MountFileSystem = watcher.FileSystem;
             }
 
-            protected override UPath ConvertPath(UPath pathFromEvent)
+            protected override UPath? TryConvertPath(UPath pathFromEvent)
             {
                 if (_mountName != null)
                 {

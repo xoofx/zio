@@ -219,31 +219,49 @@ namespace Zio.Watcher
         }
 
         /// <summary>
-        /// Converts paths from an existing event in another <see cref="IFileSystem"/> into
-        /// this <see cref="FileSystem"/>.
+        /// Attempts to convert paths from an existing event in another <see cref="IFileSystem"/> into
+        /// this <see cref="FileSystem"/>. If this returns <c>null</c> the event will be discarded.
         /// </summary>
         /// <param name="pathFromEvent">Path from the other filesystem.</param>
-        /// <returns>Path in this filesystem.</returns>
-        protected virtual UPath ConvertPath(UPath pathFromEvent)
+        /// <returns>Path in this filesystem, or null if it cannot be converted.</returns>
+        protected virtual UPath? TryConvertPath(UPath pathFromEvent)
         {
             return pathFromEvent;
         }
 
         private void OnChanged(object sender, FileChangedEventArgs args)
         {
-            var newArgs = new FileChangedEventArgs(args.ChangeType, ConvertPath(args.FullPath));
+            var newPath = TryConvertPath(args.FullPath);
+            if (!newPath.HasValue)
+            {
+                return;
+            }
+
+            var newArgs = new FileChangedEventArgs(args.ChangeType, newPath.Value);
             RaiseChanged(newArgs);
         }
 
         private void OnCreated(object sender, FileChangedEventArgs args)
         {
-            var newArgs = new FileChangedEventArgs(args.ChangeType, ConvertPath(args.FullPath));
+            var newPath = TryConvertPath(args.FullPath);
+            if (!newPath.HasValue)
+            {
+                return;
+            }
+
+            var newArgs = new FileChangedEventArgs(args.ChangeType, newPath.Value);
             RaiseCreated(newArgs);
         }
 
         private void OnDeleted(object sender, FileChangedEventArgs args)
         {
-            var newArgs = new FileChangedEventArgs(args.ChangeType, ConvertPath(args.FullPath));
+            var newPath = TryConvertPath(args.FullPath);
+            if (!newPath.HasValue)
+            {
+                return;
+            }
+
+            var newArgs = new FileChangedEventArgs(args.ChangeType, newPath.Value);
             RaiseDeleted(newArgs);
         }
 
@@ -254,9 +272,19 @@ namespace Zio.Watcher
 
         private void OnRenamed(object sender, FileRenamedEventArgs args)
         {
-            var newArgs = new FileRenamedEventArgs(
-                args.ChangeType, ConvertPath(args.FullPath), ConvertPath(args.OldFullPath));
+            var newPath = TryConvertPath(args.FullPath);
+            if (!newPath.HasValue)
+            {
+                return;
+            }
 
+            var newOldPath = TryConvertPath(args.OldFullPath);
+            if (!newOldPath.HasValue)
+            {
+                return;
+            }
+            
+            var newArgs = new FileRenamedEventArgs(args.ChangeType, newPath.Value, newOldPath.Value);
             RaiseRenamed(newArgs);
         }
     }
