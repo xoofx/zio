@@ -1602,7 +1602,15 @@ namespace Zio.FileSystems
             public FileNode(MemoryFileSystem fileSystem, DirectoryNode parentNode, string name, FileNode copyNode)
                 : base(fileSystem, parentNode, name, copyNode)
             {
-                Content = copyNode != null ? new FileContent(this, copyNode.Content) : new FileContent(this);
+                if (copyNode != null)
+                {
+                    Content = new FileContent(this, copyNode.Content);
+                }
+                else
+                {
+                    Attributes = FileAttributes.Archive;
+                    Content = new FileContent(this);
+                }
             }
 
             public FileContent Content { get; private set; }
