@@ -42,6 +42,11 @@ namespace Zio.Watcher
 
         protected virtual void Dispose(bool disposing)
         {
+            if (!disposing)
+            {
+                return;
+            }
+
             _dispatchQueue.CompleteAdding();
 
             lock (_watchers)

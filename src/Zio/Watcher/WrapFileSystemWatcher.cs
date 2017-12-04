@@ -57,8 +57,11 @@ namespace Zio.Watcher
 
         protected override void Dispose(bool disposing)
         {
-            UnregisterEvents(_watcher);
-            _watcher.Dispose();
+            if (disposing)
+            {
+                UnregisterEvents(_watcher);
+                _watcher.Dispose();
+            }
         }
     }
 }

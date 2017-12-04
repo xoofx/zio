@@ -50,7 +50,10 @@ namespace Zio.FileSystems
         {
             base.Dispose(disposing);
 
-            _dispatcher.Dispose();
+            if (disposing)
+            {
+                _dispatcher.Dispose();
+            }
         }
 
         /// <summary>
@@ -861,7 +864,7 @@ namespace Zio.FileSystems
 
             protected override void Dispose(bool disposing)
             {
-                if (!_fileSystem.IsDisposing)
+                if (disposing && !_fileSystem.IsDisposing)
                 {
                     _fileSystem._dispatcher.Remove(this);
                 }

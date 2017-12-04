@@ -36,7 +36,7 @@ namespace Zio.Watcher
         }
 
         /// <inheritdoc />
-        public virtual NotifyFilters NotifyFilter { get; set; }
+        public virtual NotifyFilters NotifyFilter { get; set; } = NotifyFilters.Default;
 
         /// <inheritdoc />
         public virtual bool EnableRaisingEvents { get; set; }
@@ -75,8 +75,7 @@ namespace Zio.Watcher
 
             FileSystem = fileSystem;
             Path = path;
-            NotifyFilter = NotifyFilters.Default;
-            Filter = "*.*";
+            _filter = "*.*";
         }
 
         ~FileSystemWatcher()
@@ -189,6 +188,11 @@ namespace Zio.Watcher
         /// <param name="watcher">Other instance to listen to.</param>
         protected void RegisterEvents(IFileSystemWatcher watcher)
         {
+            if (watcher == null)
+            {
+                throw new ArgumentNullException(nameof(watcher));
+            }
+
             watcher.Changed += OnChanged;
             watcher.Created += OnCreated;
             watcher.Deleted += OnDeleted;
@@ -202,7 +206,16 @@ namespace Zio.Watcher
         /// <param name="watcher">Instance to remove event handlers from.</param>
         protected void UnregisterEvents(IFileSystemWatcher watcher)
         {
+            if (watcher == null)
+            {
+                throw new ArgumentNullException(nameof(watcher));
+            }
+
             watcher.Changed -= OnChanged;
+            watcher.Created -= OnCreated;
+            watcher.Deleted -= OnDeleted;
+            watcher.Error -= OnError;
+            watcher.Renamed -= OnRenamed;
         }
 
         /// <summary>
