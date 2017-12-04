@@ -21,7 +21,12 @@ namespace Zio.Watcher
 
         public FileSystemEventDispatcher()
         {
-            _dispatchThread = new Thread(DispatchWorker);
+            _dispatchThread = new Thread(DispatchWorker)
+            {
+                Name = "FileSystem Event Dispatch",
+                IsBackground = true
+            };
+
             _dispatchQueue = new BlockingCollection<Action>(16);
             _dispatchCts = new CancellationTokenSource();
             _watchers = new List<T>();
@@ -42,6 +47,9 @@ namespace Zio.Watcher
 
         protected virtual void Dispose(bool disposing)
         {
+            _dispatchCts?.Cancel();
+            _dispatchThread?.Join();
+
             if (!disposing)
             {
                 return;
@@ -59,8 +67,6 @@ namespace Zio.Watcher
                 _watchers.Clear();
             }
 
-            _dispatchCts.Cancel();
-            _dispatchThread.Join();
             _dispatchQueue.Dispose();
         }
 
