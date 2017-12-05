@@ -1,5 +1,5 @@
 ﻿
-namespace Zio.Watcher
+namespace Zio
 {
     /// <summary>
     /// Represents a file or directory rename event.

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Zio.Watcher
+namespace Zio
 {
     /// <summary>
     /// Changes that might occur to a file or directory.

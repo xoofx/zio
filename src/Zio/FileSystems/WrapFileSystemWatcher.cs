@@ -1,9 +1,9 @@
 ﻿using System;
 
-namespace Zio.Watcher
+namespace Zio.FileSystems
 {
     /// <summary>
-    /// Wraps another <see cref="IFileSystemWatcher"/> instance to allow modification.
+    /// Wraps another <see cref="IFileSystemWatcher"/> instance to allow event modification and filtering.
     /// </summary>
     public class WrapFileSystemWatcher : FileSystemWatcher
     {

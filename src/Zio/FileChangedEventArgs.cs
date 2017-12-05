@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Zio.Watcher
+namespace Zio
 {
     /// <summary>
     /// The <see cref="EventArgs"/> base class for file and directory events. Used for

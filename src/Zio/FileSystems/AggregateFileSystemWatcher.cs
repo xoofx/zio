@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Zio.Watcher
+namespace Zio.FileSystems
 {
     /// <summary>
     /// Aggregates events from multiple <see cref="FileSystemWatcher"/> into one.

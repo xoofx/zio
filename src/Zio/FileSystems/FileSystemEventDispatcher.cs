@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace Zio.Watcher
+namespace Zio.FileSystems
 {
     /// <summary>
     /// Stores <see cref="FileSystemWatcher"/> instances to dispatch events to. Events are

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Zio.Watcher
+namespace Zio
 {
     /// <summary>
     /// Contains information about a filesystem error event.

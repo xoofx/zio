@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Zio.Watcher
+namespace Zio.FileSystems
 {
     public class FileSystemWatcher : IFileSystemWatcher
     {
