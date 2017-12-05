@@ -21,7 +21,8 @@ namespace Zio.FileSystems
 
         private readonly DirectoryNode _rootDirectory;
         private readonly FileSystemNodeReadWriteLock _globalLock;
-        private readonly FileSystemEventDispatcher<Watcher> _dispatcher;
+        private readonly object _dispatcherLock;
+        private FileSystemEventDispatcher<Watcher> _dispatcher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MemoryFileSystem"/> class.
@@ -30,7 +31,7 @@ namespace Zio.FileSystems
         {
             _rootDirectory = new DirectoryNode(this);
             _globalLock = new FileSystemNodeReadWriteLock();
-            _dispatcher = new FileSystemEventDispatcher<Watcher>();
+            _dispatcherLock = new object();
         }
 
         /// <summary>
@@ -43,7 +44,7 @@ namespace Zio.FileSystems
             Debug.Assert(copyFrom._globalLock.IsLocked);
             _rootDirectory = (DirectoryNode)copyFrom._rootDirectory.Clone(null, null);
             _globalLock = new FileSystemNodeReadWriteLock();
-            _dispatcher = new FileSystemEventDispatcher<Watcher>();
+            _dispatcherLock = new object();
         }
 
         protected override void Dispose(bool disposing)
@@ -52,7 +53,7 @@ namespace Zio.FileSystems
 
             if (disposing)
             {
-                _dispatcher.Dispose();
+                TryGetDispatcher()?.Dispose();
             }
         }
 
@@ -90,7 +91,7 @@ namespace Zio.FileSystems
             {
                 CreateDirectoryNode(path);
 
-                _dispatcher.RaiseCreated(path);
+                TryGetDispatcher()?.RaiseCreated(path);
             }
             finally
             {
@@ -186,7 +187,7 @@ namespace Zio.FileSystems
                         result.Node.DetachFromParent();
                         result.Node.Dispose();
 
-                        _dispatcher.RaiseDeleted(path);
+                        TryGetDispatcher()?.RaiseDeleted(path);
                     }
 
                     ExitFindNode(result);
@@ -244,8 +245,8 @@ namespace Zio.FileSystems
                             // Constructor copies and attaches to directory for us
                             var newFileNode = new FileNode(this, destDirectory, destFileName, (FileNode)srcNode);
 
-                            _dispatcher.RaiseCreated(destPath);
-                            _dispatcher.RaiseChange(destPath);
+                            TryGetDispatcher()?.RaiseCreated(destPath);
+                            TryGetDispatcher()?.RaiseChange(destPath);
                         }
                         else if (overwrite)
                         {
@@ -256,7 +257,7 @@ namespace Zio.FileSystems
                             var destFileNode = (FileNode)destNode;
                             destFileNode.Content.CopyFrom(((FileNode)srcNode).Content);
 
-                            _dispatcher.RaiseChange(destPath);
+                            TryGetDispatcher()?.RaiseChange(destPath);
                         }
                         else
                         {
@@ -361,26 +362,26 @@ namespace Zio.FileSystems
                             backupResult.Node.DetachFromParent();
                             backupResult.Node.Dispose();
 
-                            _dispatcher.RaiseDeleted(destBackupPath);
+                            TryGetDispatcher()?.RaiseDeleted(destBackupPath);
                         }
 
                         destResult.Node.DetachFromParent();
                         destResult.Node.AttachToParent(backupResult.Directory, backupResult.Name);
 
-                        _dispatcher.RaiseRenamed(destBackupPath, destPath);
+                        TryGetDispatcher()?.RaiseRenamed(destBackupPath, destPath);
                     }
                     else
                     {
                         destResult.Node.DetachFromParent();
                         destResult.Node.Dispose();
 
-                        _dispatcher.RaiseDeleted(destPath);
+                        TryGetDispatcher()?.RaiseDeleted(destPath);
                     }
 
                     srcResult.Node.DetachFromParent();
                     srcResult.Node.AttachToParent(destResult.Directory, destResult.Name);
-                    
-                    _dispatcher.RaiseRenamed(destPath, srcPath);
+
+                    TryGetDispatcher()?.RaiseRenamed(destPath, srcPath);
                 }
                 finally
                 {
@@ -464,7 +465,7 @@ namespace Zio.FileSystems
                     srcNode.DetachFromParent();
                     srcNode.Dispose();
 
-                    _dispatcher.RaiseDeleted(path);
+                    TryGetDispatcher()?.RaiseDeleted(path);
                 }
                 finally
                 {
@@ -610,7 +611,7 @@ namespace Zio.FileSystems
 
                     fileNode = new FileNode(this, parentDirectory, filename, null);
 
-                    _dispatcher.RaiseCreated(path);
+                    TryGetDispatcher()?.RaiseCreated(path);
 
                     if (isExclusive)
                     {
@@ -700,7 +701,7 @@ namespace Zio.FileSystems
             var node = FindNodeSafe(path, false);
             node.Attributes = attributes;
 
-            _dispatcher.RaiseChange(path);
+            TryGetDispatcher()?.RaiseChange(path);
         }
 
         /// <inheritdoc />
@@ -714,7 +715,7 @@ namespace Zio.FileSystems
         {
             FindNodeSafe(path, false).CreationTime = time;
 
-            _dispatcher.RaiseChange(path);
+            TryGetDispatcher()?.RaiseChange(path);
         }
 
         /// <inheritdoc />
@@ -728,7 +729,7 @@ namespace Zio.FileSystems
         {
             FindNodeSafe(path, false).LastAccessTime = time;
 
-            _dispatcher.RaiseChange(path);
+            TryGetDispatcher()?.RaiseChange(path);
         }
 
         /// <inheritdoc />
@@ -742,7 +743,7 @@ namespace Zio.FileSystems
         {
             FindNodeSafe(path, false).LastWriteTime = time;
 
-            _dispatcher.RaiseChange(path);
+            TryGetDispatcher()?.RaiseChange(path);
         }
 
         // ----------------------------------------------
@@ -848,7 +849,7 @@ namespace Zio.FileSystems
         protected override IFileSystemWatcher WatchImpl(UPath path)
         {
             var watcher = new Watcher(this, path);
-            _dispatcher.Add(watcher);
+            GetOrCreateDispatcher().Add(watcher);
             return watcher;
         }
 
@@ -866,7 +867,7 @@ namespace Zio.FileSystems
             {
                 if (disposing && !_fileSystem.IsDisposing)
                 {
-                    _fileSystem._dispatcher.Remove(this);
+                    _fileSystem.TryGetDispatcher()?.Remove(this);
                 }
             }
         }
@@ -977,8 +978,8 @@ namespace Zio.FileSystems
                     srcResult.Node.DetachFromParent();
                     srcResult.Node.AttachToParent(destResult.Directory, destResult.Name);
 
-                    _dispatcher.RaiseDeleted(srcPath);
-                    _dispatcher.RaiseCreated(destPath);
+                    TryGetDispatcher()?.RaiseDeleted(srcPath);
+                    TryGetDispatcher()?.RaiseCreated(destPath);
                 }
                 finally
                 {
@@ -1315,6 +1316,27 @@ namespace Zio.FileSystems
             return false;
         }
 
+        private FileSystemEventDispatcher<Watcher> GetOrCreateDispatcher()
+        {
+            lock (_dispatcherLock)
+            {
+                if (_dispatcher == null)
+                {
+                    _dispatcher = new FileSystemEventDispatcher<Watcher>();
+                }
+
+                return _dispatcher;
+            }
+        }
+
+        private FileSystemEventDispatcher<Watcher> TryGetDispatcher()
+        {
+            lock (_dispatcherLock)
+            {
+                return _dispatcher;
+            }
+        }
+
         // ----------------------------------------------
         // Locks internals
         // ----------------------------------------------
@@ -1629,11 +1651,14 @@ namespace Zio.FileSystems
 
             public void ContentChanged()
             {
-                // TODO: cache this
-                // TODO: we don't need to do this if nobody is watching
-                var path = GeneratePath();
+                var dispatcher = FileSystem.TryGetDispatcher();
+                if (dispatcher != null)
+                {
+                    // TODO: cache this
+                    var path = GeneratePath();
 
-                FileSystem._dispatcher.RaiseChange(path);
+                    dispatcher.RaiseChange(path);
+                }
             }
 
             private UPath GeneratePath()
