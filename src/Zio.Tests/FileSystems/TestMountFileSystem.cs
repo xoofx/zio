@@ -26,6 +26,75 @@ namespace Zio.Tests.FileSystems
             var fs = GetCommonMountFileSystemWithMounts();
             AssertCommonRead(fs);
         }
+        
+        [Fact]
+        public void TestWatcherOnRoot()
+        {
+            var fs = GetCommonMountFileSystemWithMounts();
+            var watcher = fs.Watch("/");
+
+            var gotChange = false;
+            watcher.Created += (sender, args) =>
+            {
+                if (args.FullPath == "/b/watched.txt")
+                {
+                    gotChange = true;
+                }
+            };
+
+            watcher.IncludeSubdirectories = true;
+            watcher.EnableRaisingEvents = true;
+
+            fs.WriteAllText("/b/watched.txt", "test");
+            System.Threading.Thread.Sleep(100);
+            Assert.True(gotChange);
+        }
+
+        [Fact]
+        public void TestWatcherOnMount()
+        {
+            var fs = GetCommonMountFileSystemWithMounts();
+            var watcher = fs.Watch("/b");
+
+            var gotChange = false;
+            watcher.Created += (sender, args) =>
+            {
+                if (args.FullPath == "/b/watched.txt")
+                {
+                    gotChange = true;
+                }
+            };
+
+            watcher.IncludeSubdirectories = true;
+            watcher.EnableRaisingEvents = true;
+
+            fs.WriteAllText("/b/watched.txt", "test");
+            System.Threading.Thread.Sleep(100);
+            Assert.True(gotChange);
+        }
+
+        [Fact]
+        public void TestWatcherWithBackupOnRoot()
+        {
+            var fs = GetCommonMountFileSystemWithOnlyBackup();
+            var watcher = fs.Watch("/");
+
+            var gotChange = false;
+            watcher.Created += (sender, args) =>
+            {
+                if (args.FullPath == "/b/watched.txt")
+                {
+                    gotChange = true;
+                }
+            };
+
+            watcher.IncludeSubdirectories = true;
+            watcher.EnableRaisingEvents = true;
+
+            fs.WriteAllText("/b/watched.txt", "test");
+            System.Threading.Thread.Sleep(100);
+            Assert.True(gotChange);
+        }
 
         [Fact]
         public void TestMount()

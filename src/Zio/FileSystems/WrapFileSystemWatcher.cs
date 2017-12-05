@@ -13,7 +13,9 @@ namespace Zio.FileSystems
             : base(fileSystem, path)
         {
             if (watcher == null)
+            {
                 throw new ArgumentNullException(nameof(watcher));
+            }
 
             _watcher = watcher;
 

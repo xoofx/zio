@@ -121,6 +121,11 @@ namespace Zio.Tests.FileSystems
 
         protected AggregateFileSystem GetCommonAggregateFileSystem()
         {
+            return GetCommonAggregateFileSystem(out _, out _, out _);
+        }
+
+        protected AggregateFileSystem GetCommonAggregateFileSystem(out MemoryFileSystem fs1, out MemoryFileSystem fs2, out MemoryFileSystem fs3)
+        {
             // ----------------------------------------------
             // This creates the following AggregateFileSystem
             // ----------------------------------------------
@@ -149,10 +154,10 @@ namespace Zio.Tests.FileSystems
             // f.i1               -> fs3
             // E                  -> fs2
 
-            var fs1 = new MemoryFileSystem();
+            fs1 = new MemoryFileSystem();
             CreateFolderStructure(fs1);
-            var fs2 = fs1.Clone();
-            var fs3 = fs2.Clone();
+            fs2 = fs1.Clone();
+            fs3 = fs2.Clone();
 
             // Delete part of fs2 so that it will fallback to fs1
             fs2.DeleteDirectory("/a/a", true);

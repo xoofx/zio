@@ -9,11 +9,21 @@ namespace Zio.FileSystems
     public class AggregateFileSystemWatcher : FileSystemWatcher
     {
         private readonly List<IFileSystemWatcher> _children;
+        private int _internalBufferSize;
+        private NotifyFilters _notifyFilter;
+        private bool _enableRaisingEvents;
+        private bool _includeSubdirectories;
+        private string _filter;
 
         public AggregateFileSystemWatcher(IFileSystem fileSystem, UPath path)
             : base(fileSystem, path)
         {
             _children = new List<IFileSystemWatcher>();
+            _internalBufferSize = 0;
+            _notifyFilter = NotifyFilters.Default;
+            _enableRaisingEvents = false;
+            _includeSubdirectories = false;
+            _filter = "*.*";
         }
 
         /// <summary>
@@ -70,17 +80,23 @@ namespace Zio.FileSystems
         /// <summary>
         /// Removes all <see cref="IFileSystemWatcher"/> instances from this instance.
         /// </summary>
-        public void Clear()
+        /// <param name="excludeFileSystem">Exclude this filesystem from removal.</param>
+        public void Clear(IFileSystem excludeFileSystem = null)
         {
             lock (_children)
             {
-                foreach (var watcher in _children)
+                for (var i = _children.Count - 1; i >= 0; i--)
                 {
+                    var watcher = _children[i];
+                    if (watcher.FileSystem == excludeFileSystem)
+                    {
+                        continue;
+                    }
+
                     UnregisterEvents(watcher);
+                    _children.Remove(watcher);
                     watcher.Dispose();
                 }
-
-                _children.Clear();
             }
         }
 
@@ -89,6 +105,121 @@ namespace Zio.FileSystems
             if (disposing)
             {
                 Clear();
+            }
+        }
+
+        /// <inheritdoc />
+        public override int InternalBufferSize
+        {
+            get => _internalBufferSize;
+            set
+            {
+                if (value == _internalBufferSize)
+                {
+                    return;
+                }
+
+                lock (_children)
+                {
+                    foreach (var watcher in _children)
+                    {
+                        watcher.InternalBufferSize = value;
+                    }
+                }
+
+                _internalBufferSize = value;
+            }
+        }
+
+        /// <inheritdoc />
+        public override NotifyFilters NotifyFilter
+        {
+            get => _notifyFilter;
+            set
+            {
+                if (value == _notifyFilter)
+                {
+                    return;
+                }
+
+                lock (_children)
+                {
+                    foreach (var watcher in _children)
+                    {
+                        watcher.NotifyFilter = value;
+                    }
+                }
+
+                _notifyFilter = value;
+            }
+        }
+
+        /// <inheritdoc />
+        public override bool EnableRaisingEvents
+        {
+            get => _enableRaisingEvents;
+            set
+            {
+                if (value == _enableRaisingEvents)
+                {
+                    return;
+                }
+
+                lock (_children)
+                {
+                    foreach (var watcher in _children)
+                    {
+                        watcher.EnableRaisingEvents = value;
+                    }
+                }
+
+                _enableRaisingEvents = value;
+            }
+        }
+
+        /// <inheritdoc />
+        public override bool IncludeSubdirectories
+        {
+            get => _includeSubdirectories;
+            set
+            {
+                if (value == _includeSubdirectories)
+                {
+                    return;
+                }
+
+                lock (_children)
+                {
+                    foreach (var watcher in _children)
+                    {
+                        watcher.IncludeSubdirectories = value;
+                    }
+                }
+
+                _includeSubdirectories = value;
+            }
+        }
+
+        /// <inheritdoc />
+        public override string Filter
+        {
+            get => _filter;
+            set
+            {
+                if (value == _filter)
+                {
+                    return;
+                }
+
+                lock (_children)
+                {
+                    foreach (var watcher in _children)
+                    {
+                        watcher.Filter = value;
+                    }
+                }
+
+                _filter = value;
             }
         }
     }

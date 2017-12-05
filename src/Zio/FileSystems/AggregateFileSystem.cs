@@ -58,7 +58,7 @@ namespace Zio.FileSystems
 
                 foreach (var watcher in _watchers)
                 {
-                    watcher.Clear();
+                    watcher.Clear(NextFileSystem);
                 }
             }
         }
@@ -82,7 +82,7 @@ namespace Zio.FileSystems
 
                 foreach (var watcher in _watchers)
                 {
-                    watcher.Clear();
+                    watcher.Clear(NextFileSystem);
                 }
 
                 foreach (var fileSystem in fileSystems)
@@ -371,6 +371,12 @@ namespace Zio.FileSystems
             lock (_fileSystems)
             {
                 var watcher = new AggregateFileSystemWatcher(this, path);
+
+                if (NextFileSystem != null)
+                {
+                    watcher.Add(NextFileSystem.Watch(path));
+                }
+
                 foreach (var fs in _fileSystems)
                 {
                     watcher.Add(fs.Watch(path));

@@ -19,6 +19,40 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
+        public void TestWatcher()
+        {
+            var fs = GetCommonAggregateFileSystem(out var fs1, out var fs2, out _);
+            var watcher = fs.Watch("/");
+
+            var gotChange1 = false;
+            var gotChange2 = false;
+            watcher.Created += (sender, args) =>
+            {
+                Console.WriteLine(args.FullPath.FullName);
+                if (args.FullPath == "/b/watched.txt")
+                {
+                    gotChange1 = true;
+                }
+
+                if (args.FullPath == "/C/watched.txt")
+                {
+                    gotChange2 = true;
+                }
+            };
+
+            watcher.IncludeSubdirectories = true;
+            watcher.EnableRaisingEvents = true;
+
+            fs1.WriteAllText("/b/watched.txt", "test");
+            fs2.WriteAllText("/C/watched.txt", "test");
+
+            System.Threading.Thread.Sleep(100);
+
+            Assert.True(gotChange1);
+            Assert.True(gotChange2);
+        }
+
+        [Fact]
         public void TestAddRemoveFileSystem()
         {
             var fs = new AggregateFileSystem();

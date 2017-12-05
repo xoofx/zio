@@ -618,6 +618,12 @@ namespace Zio.FileSystems
                         watcher.Add(new Watcher(this, kvp.Key, UPath.Root, internalWatcher));
                     }
 
+                    if (NextFileSystem != null)
+                    {
+                        var internalWatcher = NextFileSystem.Watch(UPath.Root);
+                        watcher.Add(new Watcher(this, null, UPath.Root, internalWatcher));
+                    }
+
                     _aggregateWatchers.Add(watcher);
                 }
 
