@@ -28,7 +28,6 @@ namespace Zio.Tests.FileSystems
             var gotChange2 = false;
             watcher.Created += (sender, args) =>
             {
-                Console.WriteLine(args.FullPath.FullName);
                 if (args.FullPath == "/b/watched.txt")
                 {
                     gotChange1 = true;
