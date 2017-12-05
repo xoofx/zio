@@ -181,6 +181,54 @@ namespace Zio
         }
 
         /// <summary>
+        /// Checks if the path is in the given directory. Does not check if the paths exist.
+        /// </summary>
+        /// <param name="path">The path to check.</param>
+        /// <param name="directory">The directory to check the path against.</param>
+        /// <param name="recursive">True to check if it is anywhere in the directory, false to check if it is directly in the directory.</param>
+        /// <returns>True when the path is in the given directory.</returns>
+        public static bool IsInDirectory(this UPath path, UPath directory, bool recursive)
+        {
+            path.AssertNotNull();
+            directory.AssertNotNull(nameof(directory));
+
+            if (path.IsAbsolute != directory.IsAbsolute)
+            {
+                throw new ArgumentException("Cannot mix absolute and relative paths", nameof(directory));
+            }
+
+            var target = path.FullName;
+            var dir = directory.FullName;
+
+            if (target.Length < dir.Length || !target.StartsWith(dir))
+            {
+                return false;
+            }
+
+            var dirHasTrailingSeparator = dir[dir.Length - 1] != UPath.DirectorySeparator;
+
+            if (!recursive)
+            {
+                // need to check if the directory part terminates 
+                var lastSeparatorInTarget = target.LastIndexOf(UPath.DirectorySeparator);
+                var expectedLastSeparator = dir.Length - (dirHasTrailingSeparator ? 0 : 1);
+
+                if (lastSeparatorInTarget != expectedLastSeparator)
+                {
+                    return false;
+                }
+            }
+
+            if (dirHasTrailingSeparator)
+            {
+                // directory is missing ending slash, check that target has it
+                return target.Length > dir.Length && target[dir.Length] == UPath.DirectorySeparator;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Asserts the specified path is not null.
         /// </summary>
         /// <param name="path">The path.</param>

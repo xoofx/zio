@@ -67,7 +67,7 @@ namespace Zio
         }
 
         /// <summary>
-        /// Gets the full name of this path (Note hat it may be null).
+        /// Gets the full name of this path (Note that it may be null).
         /// </summary>
         /// <value>The full name of this path.</value>
         public string FullName { get; }

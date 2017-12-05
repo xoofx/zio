@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -434,6 +433,25 @@ namespace Zio.FileSystems
         /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>.</param>
         /// <returns>An enumerable collection of file-system paths in the directory specified by path and that match the specified search pattern, option and target.</returns>
         protected abstract IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
+
+        // ----------------------------------------------
+        // Watch API
+        // ----------------------------------------------
+
+        /// <inheritdoc />
+        public IFileSystemWatcher Watch(UPath path)
+        {
+            AssertNotDisposed();
+            return WatchImpl(ValidatePath(path));
+        }
+
+        /// <summary>
+        /// Implementation for <see cref="Watch"/>, <paramref name="path"/> is guaranteed to be absolute and valudated through <see cref="ValidatePath"/>.
+        /// Returns an <see cref="IFileSystemWatcher"/> instance that can be used to watch for changes to files and directories in the given path.
+        /// </summary>
+        /// <param name="path">The path to watch for changes.</param>
+        /// <returns>An <see cref="IFileSystemWatcher"/> instance that can be used to watch for changes.</returns>
+        protected abstract IFileSystemWatcher WatchImpl(UPath path);
 
         // ----------------------------------------------
         // Path API

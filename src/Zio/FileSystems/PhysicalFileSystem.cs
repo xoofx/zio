@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -493,6 +492,127 @@ namespace Zio.FileSystems
                     break;
             }
         }
+
+        // ----------------------------------------------
+        // Watch API
+        // ----------------------------------------------
+
+        /// <inheritdoc />
+        protected override IFileSystemWatcher WatchImpl(UPath path)
+        {
+            if (IsWithinSpecialDirectory(path))
+            {
+                throw new UnauthorizedAccessException($"The access to `{path}` is denied");
+            }
+
+            return new Watcher(this, path);
+        }
+
+        private class Watcher : IFileSystemWatcher
+        {
+            private readonly PhysicalFileSystem _fileSystem;
+            private readonly System.IO.FileSystemWatcher _watcher;
+
+            public event EventHandler<FileChangedEventArgs> Changed;
+            public event EventHandler<FileChangedEventArgs> Created;
+            public event EventHandler<FileChangedEventArgs> Deleted;
+            public event EventHandler<FileSystemErrorEventArgs> Error;
+            public event EventHandler<FileRenamedEventArgs> Renamed;
+
+            public IFileSystem FileSystem => _fileSystem;
+            public UPath Path { get; }
+
+            public int InternalBufferSize
+            {
+                get => _watcher.InternalBufferSize;
+                set => _watcher.InternalBufferSize = value;
+            }
+
+            public NotifyFilters NotifyFilter
+            {
+                get => (NotifyFilters)_watcher.NotifyFilter;
+                set => _watcher.NotifyFilter = (System.IO.NotifyFilters)value;
+            }
+
+            public bool EnableRaisingEvents
+            {
+                get => _watcher.EnableRaisingEvents;
+                set => _watcher.EnableRaisingEvents = value;
+            }
+
+            public string Filter
+            {
+                get => _watcher.Filter;
+                set => _watcher.Filter = value;
+            }
+
+            public bool IncludeSubdirectories
+            {
+                get => _watcher.IncludeSubdirectories;
+                set => _watcher.IncludeSubdirectories = value;
+            }
+
+            public Watcher(PhysicalFileSystem fileSystem, UPath path)
+            {
+                if (fileSystem == null)
+                {
+                    throw new ArgumentNullException(nameof(fileSystem));
+                }
+
+                _fileSystem = fileSystem;
+                _watcher = new System.IO.FileSystemWatcher(_fileSystem.ConvertPathToInternal(path))
+                {
+                    Filter = "*"
+                };
+                Path = path;
+
+                _watcher.Changed += (sender, args) => Changed?.Invoke(this, Remap(args));
+                _watcher.Created += (sender, args) => Created?.Invoke(this, Remap(args));
+                _watcher.Deleted += (sender, args) => Deleted?.Invoke(this, Remap(args));
+                _watcher.Error += (sender, args) => Error?.Invoke(this, Remap(args));
+                _watcher.Renamed += (sender, args) => Renamed?.Invoke(this, Remap(args));
+            }
+
+            ~Watcher()
+            {
+                Dispose(false);
+            }
+
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            private void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _watcher.Dispose();
+                }
+            }
+
+            private FileChangedEventArgs Remap(FileSystemEventArgs args)
+            {
+                var newChangeType = (WatcherChangeTypes)args.ChangeType;
+                var newPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
+                return new FileChangedEventArgs(newChangeType, newPath);
+            }
+
+            private FileSystemErrorEventArgs Remap(ErrorEventArgs args)
+            {
+                return new FileSystemErrorEventArgs(args.GetException());
+            }
+
+            private FileRenamedEventArgs Remap(RenamedEventArgs args)
+            {
+                var newChangeType = (WatcherChangeTypes)args.ChangeType;
+                var newPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
+                var newOldPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
+                return new FileRenamedEventArgs(newChangeType, newPath, newOldPath);
+            }
+        }
+
         // ----------------------------------------------
         // Path API
         // ----------------------------------------------

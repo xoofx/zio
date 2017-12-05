@@ -3,7 +3,6 @@
 // See the license.txt file in the project root for more information.
 using System;
 using System.IO;
-
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -32,6 +31,34 @@ namespace Zio.FileSystems
         /// Gets the sub path relative to the delegate <see cref="ComposeFileSystem.NextFileSystem"/>
         /// </summary>
         public UPath SubPath { get; }
+
+        /// <inheritdoc />
+        protected override IFileSystemWatcher WatchImpl(UPath path)
+        {
+            var delegateWatcher = base.WatchImpl(path);
+            return new Watcher(this, path, delegateWatcher);
+        }
+
+        private class Watcher : WrapFileSystemWatcher
+        {
+            private readonly SubFileSystem _fileSystem;
+
+            public Watcher(SubFileSystem fileSystem, UPath path, IFileSystemWatcher watcher)
+                : base(fileSystem, path, watcher)
+            {
+                _fileSystem = fileSystem;
+            }
+
+            protected override UPath? TryConvertPath(UPath pathFromEvent)
+            {
+                if (!pathFromEvent.IsInDirectory(_fileSystem.SubPath, true))
+                {
+                    return null;
+                }
+
+                return _fileSystem.ConvertPathFromDelegate(pathFromEvent);
+            }
+        }
 
         /// <inheritdoc />
         protected override UPath ConvertPathToDelegate(UPath path)
