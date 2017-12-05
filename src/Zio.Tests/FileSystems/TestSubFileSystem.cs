@@ -46,5 +46,29 @@ namespace Zio.Tests.FileSystems
             var text = fs.ReadAllText(subFolder + "/test.txt");
             Assert.Equal("yo", text);
         }
+
+        [Fact]
+        public void TestWatcher()
+        {
+            var fs = GetCommonMemoryFileSystem();
+            var subFs = fs.GetOrCreateSubFileSystem("/a/b");
+            var watcher = subFs.Watch("/");
+
+            var gotChange = false;
+            watcher.Created += (sender, args) =>
+            {
+                if (args.FullPath == "/watched.txt")
+                {
+                    gotChange = true;
+                }
+            };
+
+            watcher.IncludeSubdirectories = true;
+            watcher.EnableRaisingEvents = true;
+
+            fs.WriteAllText("/a/b/watched.txt", "test");
+            System.Threading.Thread.Sleep(100);
+            Assert.True(gotChange);
+        }
     }
 }
