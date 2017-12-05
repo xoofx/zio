@@ -3,7 +3,6 @@
 // See the license.txt file in the project root for more information.
 using System;
 using System.IO;
-using Zio.Watcher;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems

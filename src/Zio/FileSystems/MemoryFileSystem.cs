@@ -8,7 +8,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Zio.Watcher;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -853,7 +852,7 @@ namespace Zio.FileSystems
             return watcher;
         }
 
-        private class Watcher : Zio.Watcher.FileSystemWatcher
+        private class Watcher : FileSystemWatcher
         {
             private readonly MemoryFileSystem _fileSystem;
 

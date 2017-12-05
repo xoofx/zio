@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Zio.FileSystems;
-using Zio.Watcher;
 
 namespace Zio.Tests.FileSystems
 {

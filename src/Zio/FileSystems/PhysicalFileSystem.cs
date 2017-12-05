@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Zio.Watcher;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -529,9 +528,9 @@ namespace Zio.FileSystems
                 set => _watcher.InternalBufferSize = value;
             }
 
-            public Zio.Watcher.NotifyFilters NotifyFilter
+            public NotifyFilters NotifyFilter
             {
-                get => (Zio.Watcher.NotifyFilters)_watcher.NotifyFilter;
+                get => (NotifyFilters)_watcher.NotifyFilter;
                 set => _watcher.NotifyFilter = (System.IO.NotifyFilters)value;
             }
 
@@ -595,7 +594,7 @@ namespace Zio.FileSystems
 
             private FileChangedEventArgs Remap(FileSystemEventArgs args)
             {
-                var newChangeType = (Zio.Watcher.WatcherChangeTypes)args.ChangeType;
+                var newChangeType = (WatcherChangeTypes)args.ChangeType;
                 var newPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
                 return new FileChangedEventArgs(newChangeType, newPath);
             }
@@ -607,7 +606,7 @@ namespace Zio.FileSystems
 
             private FileRenamedEventArgs Remap(RenamedEventArgs args)
             {
-                var newChangeType = (Zio.Watcher.WatcherChangeTypes)args.ChangeType;
+                var newChangeType = (WatcherChangeTypes)args.ChangeType;
                 var newPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
                 var newOldPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
                 return new FileRenamedEventArgs(newChangeType, newPath, newOldPath);

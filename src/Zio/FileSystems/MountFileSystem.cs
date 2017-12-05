@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using Zio.Watcher;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
