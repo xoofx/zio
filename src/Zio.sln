@@ -7,11 +7,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zio", "Zio\Zio.csproj", "{C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zio.Tests", "Zio.Tests\Zio.Tests.csproj", "{CE2FA165-222F-48F1-9D46-140F01687C06}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{3F93B71B-B8B6-4B48-9D86-A8EC85A8C2F8}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{3F93B71B-B8B6-4B48-9D86-A8EC85A8C2F8}"
 	ProjectSection(SolutionItems) = preProject
 		..\appveyor.yml = ..\appveyor.yml
 		..\changelog.md = ..\changelog.md
 		..\readme.md = ..\readme.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DE54AD2A-E02D-4AA0-B055-F288662C58A4}"
+	ProjectSection(SolutionItems) = preProject
 		..\doc\readme.md = ..\doc\readme.md
 	EndProjectSection
 EndProject

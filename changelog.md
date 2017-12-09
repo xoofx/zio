@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.0 (9 Dec 2017)
+- Add support for `IFileSystemWatcher`, coutesy of [Rohan Singh](https://github.com/Rohansi) via [PR #9](https://github.com/xoofx/zio/pull/9)
+
 ## 0.3.6 (19 Nov 2017)
 - Try to fix a sporadic Unauthorized access when using CopyFileCross with a PhysicalFileSystem as a destination
 
