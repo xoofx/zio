@@ -200,6 +200,25 @@ The `IFileSystem` API is mainly divided into 4 groups:
 </tbody>
 </table>
 
+- **Watch API**
+
+<table width='100%'>
+<thead>
+<tr>
+<th style="width:40%"><code>System.IO API</code></th>
+<th><code>Zio.IFileSystem API</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>new FileSystemWatcher(...)</code></td>
+<td><code>IFileSystemWatcher</code><br>
+<code>IFileSystem.Watch</code>
+</td>
+</tr>
+</tbody>
+</table>
+
 > The **IDisposable** pattern
 >
 > While current built-ins filesystem are not using this feature, a `IFileSystem` is `IDisposable` in case it would rely its internals on an underlying `IDisposable` object
@@ -378,6 +397,16 @@ subfs.DirectoryCreate("/Test");
 #### `ReadOnlyFileSystem` 
 
 The readonly filesystem simply allows to expose an existing filesystem as read-only and throws a `System.IO.IOException` on any attempt to use one of the writeable `IFileSystem` methods.
+
+## `IFileSystemWatcher`
+
+All filesystems provide support for watching directory/file changes. The `IFileSystem` provides the method `Watch` with a folder to watch for changes (which is immutable once being watched):
+
+```C#
+IFileSystemWatcher Watch(UPath path);
+```
+
+The interface returned is very similar to the [`System.IO.FileSystemWatcher`](https://msdn.microsoft.com/en-us/library/system.io.filesystemwatcher(v=vs.110).aspx)
 
 ## Implementing a FileSystem
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2005
+VisualStudioVersion = 15.0.27130.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zio", "Zio\Zio.csproj", "{C32F22EB-323B-489F-A825-BC5018EC7A7F}"
 EndProject
@@ -12,6 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{3F93B71B
 		..\appveyor.yml = ..\appveyor.yml
 		..\changelog.md = ..\changelog.md
 		..\readme.md = ..\readme.md
+		..\doc\readme.md = ..\doc\readme.md
 	EndProjectSection
 EndProject
 Global
