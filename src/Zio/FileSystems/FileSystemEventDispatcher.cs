@@ -19,8 +19,9 @@ namespace Zio.FileSystems
         private readonly CancellationTokenSource _dispatchCts;
         private readonly List<T> _watchers;
 
-        public FileSystemEventDispatcher()
+        public FileSystemEventDispatcher(IFileSystem fileSystem)
         {
+            FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
             _dispatchThread = new Thread(DispatchWorker)
             {
                 Name = "FileSystem Event Dispatch",
@@ -33,6 +34,8 @@ namespace Zio.FileSystems
 
             _dispatchThread.Start();
         }
+
+        public IFileSystem FileSystem { get; }
 
         ~FileSystemEventDispatcher()
         {
@@ -100,7 +103,7 @@ namespace Zio.FileSystems
         /// <param name="path">Absolute path to the changed file or directory.</param>
         public void RaiseChange(UPath path)
         {
-            var args = new FileChangedEventArgs(WatcherChangeTypes.Changed, path);
+            var args = new FileChangedEventArgs(FileSystem, WatcherChangeTypes.Changed, path);
             Dispatch(args, (w, a) => w.RaiseChanged(a));
         }
 
@@ -110,7 +113,7 @@ namespace Zio.FileSystems
         /// <param name="path">Absolute path to the new file or directory.</param>
         public void RaiseCreated(UPath path)
         {
-            var args = new FileChangedEventArgs(WatcherChangeTypes.Created, path);
+            var args = new FileChangedEventArgs(FileSystem, WatcherChangeTypes.Created, path);
             Dispatch(args, (w, a) => w.RaiseCreated(a));
         }
         
@@ -120,7 +123,7 @@ namespace Zio.FileSystems
         /// <param name="path">Absolute path to the changed file or directory.</param>
         public void RaiseDeleted(UPath path)
         {
-            var args = new FileChangedEventArgs(WatcherChangeTypes.Deleted, path);
+            var args = new FileChangedEventArgs(FileSystem, WatcherChangeTypes.Deleted, path);
             Dispatch(args, (w, a) => w.RaiseDeleted(a));
         }
 
@@ -131,7 +134,7 @@ namespace Zio.FileSystems
         /// <param name="oldPath">Absolute path to the old file or directory.</param>
         public void RaiseRenamed(UPath newPath, UPath oldPath)
         {
-            var args = new FileRenamedEventArgs(WatcherChangeTypes.Renamed, newPath, oldPath);
+            var args = new FileRenamedEventArgs(FileSystem, WatcherChangeTypes.Renamed, newPath, oldPath);
             Dispatch(args, (w, a) => w.RaiseRenamed(a));
         }
 

@@ -554,12 +554,7 @@ namespace Zio.FileSystems
 
             public Watcher(PhysicalFileSystem fileSystem, UPath path)
             {
-                if (fileSystem == null)
-                {
-                    throw new ArgumentNullException(nameof(fileSystem));
-                }
-
-                _fileSystem = fileSystem;
+                _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
                 _watcher = new System.IO.FileSystemWatcher(_fileSystem.ConvertPathToInternal(path))
                 {
                     Filter = "*"
@@ -596,7 +591,7 @@ namespace Zio.FileSystems
             {
                 var newChangeType = (WatcherChangeTypes)args.ChangeType;
                 var newPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
-                return new FileChangedEventArgs(newChangeType, newPath);
+                return new FileChangedEventArgs(FileSystem, newChangeType, newPath);
             }
 
             private FileSystemErrorEventArgs Remap(ErrorEventArgs args)
@@ -609,7 +604,7 @@ namespace Zio.FileSystems
                 var newChangeType = (WatcherChangeTypes)args.ChangeType;
                 var newPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
                 var newOldPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
-                return new FileRenamedEventArgs(newChangeType, newPath, newOldPath);
+                return new FileRenamedEventArgs(FileSystem, newChangeType, newPath, newOldPath);
             }
         }
 

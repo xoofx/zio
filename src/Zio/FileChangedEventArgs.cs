@@ -16,6 +16,11 @@ namespace Zio
         public WatcherChangeTypes ChangeType { get; }
 
         /// <summary>
+        /// The filesystem originating this change.
+        /// </summary>
+        public IFileSystem FileSystem { get; }
+
+        /// <summary>
         /// Absolute path to the file or directory.
         /// </summary>
         public UPath FullPath { get; }
@@ -25,11 +30,13 @@ namespace Zio
         /// </summary>
         public string Name { get; }
 
-        public FileChangedEventArgs(WatcherChangeTypes changeType, UPath fullPath)
+        public FileChangedEventArgs(IFileSystem fileSystem, WatcherChangeTypes changeType, UPath fullPath)
         {
+            if (fileSystem == null) throw new ArgumentNullException(nameof(fileSystem));
             fullPath.AssertNotNull(nameof(fullPath));
             fullPath.AssertAbsolute(nameof(fullPath));
 
+            FileSystem = fileSystem;
             ChangeType = changeType;
             FullPath = fullPath;
             Name = fullPath.GetName();

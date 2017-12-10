@@ -17,8 +17,8 @@ namespace Zio
         /// </summary>
         public string OldName { get; }
 
-        public FileRenamedEventArgs(WatcherChangeTypes changeType, UPath fullPath, UPath oldFullPath)
-            : base(changeType, fullPath)
+        public FileRenamedEventArgs(IFileSystem fileSystem, WatcherChangeTypes changeType, UPath fullPath, UPath oldFullPath)
+            : base(fileSystem, changeType, fullPath)
         {
             fullPath.AssertNotNull(nameof(oldFullPath));
             fullPath.AssertAbsolute(nameof(oldFullPath));

@@ -1322,7 +1322,7 @@ namespace Zio.FileSystems
             {
                 if (_dispatcher == null)
                 {
-                    _dispatcher = new FileSystemEventDispatcher<Watcher>();
+                    _dispatcher = new FileSystemEventDispatcher<Watcher>(this);
                 }
 
                 return _dispatcher;

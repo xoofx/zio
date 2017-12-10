@@ -237,7 +237,7 @@ namespace Zio.FileSystems
                 return;
             }
 
-            var newArgs = new FileChangedEventArgs(args.ChangeType, newPath.Value);
+            var newArgs = new FileChangedEventArgs(FileSystem, args.ChangeType, newPath.Value);
             RaiseChanged(newArgs);
         }
 
@@ -249,7 +249,7 @@ namespace Zio.FileSystems
                 return;
             }
 
-            var newArgs = new FileChangedEventArgs(args.ChangeType, newPath.Value);
+            var newArgs = new FileChangedEventArgs(FileSystem, args.ChangeType, newPath.Value);
             RaiseCreated(newArgs);
         }
 
@@ -261,7 +261,7 @@ namespace Zio.FileSystems
                 return;
             }
 
-            var newArgs = new FileChangedEventArgs(args.ChangeType, newPath.Value);
+            var newArgs = new FileChangedEventArgs(FileSystem, args.ChangeType, newPath.Value);
             RaiseDeleted(newArgs);
         }
 
@@ -284,7 +284,7 @@ namespace Zio.FileSystems
                 return;
             }
             
-            var newArgs = new FileRenamedEventArgs(args.ChangeType, newPath.Value, newOldPath.Value);
+            var newArgs = new FileRenamedEventArgs(FileSystem, args.ChangeType, newPath.Value, newOldPath.Value);
             RaiseRenamed(newArgs);
         }
     }
