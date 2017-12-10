@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.0 (10 Dec 2017)
+- Propagate the originating IFileSystem to the IFileSystemWatcher events
+
 ## 0.4.0 (9 Dec 2017)
 - Add support for `IFileSystemWatcher`, coutesy of [Rohan Singh](https://github.com/Rohansi) via [PR #9](https://github.com/xoofx/zio/pull/9)
 
