@@ -205,13 +205,20 @@ namespace Zio
                 return false;
             }
 
-            var dirHasTrailingSeparator = dir[dir.Length - 1] != UPath.DirectorySeparator;
+            if (target.Length == dir.Length)
+            {
+                // exact match due to the StartsWith above
+                // the directory parameter is interpreted as a directory so trailing separator isn't important
+                return true;
+            }
+
+            var dirHasTrailingSeparator = dir[dir.Length - 1] == UPath.DirectorySeparator;
 
             if (!recursive)
             {
                 // need to check if the directory part terminates 
                 var lastSeparatorInTarget = target.LastIndexOf(UPath.DirectorySeparator);
-                var expectedLastSeparator = dir.Length - (dirHasTrailingSeparator ? 0 : 1);
+                var expectedLastSeparator = dir.Length - (dirHasTrailingSeparator ? 1 : 0);
 
                 if (lastSeparatorInTarget != expectedLastSeparator)
                 {
@@ -219,7 +226,7 @@ namespace Zio
                 }
             }
 
-            if (dirHasTrailingSeparator)
+            if (!dirHasTrailingSeparator)
             {
                 // directory is missing ending slash, check that target has it
                 return target.Length > dir.Length && target[dir.Length] == UPath.DirectorySeparator;
