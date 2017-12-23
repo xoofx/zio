@@ -4,7 +4,6 @@
 
 ## Overview
 
-
 Zio is structured around the following concepts:
 
 - The core interface is `Zio.IFileSystem`

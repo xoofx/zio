@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.0 (23 Dec 2017)
+- Add support for mount points at any path for `MountFileSystem`, coutesy of [Rohan Singh](https://github.com/Rohansi) via [PR #11](https://github.com/xoofx/zio/pull/11)
+
 ## 0.5.0 (10 Dec 2017)
 - Propagate the originating IFileSystem to the IFileSystemWatcher events
 
