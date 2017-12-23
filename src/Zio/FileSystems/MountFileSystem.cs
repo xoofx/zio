@@ -16,7 +16,7 @@ namespace Zio.FileSystems
     /// </summary>
     public class MountFileSystem : ComposeFileSystem
     {
-        private readonly Dictionary<string, IFileSystem> _mounts;
+        private readonly SortedList<UPath, IFileSystem> _mounts;
         private readonly List<AggregateFileSystemWatcher> _aggregateWatchers;
         private readonly List<Watcher> _watchers;
 
@@ -33,7 +33,7 @@ namespace Zio.FileSystems
         /// <param name="defaultBackupFileSystem">The default backup file system.</param>
         public MountFileSystem(IFileSystem defaultBackupFileSystem) : base(defaultBackupFileSystem)
         {
-            _mounts = new Dictionary<string, IFileSystem>();
+            _mounts = new SortedList<UPath, IFileSystem>(new UPathLengthComparer());
             _aggregateWatchers = new List<AggregateFileSystemWatcher>();
             _watchers = new List<Watcher>();
         }
@@ -45,9 +45,9 @@ namespace Zio.FileSystems
         /// <param name="fileSystem">The file system.</param>
         /// <exception cref="System.ArgumentNullException">fileSystem</exception>
         /// <exception cref="System.ArgumentException">
-        /// Cannot recursively mount the filesystem to self - fileSystem
+        /// Cannot recursively mount the filesystem to self - <paramref name="fileSystem"/>
         /// or
-        /// There is already a mount with the same name: `{mountName}` - name
+        /// There is already a mount with the same name: `{name}` - <paramref name="name"/>
         /// </exception>
         public void Mount(UPath name, IFileSystem fileSystem)
         {
@@ -57,22 +57,22 @@ namespace Zio.FileSystems
                 throw new ArgumentException("Cannot recursively mount the filesystem to self", nameof(fileSystem));
             }
             AssertMountName(name);
-            var mountName = name.GetName();
+            name = NormalizeMountName(name);
 
             lock (_mounts)
             {
-                if (_mounts.ContainsKey(mountName))
+                if (_mounts.ContainsKey(name))
                 {
-                    throw new ArgumentException($"There is already a mount with the same name: `{mountName}`", nameof(name));
+                    throw new ArgumentException($"There is already a mount with the same name: `{name}`", nameof(name));
                 }
-                _mounts.Add(mountName, fileSystem);
+                _mounts.Add(name, fileSystem);
 
                 lock (_aggregateWatchers)
                 {
                     foreach (var watcher in _aggregateWatchers)
                     {
                         var internalWatcher = fileSystem.Watch(UPath.Root);
-                        watcher.Add(new Watcher(this, mountName, UPath.Root, internalWatcher));
+                        watcher.Add(new Watcher(this, name, UPath.Root, internalWatcher));
                     }
                 }
             }
@@ -86,11 +86,11 @@ namespace Zio.FileSystems
         public bool IsMounted(UPath name)
         {
             AssertMountName(name);
-            var mountName = name.GetName();
+            name = NormalizeMountName(name);
 
             lock (_mounts)
             {
-                return _mounts.ContainsKey(mountName);
+                return _mounts.ContainsKey(name);
             }
         }
 
@@ -105,7 +105,7 @@ namespace Zio.FileSystems
             {
                 foreach (var mount in _mounts)
                 {
-                    dict.Add(UPath.Root / mount.Key, mount.Value);
+                    dict.Add(mount.Key, mount.Value);
                 }
             }
             return dict;
@@ -115,21 +115,22 @@ namespace Zio.FileSystems
         /// Unmounts the specified mount name and its attached filesystem.
         /// </summary>
         /// <param name="name">The mount name.</param>
-        /// <exception cref="System.ArgumentException">The mount with the name `{mountName}` was not found</exception>
+        /// <exception cref="System.ArgumentException">The mount with the name <paramref name="name"/> was not found</exception>
         public void Unmount(UPath name)
         {
             AssertMountName(name);
-            var mountName = name.GetName();
-            IFileSystem mountFileSystem = null;
+            name = NormalizeMountName(name);
+
+            IFileSystem mountFileSystem;
 
             lock (_mounts)
             {
-                if (!_mounts.TryGetValue(mountName, out mountFileSystem))
+                if (!_mounts.TryGetValue(name, out mountFileSystem))
                 {
-                    throw new ArgumentException($"The mount with the name `{mountName}` was not found");
+                    throw new ArgumentException($"The mount with the name `{name}` was not found");
                 }
 
-                _mounts.Remove(mountName);
+                _mounts.Remove(name);
             }
 
             lock (_aggregateWatchers)
@@ -492,8 +493,7 @@ namespace Zio.FileSystems
                 {
                     foreach (var mountName in _mounts.Keys)
                     {
-                        var mountPath = UPath.Root / mountName;
-                        directories.Add(mountPath);
+                        directories.Add(mountName);
                     }
                 }
 
@@ -513,8 +513,7 @@ namespace Zio.FileSystems
 
             IEnumerable<UPath> EnumeratePathFromFileSystem(UPath subPath, bool failOnInvalidPath)
             {
-                string mountName;
-                var fs = TryGetMountOrNext(ref subPath, out mountName);
+                var fs = TryGetMountOrNext(ref subPath, out var mountPath);
 
                 if (fs == null)
                 {
@@ -528,11 +527,11 @@ namespace Zio.FileSystems
                 if (fs != NextFileSystem)
                 {
                     // In the case of a mount, we need to return the full path
-                    Debug.Assert(mountName != null);
-                    var pathPrefix = UPath.Root / mountName;
+                    Debug.Assert(!mountPath.IsNull);
+
                     foreach (var entry in fs.EnumeratePaths(subPath, searchPattern, searchOption, searchTarget))
                     {
-                        yield return pathPrefix / entry.ToRelative();
+                        yield return mountPath / entry.ToRelative();
                     }
                 }
                 else
@@ -633,14 +632,14 @@ namespace Zio.FileSystems
             {
                 // watch only one mount point
                 var internalPath = path;
-                var fs = TryGetMountOrNext(ref internalPath, out var mountName);
+                var fs = TryGetMountOrNext(ref internalPath, out var mountPath);
                 if (fs == null)
                 {
                     throw NewFileNotFoundException(path);
                 }
 
                 var internalWatcher = fs.Watch(internalPath);
-                var watcher = new Watcher(this, mountName, path, internalWatcher);
+                var watcher = new Watcher(this, mountPath, path, internalWatcher);
 
                 lock (_watchers)
                 {
@@ -653,23 +652,23 @@ namespace Zio.FileSystems
 
         private class Watcher : WrapFileSystemWatcher
         {
-            private readonly string _mountName;
+            private readonly UPath _mountPath;
 
             public IFileSystem MountFileSystem { get; }
 
-            public Watcher(MountFileSystem fileSystem, string mountName, UPath path, IFileSystemWatcher watcher)
+            public Watcher(MountFileSystem fileSystem, UPath mountPath, UPath path, IFileSystemWatcher watcher)
                 : base(fileSystem, path, watcher)
             {
-                _mountName = mountName;
+                _mountPath = mountPath;
 
                 MountFileSystem = watcher.FileSystem;
             }
 
             protected override UPath? TryConvertPath(UPath pathFromEvent)
             {
-                if (_mountName != null)
+                if (!_mountPath.IsNull)
                 {
-                    return UPath.Root / _mountName / pathFromEvent.ToRelative();
+                    return _mountPath / pathFromEvent.ToRelative();
                 }
                 else
                 {
@@ -692,52 +691,71 @@ namespace Zio.FileSystems
 
         private IFileSystem TryGetMountOrNext(ref UPath path)
         {
-            string mountName;
-            return TryGetMountOrNext(ref path, out mountName);
+            return TryGetMountOrNext(ref path, out var _);
         }
 
-        private IFileSystem TryGetMountOrNext(ref UPath path, out string mountName)
+        private IFileSystem TryGetMountOrNext(ref UPath path, out UPath mountPath)
         {
-            mountName = null;
+            mountPath = null;
             if (path.IsNull)
             {
                 return null;
             }
 
-            UPath mountSubPath;
-
-            mountName = path.GetFirstDirectory(out mountSubPath);
-            IFileSystem mountfs;
+            IFileSystem mountfs = null;
             lock (_mounts)
             {
-                _mounts.TryGetValue(mountName, out mountfs);
+                foreach (var kvp in _mounts)
+                {
+                    if (path.IsInDirectory(kvp.Key, true))
+                    {
+                        mountPath = kvp.Key;
+                        mountfs = kvp.Value;
+                        path = new UPath(path.FullName.Substring(mountPath.FullName.Length)).ToAbsolute();
+                        break;
+                    }
+                }
             }
 
             if (mountfs != null)
             {
-                path = mountSubPath.ToAbsolute();
                 return mountfs;
             }
-            else if (NextFileSystem != null)
-            {
-                mountName = null;
-                return NextFileSystem;
-            }
-            mountName = null;
-            return null;
+            
+            mountPath = null;
+            return NextFileSystem;
+        }
+
+        private static UPath NormalizeMountName(UPath name)
+        {
+            if (name.FullName[name.FullName.Length - 1] == UPath.DirectorySeparator)
+                return name;
+
+            return name.FullName + "/";
         }
 
         private void AssertMountName(UPath name)
         {
-            name.AssertAbsolute();
+            name.AssertAbsolute(nameof(name));
             if (name == UPath.Root)
             {
                 throw new ArgumentException("The mount name cannot be a `/` root filesystem", nameof(name));
             }
+        }
 
-            if (name.GetDirectory() != UPath.Root)
+        private class UPathLengthComparer : IComparer<UPath>
+        {
+            public int Compare(UPath x, UPath y)
             {
-                throw new ArgumentException("The mount name cannot contain subpath and must contain only a root path e.g `/mount`", nameof(name));
+                // longest UPath first
+                var lengthCompare = y.FullName.Length.CompareTo(x.FullName.Length);
+                if (lengthCompare != 0)
+                {
+                    return lengthCompare;
+                }
+
+                // then compare name if equal length (otherwise we get exceptions about duplicates)
+                return string.CompareOrdinal(x.FullName, y.FullName);
             }
         }
     }

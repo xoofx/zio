@@ -293,6 +293,12 @@ namespace Zio.Tests
         
         // Test relative paths
         [InlineData("a/b", "a", false, true)]
+        
+        // Test exact match
+        [InlineData("/a/b/", "/a/b/", false, true)]
+        [InlineData("/a/b/", "/a/b/", true, true)]
+        [InlineData("/a/b", "/a/b", false, true)]
+        [InlineData("/a/b", "/a/b", true, true)]
         public void TestIsInDirectory(string path1, string directory, bool recursive, bool expected)
         {
             var path = (UPath)path1;

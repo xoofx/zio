@@ -106,8 +106,6 @@ namespace Zio.Tests.FileSystems
             Assert.Throws<ArgumentNullException>(() => fs.Mount("/test", null));
             Assert.Throws<ArgumentException>(() => fs.Mount("test", memfs));
             Assert.Throws<ArgumentException>(() => fs.Mount("/", memfs));
-            Assert.Throws<ArgumentException>(() => fs.Mount("/test/a", memfs));
-            Assert.Throws<ArgumentException>(() => fs.Mount("/test/a/b", memfs));
 
             Assert.False(fs.IsMounted("/test"));
             fs.Mount("/test", memfs);
@@ -139,6 +137,12 @@ namespace Zio.Tests.FileSystems
             fs.Unmount("/test2");
 
             Assert.Equal(0, fs.GetMounts().Count);
+
+            var innerFs = GetCommonMemoryFileSystem();
+            fs.Mount("/x/y", innerFs);
+            fs.Mount("/x/y/b", innerFs);
+            Assert.True(fs.FileExists("/x/y/A.txt"));
+            Assert.True(fs.FileExists("/x/y/b/A.txt"));
         }
 
 
