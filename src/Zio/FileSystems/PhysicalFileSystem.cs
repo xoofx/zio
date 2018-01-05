@@ -603,7 +603,7 @@ namespace Zio.FileSystems
             {
                 var newChangeType = (WatcherChangeTypes)args.ChangeType;
                 var newPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
-                var newOldPath = _fileSystem.ConvertPathFromInternal(args.FullPath);
+                var newOldPath = _fileSystem.ConvertPathFromInternal(args.OldFullPath);
                 return new FileRenamedEventArgs(FileSystem, newChangeType, newPath, newOldPath);
             }
         }
