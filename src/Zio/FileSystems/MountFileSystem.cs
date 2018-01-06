@@ -72,7 +72,10 @@ namespace Zio.FileSystems
                     foreach (var watcher in _aggregateWatchers)
                     {
                         var internalWatcher = fileSystem.Watch(UPath.Root);
-                        watcher.Add(new Watcher(this, name, UPath.Root, internalWatcher));
+                        if (internalWatcher != null)
+                        {
+                            watcher.Add(new Watcher(this, name, UPath.Root, internalWatcher));
+                        }
                     }
                 }
             }
@@ -614,13 +617,19 @@ namespace Zio.FileSystems
                     foreach (var kvp in _mounts)
                     {
                         var internalWatcher = kvp.Value.Watch(UPath.Root);
-                        watcher.Add(new Watcher(this, kvp.Key, UPath.Root, internalWatcher));
+                        if (internalWatcher != null)
+                        {
+                            watcher.Add(new Watcher(this, kvp.Key, UPath.Root, internalWatcher));
+                        }
                     }
 
                     if (NextFileSystem != null)
                     {
                         var internalWatcher = NextFileSystem.Watch(UPath.Root);
-                        watcher.Add(new Watcher(this, null, UPath.Root, internalWatcher));
+                        if (internalWatcher != null)
+                        {
+                            watcher.Add(new Watcher(this, null, UPath.Root, internalWatcher));
+                        }
                     }
 
                     _aggregateWatchers.Add(watcher);
@@ -639,6 +648,11 @@ namespace Zio.FileSystems
                 }
 
                 var internalWatcher = fs.Watch(internalPath);
+                if (internalWatcher == null)
+                {
+                    return null;
+                }
+
                 var watcher = new Watcher(this, mountPath, path, internalWatcher);
 
                 lock (_watchers)

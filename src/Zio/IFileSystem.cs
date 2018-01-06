@@ -188,7 +188,7 @@ namespace Zio
         /// configured before events are called.
         /// </summary>
         /// <param name="path">The path to watch for changes.</param>
-        /// <returns>An <see cref="IFileSystemWatcher"/> instance that watches the given path.</returns>
+        /// <returns>An <see cref="IFileSystemWatcher"/> instance that watches the given path, or <c>null</c> if the filesystem cannot be watched.</returns>
         IFileSystemWatcher Watch(UPath path);
 
         // ----------------------------------------------

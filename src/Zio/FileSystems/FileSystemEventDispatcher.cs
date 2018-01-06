@@ -79,6 +79,11 @@ namespace Zio.FileSystems
         /// <param name="watcher">Instance to add.</param>
         public void Add(T watcher)
         {
+            if (watcher == null)
+            {
+                throw new ArgumentNullException(nameof(watcher));
+            }
+
             lock (_watchers)
             {
                 _watchers.Add(watcher);
@@ -91,6 +96,11 @@ namespace Zio.FileSystems
         /// <param name="watcher">Instance to remove.</param>
         public void Remove(T watcher)
         {
+            if (watcher == null)
+            {
+                throw new ArgumentNullException(nameof(watcher));
+            }
+
             lock (_watchers)
             {
                 _watchers.Remove(watcher);
