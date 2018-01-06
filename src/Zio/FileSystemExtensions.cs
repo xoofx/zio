@@ -718,7 +718,7 @@ namespace Zio
         }
 
         /// <summary>
-        /// Gets a <see cref="FileSystemEntry"/> for the specified path. If the file or directory does no exist, throws a <see cref="FileNotFoundException"/>
+        /// Gets a <see cref="FileSystemEntry"/> for the specified path. If the file or directory does not exist, throws a <see cref="FileNotFoundException"/>
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The file or directory path.</param>
@@ -740,7 +740,7 @@ namespace Zio
         }
 
         /// <summary>
-        /// Tries to get a <see cref="FileSystemEntry"/> for the specified path. If the file or directory does no exist, returns null.
+        /// Tries to get a <see cref="FileSystemEntry"/> for the specified path. If the file or directory does not exist, returns null.
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The file or directory path.</param>
@@ -762,7 +762,7 @@ namespace Zio
         }
 
         /// <summary>
-        /// Gets a <see cref="FileEntry"/> for the specified path. If the file does no exist, throws a <see cref="FileNotFoundException"/>
+        /// Gets a <see cref="FileEntry"/> for the specified path. If the file does not exist, throws a <see cref="FileNotFoundException"/>
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <param name="filePath">The file path.</param>
@@ -777,7 +777,7 @@ namespace Zio
         }
 
         /// <summary>
-        /// Gets a <see cref="DirectoryEntry"/> for the specified path. If the file does no exist, throws a <see cref="DirectoryNotFoundException"/>
+        /// Gets a <see cref="DirectoryEntry"/> for the specified path. If the file does not exist, throws a <see cref="DirectoryNotFoundException"/>
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <param name="directoryPath">The directory path.</param>
@@ -789,6 +789,22 @@ namespace Zio
                 throw NewDirectoryNotFoundException(directoryPath);
             }
             return new DirectoryEntry(fileSystem, directoryPath);
+        }
+
+        /// <summary>
+        /// Tries to watch the specified path. If watching the file system or path is not supported, returns null.
+        /// </summary>
+        /// <param name="fileSystem">The file system.</param>
+        /// <param name="path">The path to watch for changes.</param>
+        /// <returns>An <see cref="IFileSystemWatcher"/> instance or null if not supported.</returns>
+        public static IFileSystemWatcher TryWatch(this IFileSystem fileSystem, UPath path)
+        {
+            if (!fileSystem.CanWatch(path))
+            {
+                return null;
+            }
+
+            return fileSystem.Watch(path);
         }
     }
 }
