@@ -44,6 +44,12 @@ namespace Zio.FileSystems
                     throw new ArgumentException("The filesystem watcher is already added", nameof(watcher));
                 }
 
+                watcher.InternalBufferSize = InternalBufferSize;
+                watcher.NotifyFilter = NotifyFilter;
+                watcher.EnableRaisingEvents = EnableRaisingEvents;
+                watcher.IncludeSubdirectories = IncludeSubdirectories;
+                watcher.Filter = Filter;
+
                 RegisterEvents(watcher);
                 _children.Add(watcher);
             }
