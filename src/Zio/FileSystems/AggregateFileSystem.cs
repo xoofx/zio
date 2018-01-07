@@ -93,8 +93,11 @@ namespace Zio.FileSystems
 
                     foreach (var watcher in _watchers)
                     {
-                        var newWatcher = fileSystem.Watch(watcher.Path);
-                        watcher.Add(newWatcher);
+                        if (fileSystem.CanWatch(watcher.Path))
+                        {
+                            var newWatcher = fileSystem.Watch(watcher.Path);
+                            watcher.Add(newWatcher);
+                        }
                     }
                 }
             }
@@ -121,8 +124,11 @@ namespace Zio.FileSystems
 
                     foreach (var watcher in _watchers)
                     {
-                        var newWatcher = fs.Watch(watcher.Path);
-                        watcher.Add(newWatcher);
+                        if (fs.CanWatch(watcher.Path))
+                        {
+                            var newWatcher = fs.Watch(watcher.Path);
+                            watcher.Add(newWatcher);
+                        }
                     }
                 }
                 else
@@ -372,14 +378,17 @@ namespace Zio.FileSystems
             {
                 var watcher = new AggregateFileSystemWatcher(this, path);
 
-                if (NextFileSystem != null)
+                if (NextFileSystem != null && NextFileSystem.CanWatch(path))
                 {
                     watcher.Add(NextFileSystem.Watch(path));
                 }
 
                 foreach (var fs in _fileSystems)
                 {
-                    watcher.Add(fs.Watch(path));
+                    if (fs.CanWatch(path))
+                    {
+                        watcher.Add(fs.Watch(path));
+                    }
                 }
 
                 _watchers.Add(watcher);
