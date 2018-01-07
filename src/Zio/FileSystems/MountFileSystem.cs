@@ -18,7 +18,6 @@ namespace Zio.FileSystems
     {
         private readonly SortedList<UPath, IFileSystem> _mounts;
         private readonly List<AggregateFileSystemWatcher> _aggregateWatchers;
-        private readonly List<Watcher> _watchers;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MountFileSystem"/> class.
@@ -35,7 +34,6 @@ namespace Zio.FileSystems
         {
             _mounts = new SortedList<UPath, IFileSystem>(new UPathLengthComparer());
             _aggregateWatchers = new List<AggregateFileSystemWatcher>();
-            _watchers = new List<Watcher>();
         }
 
         /// <summary>
@@ -57,7 +55,6 @@ namespace Zio.FileSystems
                 throw new ArgumentException("Cannot recursively mount the filesystem to self", nameof(fileSystem));
             }
             AssertMountName(name);
-            name = NormalizeMountName(name);
 
             lock (_mounts)
             {
@@ -71,8 +68,14 @@ namespace Zio.FileSystems
                 {
                     foreach (var watcher in _aggregateWatchers)
                     {
-                        var internalWatcher = fileSystem.Watch(UPath.Root);
-                        watcher.Add(new Watcher(this, name, UPath.Root, internalWatcher));
+                        var remainingPath = GetRemainingForWatch(watcher.Path, name);
+                        if (remainingPath.IsNull)
+                        {
+                            continue;
+                        }
+
+                        var internalWatcher = fileSystem.Watch(remainingPath);
+                        watcher.Add(new Watcher(this, name, remainingPath, internalWatcher));
                     }
                 }
             }
@@ -86,7 +89,6 @@ namespace Zio.FileSystems
         public bool IsMounted(UPath name)
         {
             AssertMountName(name);
-            name = NormalizeMountName(name);
 
             lock (_mounts)
             {
@@ -119,7 +121,6 @@ namespace Zio.FileSystems
         public void Unmount(UPath name)
         {
             AssertMountName(name);
-            name = NormalizeMountName(name);
 
             IFileSystem mountFileSystem;
 
@@ -138,19 +139,6 @@ namespace Zio.FileSystems
                 foreach (var watcher in _aggregateWatchers)
                 {
                     watcher.RemoveFrom(mountFileSystem);
-                }
-            }
-
-            lock (_watchers)
-            {
-                for (var i = _watchers.Count - 1; i >= 0; i--)
-                {
-                    var watcher = _watchers[i];
-
-                    if (watcher.MountFileSystem == mountFileSystem)
-                    {
-                        _watchers.RemoveAt(i);
-                    }
                 }
             }
         }
@@ -601,53 +589,35 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         protected override IFileSystemWatcher WatchImpl(UPath path)
         {
-            if (path == UPath.Root)
+            // TODO: create/delete events when mounts are added/removed
+            
+            var watcher = new AggregateFileSystemWatcher(this, path);
+
+            lock (_mounts)
+            lock (_aggregateWatchers)
             {
-                // watch on all
-                // TODO: create/delete events when mounts are added/removed
-
-                var watcher = new AggregateFileSystemWatcher(this, path);
-
-                lock (_mounts)
-                lock (_aggregateWatchers)
+                foreach (var kvp in _mounts)
                 {
-                    foreach (var kvp in _mounts)
+                    var remainingPath = GetRemainingForWatch(kvp.Key, path);
+                    if (remainingPath.IsNull)
                     {
-                        var internalWatcher = kvp.Value.Watch(UPath.Root);
-                        watcher.Add(new Watcher(this, kvp.Key, UPath.Root, internalWatcher));
+                        continue;
                     }
-
-                    if (NextFileSystem != null)
-                    {
-                        var internalWatcher = NextFileSystem.Watch(UPath.Root);
-                        watcher.Add(new Watcher(this, null, UPath.Root, internalWatcher));
-                    }
-
-                    _aggregateWatchers.Add(watcher);
+                    
+                    var internalWatcher = kvp.Value.Watch(remainingPath);
+                    watcher.Add(new Watcher(this, kvp.Key, remainingPath, internalWatcher));
                 }
 
-                return watcher;
-            }
-            else
-            {
-                // watch only one mount point
-                var internalPath = path;
-                var fs = TryGetMountOrNext(ref internalPath, out var mountPath);
-                if (fs == null)
+                if (NextFileSystem != null)
                 {
-                    throw NewFileNotFoundException(path);
+                    var internalWatcher = NextFileSystem.Watch(path);
+                    watcher.Add(new Watcher(this, null, path, internalWatcher));
                 }
 
-                var internalWatcher = fs.Watch(internalPath);
-                var watcher = new Watcher(this, mountPath, path, internalWatcher);
-
-                lock (_watchers)
-                {
-                    _watchers.Add(watcher);
-                }
-
-                return watcher;
+                _aggregateWatchers.Add(watcher);
             }
+
+            return watcher;
         }
 
         private class Watcher : WrapFileSystemWatcher
@@ -707,13 +677,16 @@ namespace Zio.FileSystems
             {
                 foreach (var kvp in _mounts)
                 {
-                    if (path.IsInDirectory(kvp.Key, true))
+                    var remainingPath = GetRemaining(kvp.Key, path);
+                    if (remainingPath.IsNull)
                     {
-                        mountPath = kvp.Key;
-                        mountfs = kvp.Value;
-                        path = new UPath(path.FullName.Substring(mountPath.FullName.Length)).ToAbsolute();
-                        break;
+                        continue;
                     }
+
+                    mountPath = kvp.Key;
+                    mountfs = kvp.Value;
+                    path = remainingPath;
+                    break;
                 }
             }
 
@@ -726,12 +699,45 @@ namespace Zio.FileSystems
             return NextFileSystem;
         }
 
-        private static UPath NormalizeMountName(UPath name)
+        /// <summary>
+        /// Like <see cref="GetRemaining"/> but if <paramref name="path"/> is root this will return root.
+        /// </summary>
+        private static UPath GetRemainingForWatch(UPath prefix, UPath path)
         {
-            if (name.FullName[name.FullName.Length - 1] == UPath.DirectorySeparator)
-                return name;
+            UPath remainingPath;
+            if (path == UPath.Root)
+            {
+                remainingPath = path;
+            }
+            else
+            {
+                remainingPath = GetRemaining(prefix, path);
+                if (remainingPath.IsNull)
+                {
+                    return null;
+                }
+            }
 
-            return name.FullName + "/";
+            return remainingPath;
+        }
+
+        /// <summary>
+        /// Gets the remaining path after the <see cref="prefix"/>.
+        /// </summary>
+        /// <param name="prefix">The prefix of the path.</param>
+        /// <param name="path">The path to search.</param>
+        /// <returns>The path after the prefix, or a <c>null</c> path if <see cref="path"/> does not have the correct prefix.</returns>
+        private static UPath GetRemaining(UPath prefix, UPath path)
+        {
+            if (!path.IsInDirectory(prefix, true))
+            {
+                return null;
+            }
+
+            var remaining = path.FullName.Substring(prefix.FullName.Length);
+            var remainingPath = new UPath(remaining).ToAbsolute();
+
+            return remainingPath;
         }
 
         private void AssertMountName(UPath name)
