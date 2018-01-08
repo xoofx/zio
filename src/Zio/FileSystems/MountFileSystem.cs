@@ -74,8 +74,11 @@ namespace Zio.FileSystems
                             continue;
                         }
 
-                        var internalWatcher = fileSystem.Watch(remainingPath);
-                        watcher.Add(new Watcher(this, name, remainingPath, internalWatcher));
+                        if (fileSystem.CanWatch(remainingPath))
+                        {
+                            var internalWatcher = fileSystem.Watch(remainingPath);
+                            watcher.Add(new Watcher(this, name, remainingPath, internalWatcher));
+                        }
                     }
                 }
             }
@@ -603,12 +606,15 @@ namespace Zio.FileSystems
                     {
                         continue;
                     }
-                    
-                    var internalWatcher = kvp.Value.Watch(remainingPath);
-                    watcher.Add(new Watcher(this, kvp.Key, remainingPath, internalWatcher));
+
+                    if (kvp.Value.CanWatch(remainingPath))
+                    {
+                        var internalWatcher = kvp.Value.Watch(remainingPath);
+                        watcher.Add(new Watcher(this, kvp.Key, remainingPath, internalWatcher));
+                    }
                 }
 
-                if (NextFileSystem != null)
+                if (NextFileSystem != null && NextFileSystem.CanWatch(path))
                 {
                     var internalWatcher = NextFileSystem.Watch(path);
                     watcher.Add(new Watcher(this, null, path, internalWatcher));

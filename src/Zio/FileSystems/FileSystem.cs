@@ -439,18 +439,45 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
+        public bool CanWatch(UPath path)
+        {
+            AssertNotDisposed();
+            return CanWatchImpl(ValidatePath(path));
+        }
+
+        /// <summary>
+        /// Implementation for <see cref="CanWatch"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Checks if the file system and <paramref name="path"/> can be watched with <see cref="Watch"/>.
+        /// </summary>
+        /// <param name="path">The path to check.</param>
+        /// <returns>True if the the path can be watched on this file system.</returns>
+        protected virtual bool CanWatchImpl(UPath path)
+        {
+            return true;
+        }
+
+        /// <inheritdoc />
         public IFileSystemWatcher Watch(UPath path)
         {
             AssertNotDisposed();
-            return WatchImpl(ValidatePath(path));
+
+            var validatedPath = ValidatePath(path);
+
+            if (!CanWatchImpl(validatedPath))
+            {
+                throw new NotSupportedException($"The file system or path `{validatedPath}` does not support watching");
+            }
+
+            return WatchImpl(validatedPath);
         }
 
         /// <summary>
         /// Implementation for <see cref="Watch"/>, <paramref name="path"/> is guaranteed to be absolute and valudated through <see cref="ValidatePath"/>.
-        /// Returns an <see cref="IFileSystemWatcher"/> instance that can be used to watch for changes to files and directories in the given path.
+        /// Returns an <see cref="IFileSystemWatcher"/> instance that can be used to watch for changes to files and directories in the given path. The instance must be
+        /// configured before events are raised.
         /// </summary>
         /// <param name="path">The path to watch for changes.</param>
-        /// <returns>An <see cref="IFileSystemWatcher"/> instance that can be used to watch for changes.</returns>
+        /// <returns>An <see cref="IFileSystemWatcher"/> instance that watches the given path.</returns>
         protected abstract IFileSystemWatcher WatchImpl(UPath path);
 
         // ----------------------------------------------
