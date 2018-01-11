@@ -155,8 +155,9 @@ namespace Zio.FileSystems
         /// Unmounts the specified mount name and its attached filesystem.
         /// </summary>
         /// <param name="name">The mount name.</param>
+        /// <returns>The filesystem that was unmounted.</returns>
         /// <exception cref="System.ArgumentException">The mount with the name <paramref name="name"/> was not found</exception>
-        public void Unmount(UPath name)
+        public IFileSystem Unmount(UPath name)
         {
             AssertMountName(name);
 
@@ -179,6 +180,8 @@ namespace Zio.FileSystems
                     watcher.RemoveFrom(mountFileSystem);
                 }
             }
+
+            return mountFileSystem;
         }
 
         /// <inheritdoc />
