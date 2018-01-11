@@ -476,20 +476,34 @@ namespace Zio.FileSystems
                 }
             }
 
+            IEnumerable<string> results;
             switch (searchTarget)
             {
                 case SearchTarget.File:
-                    foreach (var subPath in Directory.EnumerateFiles(ConvertPathToInternal(path), searchPattern, searchOption))
-                        yield return ConvertPathFromInternal(subPath);
+                    results = Directory.EnumerateFiles(ConvertPathToInternal(path), searchPattern, searchOption);
                     break;
+
                 case SearchTarget.Directory:
-                    foreach (var subPath in Directory.EnumerateDirectories(ConvertPathToInternal(path), searchPattern, searchOption))
-                        yield return ConvertPathFromInternal(subPath);
+                    results = Directory.EnumerateDirectories(ConvertPathToInternal(path), searchPattern, searchOption);
                     break;
+
                 case SearchTarget.Both:
-                    foreach (var subPath in Directory.EnumerateFileSystemEntries(ConvertPathToInternal(path), searchPattern, searchOption))
-                        yield return ConvertPathFromInternal(subPath);
+                    results = Directory.EnumerateFileSystemEntries(ConvertPathToInternal(path), searchPattern, searchOption);
                     break;
+                
+                default:
+                    yield break;
+            }
+
+            foreach (var subPath in results)
+            {
+                // Windows will truncate the search pattern's extension to three characters if the filesystem
+                // has 8.3 paths enabled. This means searching for *.docx will list *.doc as well which is
+                // not what we want. Check against the search pattern again to filter out those false results.
+                if (!IsOnWindows || search.Match(Path.GetFileName(subPath)))
+                {
+                    yield return ConvertPathFromInternal(subPath);
+                }
             }
         }
 

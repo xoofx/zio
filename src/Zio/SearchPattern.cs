@@ -104,7 +104,6 @@ namespace Zio
                 }
             }
 
-            bool appendSpecialCaseForExt3Chars = false;
             var startIndex = 0;
             int nextIndex;
             StringBuilder builder = null;
@@ -129,16 +128,6 @@ namespace Zio
                     var regexPatternPart = c == '*' ? "[^/]*" : "[^/]";
                     builder.Append(regexPatternPart);
 
-                    // If the specified extension is exactly three characters long, 
-                    // the method returns files with extensions that begin with the specified extension. 
-                    // For example, "*.xls" returns both "book.xls" and "book.xlsx".
-                    // 012345
-                    // *.txt
-                    if (c == '*' && nextIndex + 5 == searchPattern.Length && searchPattern[nextIndex + 1] == '.' && searchPattern.IndexOf('.', nextIndex + 2) < 0)
-                    {
-                        appendSpecialCaseForExt3Chars = true;
-                    }
-
                     startIndex = nextIndex + 1;
                 }
                 if (builder == null)
@@ -152,11 +141,6 @@ namespace Zio
                     {
                         var toEscape = Regex.Escape(searchPattern.Substring(startIndex, length));
                         builder.Append(toEscape);
-                    }
-
-                    if (appendSpecialCaseForExt3Chars)
-                    {
-                        builder.Append("[^/]*");
                     }
 
                     builder.Append("$");

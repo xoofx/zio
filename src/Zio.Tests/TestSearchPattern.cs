@@ -49,7 +49,7 @@ namespace Zio.Tests
         [InlineData("/a/b/c", "x*.txt", "xyoyo.txt", true)]
         [InlineData("/a/b/c", "x*.txt", "x.txt", true)]
         [InlineData("/a/b/c", "*.txt", "x.txt", true)]
-        [InlineData("/a/b/c", "*.txt", "x.txt1", true)]
+        [InlineData("/a/b/c", "*.txt", "x.txt1", false)] // No 8.3 truncating
         [InlineData("/a/b/c", "*.i", "x.i", true)]
         [InlineData("/a/b/c", "*.i", "x.i1", false)]
         [InlineData("/a/b/c", "x*.txt", "x_txt", false)]
