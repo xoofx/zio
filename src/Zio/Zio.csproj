@@ -31,7 +31,7 @@
     <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE</DefineConstants>
   </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
     <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE</DefineConstants>
   </PropertyGroup>
   
