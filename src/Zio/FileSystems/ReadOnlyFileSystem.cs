@@ -22,7 +22,8 @@ namespace Zio.FileSystems
         /// Initializes a new instance of the <see cref="ReadOnlyFileSystem"/> class.
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
-        public ReadOnlyFileSystem(IFileSystem fileSystem) : base(fileSystem)
+        /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
+        public ReadOnlyFileSystem(IFileSystem fileSystem, bool owned = true) : base(fileSystem, owned)
         {
         }
 

@@ -20,7 +20,8 @@ namespace Zio.FileSystems
         /// <summary>
         /// Initializes a new instance of the <see cref="AggregateFileSystem"/> class.
         /// </summary>
-        public AggregateFileSystem() : this(null)
+        /// <param name="owned">True if filesystems should be disposed when this instance is disposed.</param>
+        public AggregateFileSystem(bool owned = true) : this(null, owned)
         {
         }
 
@@ -29,10 +30,44 @@ namespace Zio.FileSystems
         /// that will be used as a final filesystem while trying to resolve paths.
         /// </summary>
         /// <param name="fileSystem">The final backup filesystem (can be null).</param>
-        public AggregateFileSystem(IFileSystem fileSystem) : base(fileSystem)
+        /// <param name="owned">True if <paramref name="fileSystem"/> and other filesystems should be disposed when this instance is disposed.</param>
+        public AggregateFileSystem(IFileSystem fileSystem, bool owned = true) : base(fileSystem, owned)
         {
             _fileSystems = new List<IFileSystem>();
             _watchers = new List<AggregateFileSystemWatcher>();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+
+            if (!disposing)
+            {
+                return;
+            }
+
+            lock (_fileSystems)
+            {
+                if (Owned)
+                {
+                    foreach (var fs in _fileSystems)
+                    {
+                        fs.Dispose();
+                    }
+                }
+
+                _fileSystems.Clear();
+            }
+
+            lock (_watchers)
+            {
+                foreach (var watcher in _watchers)
+                {
+                    watcher.Dispose();
+                }
+
+                _watchers.Clear();
+            }
         }
 
         /// <summary>

@@ -13,13 +13,25 @@ namespace Zio.FileSystems
     /// </summary>
     public abstract class ComposeFileSystem : FileSystem
     {
+        protected bool Owned { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ComposeFileSystem"/> class.
         /// </summary>
         /// <param name="fileSystem">The delegated file system (can be null).</param>
-        protected ComposeFileSystem(IFileSystem fileSystem)
+        /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
+        protected ComposeFileSystem(IFileSystem fileSystem, bool owned = true)
         {
             NextFileSystem = fileSystem;
+            Owned = owned;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && Owned)
+            {
+                NextFileSystem?.Dispose();
+            }
         }
 
         /// <summary>

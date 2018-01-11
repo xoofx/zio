@@ -22,7 +22,8 @@ namespace Zio.FileSystems
         /// <summary>
         /// Initializes a new instance of the <see cref="MountFileSystem"/> class.
         /// </summary>
-        public MountFileSystem() : this(null)
+        /// <param name="owned">True if mounted filesystems should be disposed when this instance is disposed.</param>
+        public MountFileSystem(bool owned = true) : this(null, owned)
         {
         }
 
@@ -30,10 +31,44 @@ namespace Zio.FileSystems
         /// Initializes a new instance of the <see cref="MountFileSystem"/> class with a default backup filesystem.
         /// </summary>
         /// <param name="defaultBackupFileSystem">The default backup file system.</param>
-        public MountFileSystem(IFileSystem defaultBackupFileSystem) : base(defaultBackupFileSystem)
+        /// <param name="owned">True if <paramref name="defaultBackupFileSystem"/> and mounted filesytems should be disposed when this instance is disposed.</param>
+        public MountFileSystem(IFileSystem defaultBackupFileSystem, bool owned = true) : base(defaultBackupFileSystem, owned)
         {
             _mounts = new SortedList<UPath, IFileSystem>(new UPathLengthComparer());
             _aggregateWatchers = new List<AggregateFileSystemWatcher>();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+
+            if (!disposing)
+            {
+                return;
+            }
+
+            lock (_mounts)
+            {
+                if (Owned)
+                {
+                    foreach (var kvp in _mounts)
+                    {
+                        kvp.Value.Dispose();
+                    }
+                }
+
+                _mounts.Clear();
+            }
+
+            lock (_aggregateWatchers)
+            {
+                foreach (var watcher in _aggregateWatchers)
+                {
+                    watcher.Dispose();
+                }
+
+                _aggregateWatchers.Clear();
+            }
         }
 
         /// <summary>
@@ -120,8 +155,9 @@ namespace Zio.FileSystems
         /// Unmounts the specified mount name and its attached filesystem.
         /// </summary>
         /// <param name="name">The mount name.</param>
+        /// <returns>The filesystem that was unmounted.</returns>
         /// <exception cref="System.ArgumentException">The mount with the name <paramref name="name"/> was not found</exception>
-        public void Unmount(UPath name)
+        public IFileSystem Unmount(UPath name)
         {
             AssertMountName(name);
 
@@ -144,6 +180,8 @@ namespace Zio.FileSystems
                     watcher.RemoveFrom(mountFileSystem);
                 }
             }
+
+            return mountFileSystem;
         }
 
         /// <inheritdoc />
