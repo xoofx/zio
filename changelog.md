@@ -1,13 +1,20 @@
 # Changelog
 
+## 0.7.0 (11 Jan 2018)
+- Use dispose for all aggregate file systems. Add support for owned FS [(PR #22)](https://github.com/xoofx/zio/pull/22)
+- Fix SearchPattern special case for Windows. Via [(PR #23)](https://github.com/xoofx/zio/pull/23)
+- Correct MountFS watch behavior for arbitrary mounts. Via [(PR #17)](https://github.com/xoofx/zio/pull/17)
+- Add IFileSystem.CanWatch. Via [(PR #18)](https://github.com/xoofx/zio/pull/18)
+- Add support for netstandard2.0 to avoid pulling dependencies there. Via [(PR #21)](https://github.com/xoofx/zio/pull/21)
+
 ## 0.6.0 (23 Dec 2017)
-- Add support for mount points at any path for `MountFileSystem`, coutesy of [Rohan Singh](https://github.com/Rohansi) via [PR #11](https://github.com/xoofx/zio/pull/11)
+- Add support for mount points at any path for `MountFileSystem`. Courtesy of [Rohan Singh](https://github.com/Rohansi) via [PR #11](https://github.com/xoofx/zio/pull/11)
 
 ## 0.5.0 (10 Dec 2017)
 - Propagate the originating IFileSystem to the IFileSystemWatcher events
 
 ## 0.4.0 (9 Dec 2017)
-- Add support for `IFileSystemWatcher`, coutesy of [Rohan Singh](https://github.com/Rohansi) via [PR #9](https://github.com/xoofx/zio/pull/9)
+- Add support for `IFileSystemWatcher`, courtesy of [Rohan Singh](https://github.com/Rohansi) via [PR #9](https://github.com/xoofx/zio/pull/9)
 
 ## 0.3.6 (19 Nov 2017)
 - Try to fix a sporadic Unauthorized access when using CopyFileCross with a PhysicalFileSystem as a destination
