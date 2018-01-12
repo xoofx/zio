@@ -407,6 +407,13 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
+        protected override bool CanWatchImpl(UPath path)
+        {
+            // Always allow watching because a future filesystem can be added that matches this path.
+            return true;
+        }
+
+        /// <inheritdoc />
         protected override IFileSystemWatcher WatchImpl(UPath path)
         {
             lock (_fileSystems)
