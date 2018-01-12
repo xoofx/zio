@@ -510,6 +510,17 @@ namespace Zio.FileSystems
         // ----------------------------------------------
         // Watch API
         // ----------------------------------------------
+        
+        /// <inheritdoc />
+        protected override bool CanWatchImpl(UPath path)
+        {
+            if (IsWithinSpecialDirectory(path))
+            {
+                return SpecialDirectoryExists(path);
+            }
+
+            return Directory.Exists(ConvertPathToInternal(path));
+        }
 
         /// <inheritdoc />
         protected override IFileSystemWatcher WatchImpl(UPath path)

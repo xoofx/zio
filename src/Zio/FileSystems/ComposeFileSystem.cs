@@ -197,6 +197,12 @@ namespace Zio.FileSystems
         // ----------------------------------------------
         // Watch API
         // ----------------------------------------------
+        
+        /// <inheritdoc />
+        protected override bool CanWatchImpl(UPath path)
+        {
+            return NextFileSystemSafe.CanWatch(ConvertPathToDelegate(path));
+        }
 
         /// <inheritdoc />
         protected override IFileSystemWatcher WatchImpl(UPath path)
