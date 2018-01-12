@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.1 (12 Jan 2018)
+- Add CanWatch impls to physical and composite FS [(PR #24)](https://github.com/xoofx/zio/pull/24)
+
 ## 0.7.0 (11 Jan 2018)
 - Use dispose for all aggregate file systems. Add support for owned FS [(PR #22)](https://github.com/xoofx/zio/pull/22)
 - Fix SearchPattern special case for Windows. Via [(PR #23)](https://github.com/xoofx/zio/pull/23)
