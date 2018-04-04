@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.2 (04 Apr 2018)
+- Fix MountFS watchers having incorrect paths when created in Mount() [(PR #26)](https://github.com/xoofx/zio/pull/26)
+
 ## 0.7.1 (12 Jan 2018)
 - Add CanWatch impls to physical and composite FS [(PR #24)](https://github.com/xoofx/zio/pull/24)
 
