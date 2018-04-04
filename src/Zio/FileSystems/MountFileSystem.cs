@@ -103,8 +103,7 @@ namespace Zio.FileSystems
                 {
                     foreach (var watcher in _aggregateWatchers)
                     {
-                        var remainingPath = GetRemainingForWatch(watcher.Path, name);
-                        if (remainingPath.IsNull)
+                        if (!IsMountIncludedInWatch(name, watcher.Path, out var remainingPath))
                         {
                             continue;
                         }
@@ -646,8 +645,7 @@ namespace Zio.FileSystems
             {
                 foreach (var kvp in _mounts)
                 {
-                    var remainingPath = GetRemainingForWatch(kvp.Key, path);
-                    if (remainingPath.IsNull)
+                    if (!IsMountIncludedInWatch(kvp.Key, path, out var remainingPath))
                     {
                         continue;
                     }
@@ -751,25 +749,19 @@ namespace Zio.FileSystems
         }
 
         /// <summary>
-        /// Like <see cref="GetRemaining"/> but if <paramref name="path"/> is root this will return root.
+        /// Checks if a mount path would be included in the given watch path. Also provides the path to watch on the mounted
+        /// filesystem in <paramref name="remainingPath"/>.
         /// </summary>
-        private static UPath GetRemainingForWatch(UPath prefix, UPath path)
+        private static bool IsMountIncludedInWatch(UPath mountPrefix, UPath watchPath, out UPath remainingPath)
         {
-            UPath remainingPath;
-            if (path == UPath.Root)
+            if (watchPath == UPath.Root)
             {
-                remainingPath = path;
+                remainingPath = UPath.Root;
+                return true;
             }
-            else
-            {
-                remainingPath = GetRemaining(prefix, path);
-                if (remainingPath.IsNull)
-                {
-                    return null;
-                }
-            }
-
-            return remainingPath;
+            
+            remainingPath = GetRemaining(mountPrefix, watchPath);
+            return !remainingPath.IsNull;
         }
 
         /// <summary>
