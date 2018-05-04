@@ -145,6 +145,40 @@ namespace Zio.Tests.FileSystems
             Assert.True(fs.FileExists("/x/y/b/A.txt"));
         }
 
+        [Fact]
+        public void EnumerateDeepMount()
+        {
+            var fs = GetCommonMemoryFileSystem();
+            var mountFs = new MountFileSystem();
+            mountFs.Mount("/x/y/z", fs);
+            Assert.True(mountFs.FileExists("/x/y/z/A.txt"));
+
+            var expected = new List<UPath>
+            {
+                "/x",
+                "/x/y",
+                "/x/y/z",
+                "/x/y/z/a",
+                "/x/y/z/A.txt"
+            };
+
+            // only concerned with the first few because it should list the mount parts first
+            var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories).Take(5).ToList();
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void DirectoryExistsPartialMountName()
+        {
+            var fs = new MemoryFileSystem();
+            var mountFs = new MountFileSystem();
+            mountFs.Mount("/x/y/z", fs);
+
+            Assert.True(mountFs.DirectoryExists("/x"));
+            Assert.True(mountFs.DirectoryExists("/x/y"));
+            Assert.True(mountFs.DirectoryExists("/x/y/z"));
+            Assert.False(mountFs.DirectoryExists("/z"));
+        }
 
         [Fact]
         public void CreateDirectoryFail()
