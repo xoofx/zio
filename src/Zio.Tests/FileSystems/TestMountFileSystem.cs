@@ -168,6 +168,27 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
+        public void EnumerateDeepMountPartial()
+        {
+            var fs = GetCommonMemoryFileSystem();
+            var mountFs = new MountFileSystem();
+            mountFs.Mount("/x/y/z", fs);
+            Assert.True(mountFs.FileExists("/x/y/z/A.txt"));
+
+            var expected = new List<UPath>
+            {
+                "/x/y",
+                "/x/y/z",
+                "/x/y/z/a",
+                "/x/y/z/A.txt"
+            };
+
+            // only concerned with the first few because it should list the mount parts first
+            var actual = mountFs.EnumeratePaths("/x", "*", SearchOption.AllDirectories).Take(4).ToList();
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
         public void DirectoryExistsPartialMountName()
         {
             var fs = new MemoryFileSystem();
@@ -178,6 +199,21 @@ namespace Zio.Tests.FileSystems
             Assert.True(mountFs.DirectoryExists("/x/y"));
             Assert.True(mountFs.DirectoryExists("/x/y/z"));
             Assert.False(mountFs.DirectoryExists("/z"));
+        }
+
+        [Fact]
+        public void DirectoryEntryPartialMountName()
+        {
+            var fs = new MemoryFileSystem();
+            fs.CreateDirectory("/w");
+
+            var mountFs = new MountFileSystem();
+            mountFs.Mount("/x/y/z", fs);
+
+            Assert.NotNull(mountFs.GetDirectoryEntry("/x"));
+            Assert.NotNull(mountFs.GetDirectoryEntry("/x/y"));
+            Assert.NotNull(mountFs.GetDirectoryEntry("/x/y/z"));
+            Assert.NotNull(mountFs.GetDirectoryEntry("/x/y/z/w"));
         }
 
         [Fact]

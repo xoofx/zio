@@ -527,35 +527,43 @@ namespace Zio.FileSystems
             // Use the search pattern to normalize the path/search pattern
             var search = SearchPattern.Parse(ref path, ref searchPattern);
 
-            // Internal method used to retrieve the list of search locations
-            IEnumerable<SearchLocation> GetSearchLocations(UPath basePath)
+            // Query all mounts just once
+            List<KeyValuePair<UPath, IFileSystem>> mounts;
+            lock (_mounts)
             {
-                lock (_mounts)
-                {
-                    foreach (var kvp in _mounts)
-                    {
-                        // Check if path partially matches a mount name
-                        var remainingPath = GetRemaining(basePath, kvp.Key);
-                        if (!remainingPath.IsNull && remainingPath != UPath.Root)
-                        {
-                            yield return new SearchLocation(this, basePath, remainingPath);
-                            continue;
-                        }
+                mounts = _mounts.ToList();
+            }
 
-                        // Check if path fully matches a mount name
-                        remainingPath = GetRemaining(kvp.Key, basePath);
-                        if (!remainingPath.IsNull && kvp.Value.DirectoryExists(remainingPath))
-                        {
-                            yield return new SearchLocation(kvp.Value, kvp.Key, remainingPath);
-                            continue;
-                        }
+            // Internal method used to retrieve the list of search locations
+            List<SearchLocation> GetSearchLocations(UPath basePath)
+            {
+                var locations = new List<SearchLocation>();
+
+                foreach (var kvp in mounts)
+                {
+                    // Check if path partially matches a mount name
+                    var remainingPath = GetRemaining(basePath, kvp.Key);
+                    if (!remainingPath.IsNull && remainingPath != UPath.Root)
+                    {
+                        locations.Add(new SearchLocation(this, basePath, remainingPath));
+                        continue;
+                    }
+
+                    // Check if path fully matches a mount name
+                    remainingPath = GetRemaining(kvp.Key, basePath);
+                    if (!remainingPath.IsNull && kvp.Value.DirectoryExists(remainingPath))
+                    {
+                        locations.Add(new SearchLocation(kvp.Value, kvp.Key, remainingPath));
+                        continue;
                     }
                 }
 
                 if (NextFileSystem != null && NextFileSystem.DirectoryExists(basePath))
                 {
-                    yield return new SearchLocation(NextFileSystem, null, basePath);
+                    locations.Add(new SearchLocation(NextFileSystem, null, basePath));
                 }
+
+                return locations;
             }
             
             var directoryToVisit = new List<UPath>();
@@ -574,7 +582,7 @@ namespace Zio.FileSystems
                 entries.Clear();
                 sortedDirectories.Clear();
 
-                var locations = GetSearchLocations(pathToVisit).ToList();
+                var locations = GetSearchLocations(pathToVisit);
                 
                 // Only need to search within one filesystem, no need to sort or do other work
                 if (locations.Count == 1 && locations[0].FileSystem != this && (!first || searchOption == SearchOption.AllDirectories))
