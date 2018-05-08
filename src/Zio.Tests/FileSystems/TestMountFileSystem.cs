@@ -189,6 +189,38 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
+        public void EnumerateMountsOverride()
+        {
+            var baseFs = new MemoryFileSystem();
+            baseFs.CreateDirectory("/foo/bar");
+            baseFs.WriteAllText("/base.txt", "test");
+            baseFs.WriteAllText("/foo/base.txt", "test");
+            baseFs.WriteAllText("/foo/bar/base.txt", "test");
+
+            var mountedFs = new MemoryFileSystem();
+            mountedFs.WriteAllText("/mounted.txt", "test");
+
+            var deepMountedFs = new MemoryFileSystem();
+            deepMountedFs.WriteAllText("/deep_mounted.txt", "test");
+
+            var mountFs = new MountFileSystem(baseFs);
+            mountFs.Mount("/foo", mountedFs);
+            mountFs.Mount("/foo/bar", deepMountedFs);
+            
+            var expected = new List<UPath>
+            {
+                "/base.txt",
+                "/foo",
+                "/foo/bar",
+                "/foo/mounted.txt",
+                "/foo/bar/deep_mounted.txt"
+            };
+
+            var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories).ToList();
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
         public void DirectoryExistsPartialMountName()
         {
             var fs = new MemoryFileSystem();

@@ -538,6 +538,7 @@ namespace Zio.FileSystems
             List<SearchLocation> GetSearchLocations(UPath basePath)
             {
                 var locations = new List<SearchLocation>();
+                var matchedMount = false;
 
                 foreach (var kvp in mounts)
                 {
@@ -549,16 +550,23 @@ namespace Zio.FileSystems
                         continue;
                     }
 
-                    // Check if path fully matches a mount name
-                    remainingPath = GetRemaining(kvp.Key, basePath);
-                    if (!remainingPath.IsNull && kvp.Value.DirectoryExists(remainingPath))
+                    if (!matchedMount)
                     {
-                        locations.Add(new SearchLocation(kvp.Value, kvp.Key, remainingPath));
-                        continue;
+                        // Check if path fully matches a mount name
+                        remainingPath = GetRemaining(kvp.Key, basePath);
+                        if (!remainingPath.IsNull)
+                        {
+                            matchedMount = true; // don't check other mounts, we don't want to merge them together
+
+                            if (kvp.Value.DirectoryExists(remainingPath))
+                            {
+                                locations.Add(new SearchLocation(kvp.Value, kvp.Key, remainingPath));
+                            }
+                        }
                     }
                 }
 
-                if (NextFileSystem != null && NextFileSystem.DirectoryExists(basePath))
+                if (!matchedMount && NextFileSystem != null && NextFileSystem.DirectoryExists(basePath))
                 {
                     locations.Add(new SearchLocation(NextFileSystem, null, basePath));
                 }
