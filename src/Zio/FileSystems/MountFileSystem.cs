@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -210,6 +211,20 @@ namespace Zio.FileSystems
             {
                 return path == UPath.Root || fs.DirectoryExists(path);
             }
+
+            // Check if the path is part of a mount name
+            lock (_mounts)
+            {
+                foreach (var kvp in _mounts)
+                {
+                    var remainingPath = GetRemaining(path, kvp.Key);
+                    if (!remainingPath.IsNull)
+                    {
+                        return true;
+                    }
+                }
+            }
+
             return false;
         }
 
@@ -511,115 +526,151 @@ namespace Zio.FileSystems
         {
             // Use the search pattern to normalize the path/search pattern
             var search = SearchPattern.Parse(ref path, ref searchPattern);
-            var originalSrcPath = path;
 
-            // Internal method used to retrieve the list of root directories
-            SortedSet<UPath> GetRootDirectories()
+            // Query all mounts just once
+            List<KeyValuePair<UPath, IFileSystem>> mounts;
+            lock (_mounts)
             {
-                var directories = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
-                lock (_mounts)
-                {
-                    foreach (var mountName in _mounts.Keys)
-                    {
-                        directories.Add(mountName);
-                    }
-                }
+                mounts = _mounts.ToList();
+            }
 
-                if (NextFileSystem != null)
+            // Internal method used to retrieve the list of search locations
+            List<SearchLocation> GetSearchLocations(UPath basePath)
+            {
+                var locations = new List<SearchLocation>();
+                var matchedMount = false;
+
+                foreach (var kvp in mounts)
                 {
-                    foreach (var dir in NextFileSystem.EnumeratePaths(path, "*", SearchOption.TopDirectoryOnly, SearchTarget.Directory))
+                    // Check if path partially matches a mount name
+                    var remainingPath = GetRemaining(basePath, kvp.Key);
+                    if (!remainingPath.IsNull && remainingPath != UPath.Root)
                     {
-                        if (!directories.Contains(dir))
+                        locations.Add(new SearchLocation(this, basePath, remainingPath));
+                        continue;
+                    }
+
+                    if (!matchedMount)
+                    {
+                        // Check if path fully matches a mount name
+                        remainingPath = GetRemaining(kvp.Key, basePath);
+                        if (!remainingPath.IsNull)
                         {
-                            directories.Add(dir);
+                            matchedMount = true; // don't check other mounts, we don't want to merge them together
+
+                            if (kvp.Value.DirectoryExists(remainingPath))
+                            {
+                                locations.Add(new SearchLocation(kvp.Value, kvp.Key, remainingPath));
+                            }
                         }
                     }
                 }
 
-                return directories;
-            }
-
-            IEnumerable<UPath> EnumeratePathFromFileSystem(UPath subPath, bool failOnInvalidPath)
-            {
-                var fs = TryGetMountOrNext(ref subPath, out var mountPath);
-
-                if (fs == null)
+                if (!matchedMount && NextFileSystem != null && NextFileSystem.DirectoryExists(basePath))
                 {
-                    if (failOnInvalidPath)
-                    {
-                        throw NewDirectoryNotFoundException(originalSrcPath);
-                    }
-                    yield break;
+                    locations.Add(new SearchLocation(NextFileSystem, null, basePath));
                 }
 
-                if (fs != NextFileSystem)
-                {
-                    // In the case of a mount, we need to return the full path
-                    Debug.Assert(!mountPath.IsNull);
+                return locations;
+            }
+            
+            var directoryToVisit = new List<UPath>();
+            directoryToVisit.Add(path);
 
-                    foreach (var entry in fs.EnumeratePaths(subPath, searchPattern, searchOption, searchTarget))
+            var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
+            var sortedDirectories = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
+
+            var first = true;
+
+            while (directoryToVisit.Count > 0)
+            {
+                var pathToVisit = directoryToVisit[0];
+                directoryToVisit.RemoveAt(0);
+                var dirIndex = 0;
+                entries.Clear();
+                sortedDirectories.Clear();
+
+                var locations = GetSearchLocations(pathToVisit);
+                
+                // Only need to search within one filesystem, no need to sort or do other work
+                if (locations.Count == 1 && locations[0].FileSystem != this && (!first || searchOption == SearchOption.AllDirectories))
+                {
+                    var last = locations[0];
+                    foreach (var item in last.FileSystem.EnumeratePaths(last.Path, searchPattern, searchOption, searchTarget))
                     {
-                        yield return mountPath / entry.ToRelative();
+                        yield return CombinePrefix(last.Prefix, item);
                     }
                 }
                 else
                 {
-                    foreach (var entry in fs.EnumeratePaths(subPath, searchPattern, searchOption, searchTarget))
+                    for (var i = locations.Count - 1; i >= 0; i--)
                     {
-                        yield return entry;
-                    }
-                }
-            }
+                        var location = locations[i];
+                        var fileSystem = location.FileSystem;
+                        var searchPath = location.Path;
 
-            // Special case for the root as we have to return the list of mount directories
-            // and merge them with the underlying FileSystem
-            if (path == UPath.Root)
-            {
-                var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
-
-                // Return the list of dircetories
-                var directories = GetRootDirectories();
-
-                // Process the files first
-                if (NextFileSystem != null && (searchTarget == SearchTarget.File || searchTarget == SearchTarget.Both))
-                {
-                    foreach (var file in NextFileSystem.EnumeratePaths(path, searchPattern, SearchOption.TopDirectoryOnly, SearchTarget.File))
-                    {
-                        entries.Add(file);
-                    }
-                }
-
-                if (searchTarget != SearchTarget.File)
-                {
-                    foreach (var dir in directories)
-                    {
-                        if (search.Match(dir))
+                        if (fileSystem == this)
                         {
-                            entries.Add(dir);
+                            // List a single part of a mount name, queue it to be visited if needed
+                            var mountPart = new UPath(searchPath.GetFirstDirectory(out _)).ToRelative();
+                            var mountPath = location.Prefix / mountPart;
+
+                            var isMatching = search.Match(mountPath);
+                            if (isMatching && searchTarget != SearchTarget.File)
+                            {
+                                entries.Add(mountPath);
+                            }
+
+                            if (searchOption == SearchOption.AllDirectories)
+                            {
+                                sortedDirectories.Add(mountPath);
+                            }
+                        }
+                        else
+                        {
+                            // List files in the mounted filesystems, merged and sorted into one list
+                            foreach (var item in fileSystem.EnumeratePaths(searchPath, "*", SearchOption.TopDirectoryOnly, SearchTarget.Both))
+                            {
+                                var publicName = CombinePrefix(location.Prefix, item);
+                                if (entries.Contains(publicName))
+                                {
+                                    continue;
+                                }
+
+                                var isFile = fileSystem.FileExists(item);
+                                var isDirectory = fileSystem.DirectoryExists(item);
+                                var isMatching = search.Match(publicName);
+
+                                if (isMatching && ((isFile && searchTarget != SearchTarget.Directory) || (isDirectory && searchTarget != SearchTarget.File)))
+                                {
+                                    entries.Add(publicName);
+                                }
+
+                                if (searchOption == SearchOption.AllDirectories && isDirectory)
+                                {
+                                    sortedDirectories.Add(publicName);
+                                }
+                            }
                         }
                     }
                 }
 
-                // Return all entries sorted
+                if (first)
+                {
+                    if (locations.Count == 0)
+                        throw NewDirectoryNotFoundException(path);
+
+                    first = false;
+                }
+
+                // Enqueue directories and respect order
+                foreach (var nextDir in sortedDirectories)
+                {
+                    directoryToVisit.Insert(dirIndex++, nextDir);
+                }
+
+                // Return entries
                 foreach (var entry in entries)
-                {
-                    yield return entry;
-                }
-
-                if (searchOption == SearchOption.AllDirectories)
-                {
-                    foreach (var dir in directories)
-                    {
-                        foreach (var entry in EnumeratePathFromFileSystem(dir, false))
-                        {
-                            yield return entry;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                foreach (var entry in EnumeratePathFromFileSystem(path, true))
                 {
                     yield return entry;
                 }
@@ -783,6 +834,12 @@ namespace Zio.FileSystems
             return remainingPath;
         }
 
+        private static UPath CombinePrefix(UPath prefix, UPath remaining)
+        {
+            return prefix.IsNull ? remaining
+                : prefix / remaining.ToRelative();
+        }
+
         private void AssertMountName(UPath name)
         {
             name.AssertAbsolute(nameof(name));
@@ -805,6 +862,20 @@ namespace Zio.FileSystems
 
                 // then compare name if equal length (otherwise we get exceptions about duplicates)
                 return string.CompareOrdinal(x.FullName, y.FullName);
+            }
+        }
+
+        private struct SearchLocation
+        {
+            public IFileSystem FileSystem { get; }
+            public UPath Prefix { get; }
+            public UPath Path { get; }
+
+            public SearchLocation(IFileSystem fileSystem, UPath prefix, UPath path)
+            {
+                FileSystem = fileSystem;
+                Prefix = prefix;
+                Path = path;
             }
         }
     }
