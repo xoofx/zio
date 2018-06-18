@@ -657,7 +657,7 @@ namespace Zio.FileSystems
 
                 if (first)
                 {
-                    if (locations.Count == 0)
+                    if (locations.Count == 0 && path != UPath.Root)
                         throw NewDirectoryNotFoundException(path);
 
                     first = false;

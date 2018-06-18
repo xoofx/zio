@@ -221,6 +221,30 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
+        public void EnumerateEmptyOnRoot()
+        {
+            var mountFs = new MountFileSystem();
+            var expected = Array.Empty<UPath>();
+            var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList();
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void EnumerateDoesntExist()
+        {
+            var mountFs = new MountFileSystem();
+            mountFs.Mount("/x", new MemoryFileSystem());
+            Assert.Throws<DirectoryNotFoundException>(() => mountFs.EnumeratePaths("/y", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList());
+        }
+
+        [Fact]
+        public void EnumerateBackupDoesntExist()
+        {
+            var mountFs = new MountFileSystem(new MemoryFileSystem());            
+            Assert.Throws<DirectoryNotFoundException>(() => mountFs.EnumeratePaths("/y", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList());
+        }
+
+        [Fact]
         public void DirectoryExistsPartialMountName()
         {
             var fs = new MemoryFileSystem();
