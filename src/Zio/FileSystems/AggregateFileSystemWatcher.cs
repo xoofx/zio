@@ -77,7 +77,7 @@ namespace Zio.FileSystems
                     }
                     
                     UnregisterEvents(watcher);
-                    _children.Remove(watcher);
+                    _children.RemoveAt(i);
                     watcher.Dispose();
                 }
             }
@@ -100,7 +100,7 @@ namespace Zio.FileSystems
                     }
 
                     UnregisterEvents(watcher);
-                    _children.Remove(watcher);
+                    _children.RemoveAt(i);
                     watcher.Dispose();
                 }
             }
