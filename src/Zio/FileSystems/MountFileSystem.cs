@@ -50,6 +50,16 @@ namespace Zio.FileSystems
 
             lock (_mounts)
             {
+                lock (_aggregateWatchers)
+                {
+                    foreach (var watcher in _aggregateWatchers)
+                    {
+                        watcher.Dispose();
+                    }
+
+                    _aggregateWatchers.Clear();
+                }
+
                 if (Owned)
                 {
                     foreach (var kvp in _mounts)
@@ -59,16 +69,6 @@ namespace Zio.FileSystems
                 }
 
                 _mounts.Clear();
-            }
-
-            lock (_aggregateWatchers)
-            {
-                foreach (var watcher in _aggregateWatchers)
-                {
-                    watcher.Dispose();
-                }
-
-                _aggregateWatchers.Clear();
             }
         }
 
@@ -112,7 +112,7 @@ namespace Zio.FileSystems
                         if (fileSystem.CanWatch(remainingPath))
                         {
                             var internalWatcher = fileSystem.Watch(remainingPath);
-                            watcher.Add(new Watcher(this, name, remainingPath, internalWatcher));
+                            watcher.Add(new Watcher(fileSystem, name, remainingPath, internalWatcher));
                         }
                     }
                 }
@@ -170,15 +170,15 @@ namespace Zio.FileSystems
                     throw new ArgumentException($"The mount with the name `{name}` was not found");
                 }
 
-                _mounts.Remove(name);
-            }
-
-            lock (_aggregateWatchers)
-            {
-                foreach (var watcher in _aggregateWatchers)
+                lock (_aggregateWatchers)
                 {
-                    watcher.RemoveFrom(mountFileSystem);
+                    foreach (var watcher in _aggregateWatchers)
+                    {
+                        watcher.RemoveFrom(mountFileSystem);
+                    }
                 }
+
+                _mounts.Remove(name);
             }
 
             return mountFileSystem;
@@ -704,14 +704,14 @@ namespace Zio.FileSystems
                     if (kvp.Value.CanWatch(remainingPath))
                     {
                         var internalWatcher = kvp.Value.Watch(remainingPath);
-                        watcher.Add(new Watcher(this, kvp.Key, remainingPath, internalWatcher));
+                        watcher.Add(new Watcher(kvp.Value, kvp.Key, remainingPath, internalWatcher));
                     }
                 }
 
                 if (NextFileSystem != null && NextFileSystem.CanWatch(path))
                 {
                     var internalWatcher = NextFileSystem.Watch(path);
-                    watcher.Add(new Watcher(this, null, path, internalWatcher));
+                    watcher.Add(new Watcher(NextFileSystem, null, path, internalWatcher));
                 }
 
                 _aggregateWatchers.Add(watcher);
@@ -724,14 +724,10 @@ namespace Zio.FileSystems
         {
             private readonly UPath _mountPath;
 
-            public IFileSystem MountFileSystem { get; }
-
-            public Watcher(MountFileSystem fileSystem, UPath mountPath, UPath path, IFileSystemWatcher watcher)
+            public Watcher(IFileSystem fileSystem, UPath mountPath, UPath path, IFileSystemWatcher watcher)
                 : base(fileSystem, path, watcher)
             {
                 _mountPath = mountPath;
-
-                MountFileSystem = watcher.FileSystem;
             }
 
             protected override UPath? TryConvertPath(UPath pathFromEvent)
