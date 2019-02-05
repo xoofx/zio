@@ -92,10 +92,10 @@ namespace Zio.Tests.FileSystems
             var subFolder = mydir.CreateSubdirectory("sub");
             Assert.True(subFolder.Exists);
 
-            Assert.Equal(0, mydir.EnumerateFiles().ToList().Count);
+            Assert.Empty(mydir.EnumerateFiles());
 
             var subDirs = mydir.EnumerateDirectories().ToList();
-            Assert.Equal(1, subDirs.Count);
+            Assert.Single(subDirs);
             Assert.Equal("/yoyo/sub", subDirs[0].FullName);
 
             mydir.Delete();
@@ -117,11 +117,11 @@ namespace Zio.Tests.FileSystems
             Assert.Equal("abcdefghi", file.ReadAllText());
 
             var lines = file.ReadAllLines();
-            Assert.Equal(1, lines.Length);
+            Assert.Single(lines);
             Assert.Equal("abcdefghi", lines[0]);
 
             lines = file.ReadAllLines(Encoding.UTF8);
-            Assert.Equal(1, lines.Length);
+            Assert.Single(lines);
             Assert.Equal("abcdefghi", lines[0]);
 
             Assert.Equal(new byte[] { 1, 2, 3 }, yoyo.ReadAllBytes());

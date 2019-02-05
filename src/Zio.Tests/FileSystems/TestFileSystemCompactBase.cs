@@ -162,7 +162,7 @@ namespace Zio.Tests.FileSystems
             Assert.Equal(new List<string>() {"/tata.txt", "/titi.txt"}, files);
 
             var dirs = fs.EnumerateDirectories("/").Select(p => p.FullName).ToList();
-            Assert.Equal(0, dirs.Count);
+            Assert.Empty(dirs);
 
             // Check ReplaceFile
             var originalContent2 = "this is a content2";
@@ -342,7 +342,7 @@ namespace Zio.Tests.FileSystems
             fs.DeleteDirectory("/dir", true);
 
             var entries = fs.EnumeratePaths("/").ToList();
-            Assert.Equal(0, entries.Count);
+            Assert.Empty(entries);
         }
 
         [Fact]

@@ -22,7 +22,6 @@ namespace Zio.Tests
 
         // Test exact match
         [InlineData("/a/b/c", "x", "x", true)]
-        [InlineData("/a/b/c", "d/x", "x", true)]
         [InlineData("/a/b/c", "x", "d/x", true)]
         [InlineData("/a/b/c", "x", "d/e/x", true)]
 
@@ -53,7 +52,6 @@ namespace Zio.Tests
         [InlineData("/a/b/c", "*.i", "x.i", true)]
         [InlineData("/a/b/c", "*.i", "x.i1", false)]
         [InlineData("/a/b/c", "x*.txt", "x_txt", false)]
-        [InlineData("/a/b/c", "x?z", "d/xyz", true)]
         public void TestMatch(string path, string searchPattern, string pathToSearch, bool match = true)
         {
             var pathInfo = new UPath(path);

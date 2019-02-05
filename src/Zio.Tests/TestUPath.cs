@@ -103,7 +103,6 @@ namespace Zio.Tests
         [InlineData("\\", "\\", "/")]
         [InlineData("//", "//", "/")]
         [InlineData("", "/", "/")]
-        [InlineData("", "", "")]
         [InlineData("a", "b", "a/b")]
         [InlineData("a/b", "c", "a/b/c")]
         [InlineData("", "b", "b")]

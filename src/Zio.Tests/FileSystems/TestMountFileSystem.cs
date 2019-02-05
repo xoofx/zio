@@ -3,9 +3,11 @@
 // See the license.txt file in the project root for more information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Xunit;
 using Zio.FileSystems;
 
@@ -136,7 +138,7 @@ namespace Zio.Tests.FileSystems
 
             fs.Unmount("/test2");
 
-            Assert.Equal(0, fs.GetMounts().Count);
+            Assert.Empty(fs.GetMounts());
 
             var innerFs = GetCommonMemoryFileSystem();
             fs.Mount("/x/y", innerFs);

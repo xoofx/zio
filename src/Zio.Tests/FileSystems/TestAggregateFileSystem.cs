@@ -3,7 +3,8 @@
 // See the license.txt file in the project root for more information.
 
 using System;
-using System.Linq;
+using System.Collections;
+using System.Reflection;
 using Xunit;
 using Zio.FileSystems;
 
@@ -69,18 +70,18 @@ namespace Zio.Tests.FileSystems
             Assert.Throws<ArgumentException>(() => fs.RemoveFileSystem(memfs2));
 
             var list = fs.GetFileSystems();
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.Equal(memfs, list[0]);
 
             fs.ClearFileSystems();
-            Assert.Equal(0, fs.GetFileSystems().Count);
+            Assert.Empty(fs.GetFileSystems());
 
             fs.SetFileSystems(list);
 
             fs.RemoveFileSystem(memfs);
 
             list = fs.GetFileSystems();
-            Assert.Equal(0, list.Count);
+            Assert.Empty(list);
         }
 
         [Fact]
@@ -112,7 +113,7 @@ namespace Zio.Tests.FileSystems
 
             {
                 var entries = fs.FindFileSystemEntries("/b");
-                Assert.Equal(1, entries.Count);
+                Assert.Single(entries);
 
                 Assert.IsType<DirectoryEntry>(entries[0]);
                 Assert.Equal(memfs2, entries[0].FileSystem);
