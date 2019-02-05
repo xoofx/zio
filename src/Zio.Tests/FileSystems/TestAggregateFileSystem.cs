@@ -53,6 +53,27 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
+        public void TestWatcherRemovedWhenDisposed()
+        {
+            var fs = GetCommonAggregateFileSystem();
+
+            var watcher = fs.Watch("/");
+            watcher.IncludeSubdirectories = true;
+            watcher.EnableRaisingEvents = true;
+            watcher.Dispose();
+
+            System.Threading.Thread.Sleep(100);
+
+            var watchersField = typeof(AggregateFileSystem).GetTypeInfo()
+                .GetField("_watchers", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(watchersField);
+
+            var watchers = (IList)watchersField.GetValue(fs);
+            Assert.NotNull(watchers);
+            Assert.Empty(watchers);
+        }
+
+        [Fact]
         public void TestAddRemoveFileSystem()
         {
             var fs = new AggregateFileSystem();

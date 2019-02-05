@@ -18,7 +18,7 @@ namespace Zio.FileSystems
     public class MountFileSystem : ComposeFileSystem
     {
         private readonly SortedList<UPath, IFileSystem> _mounts;
-        private readonly List<AggregateFileSystemWatcher> _aggregateWatchers;
+        private readonly List<AggregateWatcher> _watchers;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MountFileSystem"/> class.
@@ -36,7 +36,7 @@ namespace Zio.FileSystems
         public MountFileSystem(IFileSystem defaultBackupFileSystem, bool owned = true) : base(defaultBackupFileSystem, owned)
         {
             _mounts = new SortedList<UPath, IFileSystem>(new UPathLengthComparer());
-            _aggregateWatchers = new List<AggregateFileSystemWatcher>();
+            _watchers = new List<AggregateWatcher>();
         }
 
         protected override void Dispose(bool disposing)
@@ -50,14 +50,14 @@ namespace Zio.FileSystems
 
             lock (_mounts)
             {
-                lock (_aggregateWatchers)
+                lock (_watchers)
                 {
-                    foreach (var watcher in _aggregateWatchers)
+                    foreach (var watcher in _watchers)
                     {
                         watcher.Dispose();
                     }
 
-                    _aggregateWatchers.Clear();
+                    _watchers.Clear();
                 }
 
                 if (Owned)
@@ -100,9 +100,9 @@ namespace Zio.FileSystems
                 }
                 _mounts.Add(name, fileSystem);
 
-                lock (_aggregateWatchers)
+                lock (_watchers)
                 {
-                    foreach (var watcher in _aggregateWatchers)
+                    foreach (var watcher in _watchers)
                     {
                         if (!IsMountIncludedInWatch(name, watcher.Path, out var remainingPath))
                         {
@@ -112,7 +112,7 @@ namespace Zio.FileSystems
                         if (fileSystem.CanWatch(remainingPath))
                         {
                             var internalWatcher = fileSystem.Watch(remainingPath);
-                            watcher.Add(new Watcher(fileSystem, name, remainingPath, internalWatcher));
+                            watcher.Add(new WrapWatcher(fileSystem, name, remainingPath, internalWatcher));
                         }
                     }
                 }
@@ -170,9 +170,9 @@ namespace Zio.FileSystems
                     throw new ArgumentException($"The mount with the name `{name}` was not found");
                 }
 
-                lock (_aggregateWatchers)
+                lock (_watchers)
                 {
-                    foreach (var watcher in _aggregateWatchers)
+                    foreach (var watcher in _watchers)
                     {
                         watcher.RemoveFrom(mountFileSystem);
                     }
@@ -689,10 +689,10 @@ namespace Zio.FileSystems
         {
             // TODO: create/delete events when mounts are added/removed
             
-            var watcher = new AggregateFileSystemWatcher(this, path);
+            var watcher = new AggregateWatcher(this, path);
 
             lock (_mounts)
-            lock (_aggregateWatchers)
+            lock (_watchers)
             {
                 foreach (var kvp in _mounts)
                 {
@@ -704,27 +704,49 @@ namespace Zio.FileSystems
                     if (kvp.Value.CanWatch(remainingPath))
                     {
                         var internalWatcher = kvp.Value.Watch(remainingPath);
-                        watcher.Add(new Watcher(kvp.Value, kvp.Key, remainingPath, internalWatcher));
+                        watcher.Add(new WrapWatcher(kvp.Value, kvp.Key, remainingPath, internalWatcher));
                     }
                 }
 
                 if (NextFileSystem != null && NextFileSystem.CanWatch(path))
                 {
                     var internalWatcher = NextFileSystem.Watch(path);
-                    watcher.Add(new Watcher(NextFileSystem, null, path, internalWatcher));
+                    watcher.Add(new WrapWatcher(NextFileSystem, null, path, internalWatcher));
                 }
 
-                _aggregateWatchers.Add(watcher);
+                _watchers.Add(watcher);
             }
 
             return watcher;
         }
 
-        private class Watcher : WrapFileSystemWatcher
+        private class AggregateWatcher : AggregateFileSystemWatcher
+        {
+            private readonly MountFileSystem _fileSystem;
+
+            public AggregateWatcher(MountFileSystem fileSystem, UPath path)
+                : base(fileSystem, path)
+            {
+                _fileSystem = fileSystem;
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing && !_fileSystem.IsDisposing)
+                {
+                    lock (_fileSystem._watchers)
+                    {
+                        _fileSystem._watchers.Remove(this);
+                    }
+                }
+            }
+        }
+
+        private class WrapWatcher : WrapFileSystemWatcher
         {
             private readonly UPath _mountPath;
 
-            public Watcher(IFileSystem fileSystem, UPath mountPath, UPath path, IFileSystemWatcher watcher)
+            public WrapWatcher(IFileSystem fileSystem, UPath mountPath, UPath path, IFileSystemWatcher watcher)
                 : base(fileSystem, path, watcher)
             {
                 _mountPath = mountPath;

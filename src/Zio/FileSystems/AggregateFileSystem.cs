@@ -15,7 +15,7 @@ namespace Zio.FileSystems
     public class AggregateFileSystem : ReadOnlyFileSystem
     {
         private readonly List<IFileSystem> _fileSystems;
-        private readonly List<AggregateFileSystemWatcher> _watchers;
+        private readonly List<Watcher> _watchers;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AggregateFileSystem"/> class.
@@ -34,7 +34,7 @@ namespace Zio.FileSystems
         public AggregateFileSystem(IFileSystem fileSystem, bool owned = true) : base(fileSystem, owned)
         {
             _fileSystems = new List<IFileSystem>();
-            _watchers = new List<AggregateFileSystemWatcher>();
+            _watchers = new List<Watcher>();
         }
 
         protected override void Dispose(bool disposing)
@@ -57,10 +57,7 @@ namespace Zio.FileSystems
                 }
 
                 _fileSystems.Clear();
-            }
 
-            lock (_watchers)
-            {
                 foreach (var watcher in _watchers)
                 {
                     watcher.Dispose();
@@ -418,7 +415,7 @@ namespace Zio.FileSystems
         {
             lock (_fileSystems)
             {
-                var watcher = new AggregateFileSystemWatcher(this, path);
+                var watcher = new Watcher(this, path);
 
                 if (NextFileSystem != null && NextFileSystem.CanWatch(path))
                 {
@@ -435,6 +432,30 @@ namespace Zio.FileSystems
 
                 _watchers.Add(watcher);
                 return watcher;
+            }
+        }
+
+        private class Watcher : AggregateFileSystemWatcher
+        {
+            private readonly AggregateFileSystem _fileSystem;
+
+            public Watcher(AggregateFileSystem fileSystem, UPath path)
+                : base(fileSystem, path)
+            {
+                _fileSystem = fileSystem;
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+
+                if (disposing && !_fileSystem.IsDisposing)
+                {
+                    lock (_fileSystem._fileSystems)
+                    {
+                        _fileSystem._watchers.Remove(this);
+                    }
+                }
             }
         }
 
