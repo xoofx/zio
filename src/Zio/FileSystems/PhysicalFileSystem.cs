@@ -269,6 +269,9 @@ namespace Zio.FileSystems
 
                     foreach (var drive in DriveInfo.GetDrives())
                     {
+                        if (!drive.IsReady)
+                            continue;
+
                         var newCreationTime = drive.RootDirectory.CreationTime;
                         if (newCreationTime < creationTime)
                         {
@@ -316,6 +319,9 @@ namespace Zio.FileSystems
 
                     foreach (var drive in DriveInfo.GetDrives())
                     {
+                        if (!drive.IsReady)
+                            continue;
+
                         var time = drive.RootDirectory.LastAccessTime;
                         if (time < lastAccessTime)
                         {
@@ -364,6 +370,9 @@ namespace Zio.FileSystems
 
                     foreach (var drive in DriveInfo.GetDrives())
                     {
+                        if (!drive.IsReady)
+                            continue;
+
                         var time = drive.RootDirectory.LastWriteTime;
                         if (time < lastWriteTime)
                         {
