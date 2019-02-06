@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3 (02 Feb 2019)
+- Properly show mount paths when enumerating MountFS (fixes #28) [(PR #29)](https://github.com/xoofx/zio/pull/29)
+- Don't throw when enumerating root on empty MountFS [(PR #31)](https://github.com/xoofx/zio/pull/31)
+- Fix IFileSystemWatcher instances not being removed from AggregateFSWs [(PR #32)](https://github.com/xoofx/zio/pull/32)
+- Fix dispose not removing the watchers from aggregate and mount FS [(PR #34)](https://github.com/xoofx/zio/pull/34) 
+
 ## 0.7.2 (04 Apr 2018)
 - Fix MountFS watchers having incorrect paths when created in Mount() [(PR #26)](https://github.com/xoofx/zio/pull/26)
 
