@@ -317,19 +317,19 @@ namespace Zio.Tests.FileSystems
 
             public void Check(EnumeratePathsResult other)
             {
-                Assert.Equal(TopDirs, other.TopDirs);
-                Assert.Equal(TopFiles, other.TopFiles);
-                Assert.Equal(TopEntries, other.TopEntries);
+                AssertEx.Equivalent(TopDirs, other.TopDirs);
+                AssertEx.Equivalent(TopFiles, other.TopFiles);
+                AssertEx.Equivalent(TopEntries, other.TopEntries);
 
-                Assert.Equal(AllDirs, other.AllDirs);
-                Assert.Equal(AllFiles, other.AllFiles);
-                Assert.Equal(AllEntries, other.AllEntries);
+                AssertEx.Equivalent(AllDirs, other.AllDirs);
+                AssertEx.Equivalent(AllFiles, other.AllFiles);
+                AssertEx.Equivalent(AllEntries, other.AllEntries);
 
-                Assert.Equal(AllFiles_txt, other.AllFiles_txt);
-                Assert.Equal(AllFiles_i, other.AllFiles_i);
-                Assert.Equal(AllEntries_b, other.AllEntries_b);
-                Assert.Equal(AllDirs_a1, other.AllDirs_a1);
-                Assert.Equal(AllDirs_a2, other.AllDirs_a2);
+                AssertEx.Equivalent(AllFiles_txt, other.AllFiles_txt);
+                AssertEx.Equivalent(AllFiles_i, other.AllFiles_i);
+                AssertEx.Equivalent(AllEntries_b, other.AllEntries_b);
+                AssertEx.Equivalent(AllDirs_a1, other.AllDirs_a1);
+                AssertEx.Equivalent(AllDirs_a2, other.AllDirs_a2);
             }
 
             public EnumeratePathsResult(IFileSystem fs)

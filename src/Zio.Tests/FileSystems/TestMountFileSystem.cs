@@ -3,9 +3,11 @@
 // See the license.txt file in the project root for more information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Xunit;
 using Zio.FileSystems;
 
@@ -136,13 +138,34 @@ namespace Zio.Tests.FileSystems
 
             fs.Unmount("/test2");
 
-            Assert.Equal(0, fs.GetMounts().Count);
+            Assert.Empty(fs.GetMounts());
 
             var innerFs = GetCommonMemoryFileSystem();
             fs.Mount("/x/y", innerFs);
             fs.Mount("/x/y/b", innerFs);
             Assert.True(fs.FileExists("/x/y/A.txt"));
             Assert.True(fs.FileExists("/x/y/b/A.txt"));
+        }
+
+        [Fact]
+        public void TestWatcherRemovedWhenDisposed()
+        {
+            var fs = GetCommonMountFileSystemWithMounts();
+
+            var watcher = fs.Watch("/");
+            watcher.IncludeSubdirectories = true;
+            watcher.EnableRaisingEvents = true;
+            watcher.Dispose();
+
+            System.Threading.Thread.Sleep(100);
+
+            var watchersField = typeof(MountFileSystem).GetTypeInfo()
+                .GetField("_watchers", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(watchersField);
+
+            var watchers = (IList)watchersField.GetValue(fs);
+            Assert.NotNull(watchers);
+            Assert.Empty(watchers);
         }
 
         [Fact]
