@@ -190,10 +190,11 @@ namespace Zio.FileSystems
         /// <param name="path">The path to search for.</param>
         /// <param name="name">The mount name that the <paramref name="path"/> belongs to.</param>
         /// <param name="fileSystem">The mounted filesystem that the <paramref name="path"/> is located in.</param>
+        /// <param name="fileSystemPath">The path inside of <paramref name="fileSystem"/> that refers to the file at <paramref name="path"/>.</param>
         /// <returns>True if the <paramref name="path"/> was found in a mounted filesystem.</returns>
         /// <exception cref="System.ArgumentNullException">The <paramref name="path"/> must not be null.</exception>
         /// <exception cref="System.ArgumentException">The <paramref name="path"/> must be absolute.</exception>
-        public bool TryGetMount(UPath path, out UPath name, out IFileSystem fileSystem)
+        public bool TryGetMount(UPath path, out UPath name, out IFileSystem fileSystem, out UPath fileSystemPath)
         {
             path.AssertNotNull();
             path.AssertAbsolute();
@@ -204,10 +205,12 @@ namespace Zio.FileSystems
             {
                 name = null;
                 fileSystem = null;
+                fileSystemPath = null;
                 return false;
             }
 
             fileSystem = fs;
+            fileSystemPath = path;
             return true;
         }
 
