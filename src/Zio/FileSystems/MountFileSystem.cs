@@ -184,6 +184,61 @@ namespace Zio.FileSystems
             return mountFileSystem;
         }
 
+        /// <summary>
+        /// Attempts to find information about the mount that a given path maps to.
+        /// </summary>
+        /// <param name="path">The path to search for.</param>
+        /// <param name="name">The mount name that the <paramref name="path"/> belongs to.</param>
+        /// <param name="fileSystem">The mounted filesystem that the <paramref name="path"/> is located in.</param>
+        /// <returns>True if the <paramref name="path"/> was found in a mounted filesystem.</returns>
+        /// <exception cref="System.ArgumentNullException">The <paramref name="path"/> must not be null.</exception>
+        /// <exception cref="System.ArgumentException">The <paramref name="path"/> must be absolute.</exception>
+        public bool TryGetMount(UPath path, out UPath name, out IFileSystem fileSystem)
+        {
+            path.AssertNotNull();
+            path.AssertAbsolute();
+
+            var fs = TryGetMountOrNext(ref path, out name);
+
+            if (fs == null || name.IsNull)
+            {
+                name = null;
+                fileSystem = null;
+                return false;
+            }
+
+            fileSystem = fs;
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to find the mount name that a filesystem has been mounted to
+        /// </summary>
+        /// <param name="fileSystem">The mounted filesystem to search for.</param>
+        /// <param name="name">The mount name that the <paramref name="fileSystem"/> is mounted with.</param>
+        /// <returns>True if the <paramref name="fileSystem"/> is mounted.</returns>
+        /// <exception cref="System.ArgumentNullException">The <paramref name="fileSystem"/> must not be null.</exception>
+        public bool TryGetMountName(IFileSystem fileSystem, out UPath name)
+        {
+            if (fileSystem == null)
+                throw new ArgumentNullException(nameof(fileSystem));
+
+            lock (_mounts)
+            {
+                foreach (var mount in _mounts)
+                {
+                    if (mount.Value != fileSystem)
+                        continue;
+
+                    name = mount.Key;
+                    return true;
+                }
+            }
+
+            name = null;
+            return false;
+        }
+
         /// <inheritdoc />
         protected override void CreateDirectoryImpl(UPath path)
         {
