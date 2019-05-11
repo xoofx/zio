@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.4 (11 May 2019)
+- Add MountFS.TryGetMount and MountFS.TryGetMountName via [(PR #36)](https://github.com/xoofx/zio/pull/36)
+
 ## 0.7.3 (02 Feb 2019)
 - Properly show mount paths when enumerating MountFS (fixes #28) [(PR #29)](https://github.com/xoofx/zio/pull/29)
 - Don't throw when enumerating root on empty MountFS [(PR #31)](https://github.com/xoofx/zio/pull/31)
