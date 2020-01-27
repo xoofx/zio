@@ -1,5 +1,5 @@
 // Copyright (c) Alexandre Mutel. All rights reserved.
-// This file is licensed under the BSD-Clause 2 license. 
+// This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 using System;
 using System.Collections.Generic;
@@ -135,7 +135,7 @@ namespace Zio.FileSystems
 
         /// <summary>
         /// Implementation for <see cref="DeleteDirectory"/>, <paramref name="path"/> is guaranteed to be absolute and different from root path `/` and validated through <see cref="ValidatePath"/>.
-        /// Deletes the specified directory and, if indicated, any subdirectories and files in the directory. 
+        /// Deletes the specified directory and, if indicated, any subdirectories and files in the directory.
         /// </summary>
         /// <param name="path">The path of the directory to remove.</param>
         /// <param name="isRecursive"><c>true</c> to remove directories, subdirectories, and files in path; otherwise, <c>false</c>.</param>
@@ -233,9 +233,9 @@ namespace Zio.FileSystems
         /// Determines whether the specified file exists.
         /// </summary>
         /// <param name="path">The path.</param>
-        /// <returns><c>true</c> if the caller has the required permissions and path contains the name of an existing file; 
-        /// otherwise, <c>false</c>. This method also returns false if path is null, an invalid path, or a zero-length string. 
-        /// If the caller does not have sufficient permissions to read the specified file, 
+        /// <returns><c>true</c> if the caller has the required permissions and path contains the name of an existing file;
+        /// otherwise, <c>false</c>. This method also returns false if path is null, an invalid path, or a zero-length string.
+        /// If the caller does not have sufficient permissions to read the specified file,
         /// no exception is thrown and the method returns false regardless of the existence of path.</returns>
         protected abstract bool FileExistsImpl(UPath path);
 
@@ -264,7 +264,7 @@ namespace Zio.FileSystems
 
         /// <summary>
         /// Implementation for <see cref="FileExists"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
-        /// Deletes the specified file. 
+        /// Deletes the specified file.
         /// </summary>
         /// <param name="path">The path of the file to be deleted.</param>
         protected abstract void DeleteFileImpl(UPath path);
@@ -493,7 +493,7 @@ namespace Zio.FileSystems
 
         /// <summary>
         /// Implementation for <see cref="ConvertPathToInternal"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
-        /// Converts the specified path to the underlying path used by this <see cref="IFileSystem"/>. In case of a <see cref="Zio.FileSystems.PhysicalFileSystem"/>, it 
+        /// Converts the specified path to the underlying path used by this <see cref="IFileSystem"/>. In case of a <see cref="Zio.FileSystems.PhysicalFileSystem"/>, it
         /// would represent the actual path on the disk.
         /// </summary>
         /// <param name="path">The path.</param>
@@ -536,7 +536,7 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path.</param>
         /// <param name="name">The name.</param>
-        /// <param name="allowNull">if set to <c>true</c> the path is allowed to be null. <c>false</c> otherwise.</param>  
+        /// <param name="allowNull">if set to <c>true</c> the path is allowed to be null. <c>false</c> otherwise.</param>
         /// <returns>The path validated</returns>
         protected UPath ValidatePath(UPath path, string name = "path", bool allowNull = false)
         {
@@ -567,10 +567,13 @@ namespace Zio.FileSystems
 
         private void DisposeInternal(bool disposing)
         {
-            AssertNotDisposed();
-            IsDisposing = true;
-            Dispose(disposing);
-            IsDisposed = true;
+            if (!IsDisposed)
+            {
+                AssertNotDisposed();
+                IsDisposing = true;
+                Dispose(disposing);
+                IsDisposed = true;
+            }
         }
     }
 }
