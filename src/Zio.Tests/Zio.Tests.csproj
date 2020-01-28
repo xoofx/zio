@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RuntimeFrameworkVersion>2.1.6</RuntimeFrameworkVersion>
     <DebugType>Full</DebugType>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
