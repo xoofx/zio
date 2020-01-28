@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.5 (28 Jan 2020)
+- Make UPath struct readonly.
+- Don't throw if Dispose is being called multiple times on a FileSystem via [(PR #38)](https://github.com/xoofx/zio/pull/38).
+- Add SourceLink support.
+
 ## 0.7.4 (11 May 2019)
 - Add MountFS.TryGetMount and MountFS.TryGetMountName via [(PR #36)](https://github.com/xoofx/zio/pull/36)
 
