@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.6 (28 Jan 2020)
+- Fix assembly to use Portable debug info.
+
 ## 0.7.5 (28 Jan 2020)
 - Make UPath struct readonly.
 - Don't throw if Dispose is being called multiple times on a FileSystem via [(PR #38)](https://github.com/xoofx/zio/pull/38).
