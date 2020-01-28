@@ -12,7 +12,7 @@ namespace Zio
     /// A uniform unix like path.
     /// </summary>
     /// <seealso cref="UPath" />
-    public struct UPath : IEquatable<UPath>, IComparable<UPath>
+    public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
     {
         [ThreadStatic] private static InternalHelper _internalHelperTls;
 

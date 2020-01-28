@@ -15,6 +15,7 @@
     <PackageProjectUrl>https://github.com/xoofx/zio</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/xoofx/zio/blob/master/license.txt</PackageLicenseUrl>
     <DebugType>Full</DebugType>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3'">
