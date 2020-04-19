@@ -735,7 +735,7 @@ namespace Zio.FileSystems
             // Else check that we have a valid drive path (e.g /drive/c)
             return parentDirectory == PathDrivePrefixOnWindows && 
                    dirName.Length == 1 && 
-                   DriveInfo.GetDrives().Any(p => char.ToLowerInvariant(p.Name[0]) == char.ToLowerInvariant(dirName[0]));
+                   DriveInfo.GetDrives().Any(p => char.ToLowerInvariant(p.Name[0]) == dirName[0]);
         }
 
         private static bool IsDriveLetter(char c)

@@ -22,6 +22,16 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
+        public void TestFileSystemInvalidDriveLetter()
+        {
+            var driverLetter = SystemPath[0];
+            Assert.Throws<DirectoryNotFoundException>( () => new SubFileSystem(new PhysicalFileSystem(), $"/mnt/{driverLetter}"));
+            using (var fs = new SubFileSystem(new PhysicalFileSystem(), $"/mnt/{char.ToLowerInvariant(driverLetter)}"))
+            {
+            }
+        }
+
+        [Fact]
         public void TestWatcher()
         {
             var fs = GetCommonPhysicalFileSystem();
