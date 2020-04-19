@@ -32,6 +32,62 @@ namespace Zio
         }
 
         /// <summary>
+        /// Copies a filesystem to a destination filesystem and folder.
+        /// </summary>
+        /// <param name="fs">The source filesystem.</param>
+        /// <param name="destFileSystem">The destination filesystem.</param>
+        /// <param name="dstFolder">The destination folder in the destination filesystem.</param>
+        /// <param name="overwrite"><c>true</c> to overwrite files.</param>
+        public static void CopyTo(this IFileSystem fs, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
+        {
+            if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
+
+            CopyDirectory(fs, UPath.Root, destFileSystem, dstFolder, overwrite);
+        }
+
+        /// <summary>
+        /// Copies a directory from a source filesystem to a destination filesystem and folder.
+        /// </summary>
+        /// <param name="fs">The source filesystem.</param>
+        /// <param name="srcFolder">The source folder.</param>
+        /// <param name="destFileSystem">The destination filesystem.</param>
+        /// <param name="dstFolder">The destination folder in the destination filesystem.</param>
+        /// <param name="overwrite"><c>true</c> to overwrite files.</param>
+        public static void CopyDirectory(this IFileSystem fs, UPath srcFolder, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
+        {
+            if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
+
+            if (!fs.DirectoryExists(srcFolder)) throw new DirectoryNotFoundException($"{srcFolder} folder not found from source file system.");
+
+            if (dstFolder != UPath.Root)
+            {
+                destFileSystem.CreateDirectory(dstFolder);
+            }
+
+            var srcFolderFullName = srcFolder.FullName;
+
+            int deltaSubString = srcFolder == UPath.Root ? 0 : 1;
+
+            // Copy the files for the folder
+            foreach (var file in fs.EnumerateFiles(srcFolder))
+            {
+                var relativeFile = file.FullName.Substring(srcFolderFullName.Length + deltaSubString);
+                var destFile = UPath.Combine(dstFolder, relativeFile);
+
+                fs.CopyFileCross(destFileSystem, file, destFile, overwrite);
+            }
+
+            // Then copy the folder structure recursively
+            foreach (var srcSubFolder in fs.EnumerateDirectories(srcFolder))
+            {
+                var relativeDestFolder = srcSubFolder.FullName.Substring(srcFolderFullName.Length + deltaSubString);
+
+                var destSubFolder = UPath.Combine(dstFolder, relativeDestFolder);
+                CopyDirectory(fs, srcSubFolder, destFileSystem, destSubFolder, overwrite);
+            }
+        }
+
+        /// <summary>
         ///     Copies a file between two filesystems.
         /// </summary>
         /// <param name="fs">The source filesystem</param>

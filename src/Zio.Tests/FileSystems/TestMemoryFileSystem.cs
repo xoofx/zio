@@ -18,6 +18,32 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
+        public void TestCopyFileSystem()
+        {
+            var fs = GetCommonMemoryFileSystem();
+
+            var dest = new MemoryFileSystem();
+            fs.CopyTo(dest, UPath.Root, true);
+
+            AssertFileSystemEqual(fs, dest);
+        }
+
+        [Fact]
+        public void TestCopyFileSystemSubFolder()
+        {
+            var fs = GetCommonMemoryFileSystem();
+
+            var dest = new MemoryFileSystem();
+            var subFolder = UPath.Root / "subfolder";
+            fs.CopyTo(dest, subFolder, true);
+
+            var destSubFileSystem = dest.GetOrCreateSubFileSystem(subFolder);
+            
+            AssertFileSystemEqual(fs, destSubFileSystem);
+        }
+        
+
+        [Fact]
         public void TestWatcher()
         {
             var fs = GetCommonMemoryFileSystem();

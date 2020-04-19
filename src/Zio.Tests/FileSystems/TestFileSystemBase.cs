@@ -300,6 +300,11 @@ namespace Zio.Tests.FileSystems
             new EnumeratePathsResult(fs).Check(_referenceEnumeratePathsResult);
         }
 
+        protected void AssertFileSystemEqual(IFileSystem from, IFileSystem to)
+        {
+            new EnumeratePathsResult(from).Check(new EnumeratePathsResult(to));
+        }
+        
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         class EnumeratePathsResult
         {
