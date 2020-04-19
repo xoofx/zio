@@ -32,7 +32,7 @@ jobs:
       run: dotnet test src -c Release
 
     - name: Coverlet
-      run: dotnet test src -c Release -f netcoreapp2.1 /p:Include=\"[${{env.PROJECT_NAME}}]*\" /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
+      run: dotnet test src -c Release -f netcoreapp3.1 /p:Include=\"[${{env.PROJECT_NAME}}]*\" /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
 
     - name: Coveralls Upload
       uses: coverallsapp/github-action@v1.0.1
