@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0 (19 Apr 2020)
+- Add extension method to copy filesystem or folder to another filesystem subfolder.
+- Fix issue with SubFileSystem not throwing an exception when mounting a windows filesystem with an incorrect uppercase drive letter (e.g `/mnt/C`)
+
 ## 0.7.6 (28 Jan 2020)
 - Fix assembly to use Portable debug info.
 
