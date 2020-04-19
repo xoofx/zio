@@ -354,7 +354,7 @@ The `AggregateFileSystem` will expose this read-only filesystem:
 /a                       | fs2
     file1.txt            | fs2
     file2.txt            | fs1
-    file4.txt            | fs1
+    file4.txt            | fs2
 /b                       | fs2
     file5.txt            | fs2
 file3.txt                | fs1
