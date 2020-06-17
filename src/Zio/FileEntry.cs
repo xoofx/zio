@@ -134,7 +134,7 @@ namespace Zio
         public FileEntry CopyTo(FileEntry destFile, bool overwrite)
         {
             if (destFile == null) throw new ArgumentNullException(nameof(destFile));
-            FileSystem.CopyFileCross(destFile.FileSystem, Path, destFile.Path, overwrite);
+            FileSystem.CopyFileCross(Path, destFile.FileSystem, destFile.Path, overwrite);
             return destFile;
         }
 

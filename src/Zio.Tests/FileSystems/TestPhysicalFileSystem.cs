@@ -66,7 +66,7 @@ namespace Zio.Tests.FileSystems
             try
             {
                 outputfs.WriteAllText(outputPath, "toto");
-                from.CopyFileCross(outputfs, "/test.txt", outputPath, true);
+                from.CopyFileCross("/test.txt", outputfs, outputPath, true);
                 var content = outputfs.ReadAllText(outputPath);
                 Assert.Equal("test", content);
             }
