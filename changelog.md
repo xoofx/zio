@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 (17 Jun 2020)
+- Add FileSystem.Name for debugging purpose.
+- Add DebuggerDisplay/DebuggerTypeProxy to all FileSystem
+- Breaking change: Renaming of protected `ComposeFileSystem.NextFileSystem` to `ComposeFileSystem.Fallback`
+- Breaking Change: `FileSystem.CopyFileCross` destination IFileSystem moved to 3rd parameter instead of 2nd.
+
 ## 0.8.0 (19 Apr 2020)
 - Add extension method to copy filesystem or folder to another filesystem subfolder.
 - Fix issue with SubFileSystem not throwing an exception when mounting a windows filesystem with an incorrect uppercase drive letter (e.g `/mnt/C`)
