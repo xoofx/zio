@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -15,6 +16,8 @@ namespace Zio.FileSystems
     /// A <see cref="IFileSystem"/> that can mount other filesystems on a root name. 
     /// This mount filesystem supports also an optionnal fallback delegate FileSystem if a path was not found through a mount
     /// </summary>
+    [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq} Count={_mounts.Count}")]
+    [DebuggerTypeProxy(typeof(DebuggerProxy))]
     public class MountFileSystem : ComposeFileSystem
     {
         private readonly SortedList<UPath, IFileSystem> _mounts;
@@ -953,6 +956,21 @@ namespace Zio.FileSystems
                 Prefix = prefix;
                 Path = path;
             }
+        }
+
+        private sealed class DebuggerProxy
+        {
+            private readonly MountFileSystem _fs;
+
+            public DebuggerProxy(MountFileSystem fs)
+            {
+                _fs = fs;
+            }
+
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public KeyValuePair<string, IFileSystem>[] Mounts => _fs._mounts.Select(x => new KeyValuePair<string, IFileSystem>(x.Key.ToString(), x.Value)).ToArray();
+
+            public IFileSystem Fallback => _fs.Fallback;
         }
     }
 }

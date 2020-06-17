@@ -56,6 +56,11 @@ namespace Zio.FileSystems
             }
         }
 
+        protected override string DebuggerDisplay()
+        {
+            return $"{base.DebuggerDisplay()} (Fallback: {(Fallback is FileSystem fs ? fs.DebuggerKindName() : Fallback.GetType().Name.Replace("FileSystem", "fs").ToLowerInvariant())})";
+        }
+
         // ----------------------------------------------
         // Directory API
         // ----------------------------------------------

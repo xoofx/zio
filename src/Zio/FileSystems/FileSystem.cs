@@ -3,6 +3,7 @@
 // See the license.txt file in the project root for more information.
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using static Zio.FileSystemExceptionHelper;
 
@@ -39,11 +40,13 @@ namespace Zio.FileSystems
         /// <summary>
         /// <c>true</c> if this instance if being disposed.
         /// </summary>
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         protected bool IsDisposing { get; private set; }
 
         /// <summary>
         /// <c>true</c> if this instance if being disposed.
         /// </summary>
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         protected bool IsDisposed { get; private set; }
 
         /// <summary>
@@ -148,6 +151,19 @@ namespace Zio.FileSystems
         /// <param name="path">The path of the directory to remove.</param>
         /// <param name="isRecursive"><c>true</c> to remove directories, subdirectories, and files in path; otherwise, <c>false</c>.</param>
         protected abstract void DeleteDirectoryImpl(UPath path, bool isRecursive);
+
+        internal string DebuggerDisplayInternal()
+        {
+            return DebuggerDisplay();
+        }
+
+        internal string DebuggerKindName()
+        {
+            var typeName = this.GetType().Name.Replace("FileSystem", "fs").ToLowerInvariant();
+            return Name != null ? $"{typeName}-{Name}" : typeName;
+        }
+
+        protected virtual string DebuggerDisplay() => DebuggerKindName();
 
         // ----------------------------------------------
         // File API

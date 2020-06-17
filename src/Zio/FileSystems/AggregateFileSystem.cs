@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using static Zio.FileSystemExceptionHelper;
 
@@ -12,6 +13,8 @@ namespace Zio.FileSystems
     /// <summary>
     /// Provides a readonly merged view filesystem over multiple filesystems (overriding files/directory in order)
     /// </summary>
+    [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq} Count={_fileSystems.Count}")]
+    [DebuggerTypeProxy(typeof(DebuggerProxy))]
     public class AggregateFileSystem : ReadOnlyFileSystem
     {
         private readonly List<IFileSystem> _fileSystems;
@@ -546,6 +549,21 @@ namespace Zio.FileSystems
             public readonly UPath Path;
 
             public readonly bool IsFile;
+        }
+
+        private sealed class DebuggerProxy
+        {
+            private readonly AggregateFileSystem _fs;
+
+            public DebuggerProxy(AggregateFileSystem fs)
+            {
+                _fs = fs;
+            }
+            
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public IFileSystem[] FileSystems => _fs._fileSystems.ToArray();
+
+            public IFileSystem Fallback => _fs.Fallback;
         }
     }
 }

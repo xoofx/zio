@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -14,6 +15,7 @@ namespace Zio.FileSystems
     /// <summary>
     /// Provides a <see cref="IFileSystem"/> for the physical filesystem.
     /// </summary>
+    [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
     public class PhysicalFileSystem : FileSystem
     {
         private const string DrivePrefixOnWindows = "/mnt/";

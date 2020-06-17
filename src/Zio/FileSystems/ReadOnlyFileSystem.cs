@@ -3,6 +3,7 @@
 // See the license.txt file in the project root for more information.
 
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace Zio.FileSystems
@@ -11,6 +12,7 @@ namespace Zio.FileSystems
     /// Provides a readonly filesystem on top of another <see cref="IFileSystem"/>.
     /// </summary>
     /// <seealso cref="ComposeFileSystem" />
+    [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
     public class ReadOnlyFileSystem : ComposeFileSystem
     {
         /// <summary>

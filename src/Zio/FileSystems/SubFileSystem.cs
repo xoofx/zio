@@ -2,6 +2,7 @@
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 using System;
+using System.Diagnostics;
 using System.IO;
 using static Zio.FileSystemExceptionHelper;
 
@@ -10,6 +11,7 @@ namespace Zio.FileSystems
     /// <summary>
     /// Provides a secure view on a sub folder of another delegate <see cref="IFileSystem"/>
     /// </summary>
+    [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
     public class SubFileSystem : ComposeFileSystem
     {
         /// <summary>
@@ -32,6 +34,11 @@ namespace Zio.FileSystems
         /// Gets the sub path relative to the delegate <see cref="ComposeFileSystem.Fallback"/>
         /// </summary>
         public UPath SubPath { get; }
+
+        protected override string DebuggerDisplay()
+        {
+            return $"{base.DebuggerDisplay()} Path: {SubPath}";
+        }
 
         /// <inheritdoc />
         protected override IFileSystemWatcher WatchImpl(UPath path)

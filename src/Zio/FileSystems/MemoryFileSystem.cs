@@ -15,6 +15,8 @@ namespace Zio.FileSystems
     /// <summary>
     /// Provides an in-memory <see cref="IFileSystem"/> compatible with the way a real <see cref="PhysicalFileSystem"/> is working.
     /// </summary>
+    [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
+    [DebuggerTypeProxy(typeof(DebuggerProxy))]
     public class MemoryFileSystem : FileSystem
     {
         // The locking strategy is based on https://www.kernel.org/doc/Documentation/filesystems/directory-locking
@@ -77,6 +79,11 @@ namespace Zio.FileSystems
         protected virtual MemoryFileSystem CloneImpl()
         {
             return new MemoryFileSystem(this);
+        }
+
+        protected override string DebuggerDisplay()
+        {
+            return $"{base.DebuggerDisplay()} {_rootDirectory.DebuggerDisplay()}";
         }
 
         // ----------------------------------------------
@@ -1577,9 +1584,11 @@ namespace Zio.FileSystems
             }
         }
 
+        [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
+        [DebuggerTypeProxy(typeof(DebuggerProxyInternal))]
         private class DirectoryNode : FileSystemNode
         {
-            private Dictionary<string, FileSystemNode> _children;
+            internal Dictionary<string, FileSystemNode> _children;
 
             public DirectoryNode(MemoryFileSystem fileSystem) : base(fileSystem, null, null, null)
             {
@@ -1612,12 +1621,26 @@ namespace Zio.FileSystems
                 return dir;
             }
 
-            public override string ToString()
+            public override string DebuggerDisplay()
             {
-                return $"Directory {Name} Children[{_children.Count}] ({base.ToString()})";
+                return Name == null ? $"Count = {_children.Count}{base.DebuggerDisplay()}"  : $"Folder: {Name}, Count = {_children.Count}{base.DebuggerDisplay()}";
+            }
+
+            private sealed class DebuggerProxyInternal
+            {
+                private readonly DirectoryNode _directoryNode;
+
+                public DebuggerProxyInternal(DirectoryNode directoryNode)
+                {
+                    _directoryNode = directoryNode;
+                }
+
+                [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+                public FileSystemNode[] Items => _directoryNode._children.Values.ToArray();
             }
         }
 
+        [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
         private class FileNode : FileSystemNode
         {
             public FileNode(MemoryFileSystem fileSystem, DirectoryNode parentNode, string name, FileNode copyNode)
@@ -1644,9 +1667,9 @@ namespace Zio.FileSystems
                 return copy;
             }
 
-            public override string ToString()
+            public override string DebuggerDisplay()
             {
-                return $"File {Name} Content-{Content} ({base.ToString()})";
+                return $"File: {Name}, {Content.DebuggerDisplay()}{base.DebuggerDisplay()}";
             }
 
             public void ContentChanged()
@@ -1772,10 +1795,7 @@ namespace Zio.FileSystems
                 }
             }
 
-            public override string ToString()
-            {
-                return $"{nameof(Length)}: {Length}";
-            }
+            public string DebuggerDisplay() => $"Size = {_stream.Length}";
         }
 
         private sealed class MemoryFileStream : Stream
@@ -2092,10 +2112,23 @@ namespace Zio.FileSystems
                 }
             }
 
-            public override string ToString()
+            public virtual string DebuggerDisplay()
             {
-                return _sharedCount < 0 ? "exclusive lock" : _sharedCount > 0 ? $"shared lock ({_sharedCount})" : "no lock";
+                return _sharedCount < 0 ? " (exclusive lock)" : _sharedCount > 0 ? $" (shared lock: {_sharedCount})" : string.Empty;
             }
+        }
+
+        private sealed class DebuggerProxy
+        {
+            private readonly MemoryFileSystem _fs;
+
+            public DebuggerProxy(MemoryFileSystem fs)
+            {
+                _fs = fs;
+            }
+
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public FileSystemNode[] Items => _fs._rootDirectory._children.Select(x => x.Value).ToArray();
         }
     }
 }
