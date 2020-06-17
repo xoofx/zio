@@ -624,9 +624,9 @@ namespace Zio.FileSystems
                     }
                 }
 
-                if (!matchedMount && NextFileSystem != null && NextFileSystem.DirectoryExists(basePath))
+                if (!matchedMount && Fallback != null && Fallback.DirectoryExists(basePath))
                 {
-                    locations.Add(new SearchLocation(NextFileSystem, null, basePath));
+                    locations.Add(new SearchLocation(Fallback, null, basePath));
                 }
 
                 return locations;
@@ -766,10 +766,10 @@ namespace Zio.FileSystems
                     }
                 }
 
-                if (NextFileSystem != null && NextFileSystem.CanWatch(path))
+                if (Fallback != null && Fallback.CanWatch(path))
                 {
-                    var internalWatcher = NextFileSystem.Watch(path);
-                    watcher.Add(new WrapWatcher(NextFileSystem, null, path, internalWatcher));
+                    var internalWatcher = Fallback.Watch(path);
+                    watcher.Add(new WrapWatcher(Fallback, null, path, internalWatcher));
                 }
 
                 _watchers.Add(watcher);
@@ -872,7 +872,7 @@ namespace Zio.FileSystems
             }
             
             mountPath = null;
-            return NextFileSystem;
+            return Fallback;
         }
 
         /// <summary>

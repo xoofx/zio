@@ -90,7 +90,7 @@ namespace Zio.FileSystems
 
                 foreach (var watcher in _watchers)
                 {
-                    watcher.Clear(NextFileSystem);
+                    watcher.Clear(Fallback);
                 }
             }
         }
@@ -114,7 +114,7 @@ namespace Zio.FileSystems
 
                 foreach (var watcher in _watchers)
                 {
-                    watcher.Clear(NextFileSystem);
+                    watcher.Clear(Fallback);
                 }
 
                 foreach (var fileSystem in fileSystems)
@@ -326,9 +326,9 @@ namespace Zio.FileSystems
             var sortedDirectories = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
             var fileSystems = new List<IFileSystem>();
 
-            if (NextFileSystem != null)
+            if (Fallback != null)
             {
-                fileSystems.Add(NextFileSystem);
+                fileSystems.Add(Fallback);
             }
 
             // Query all filesystems just once
@@ -417,9 +417,9 @@ namespace Zio.FileSystems
             {
                 var watcher = new Watcher(this, path);
 
-                if (NextFileSystem != null && NextFileSystem.CanWatch(path))
+                if (Fallback != null && Fallback.CanWatch(path))
                 {
-                    watcher.Add(NextFileSystem.Watch(path));
+                    watcher.Add(Fallback.Watch(path));
                 }
 
                 foreach (var fs in _fileSystems)
@@ -514,7 +514,7 @@ namespace Zio.FileSystems
             {
                 for (var i = _fileSystems.Count - 1; i >= -1; i--)
                 {
-                    var fileSystem = i < 0 ? NextFileSystem : _fileSystems[i];
+                    var fileSystem = i < 0 ? Fallback : _fileSystems[i];
 
                     if (fileSystem == null)
                     {

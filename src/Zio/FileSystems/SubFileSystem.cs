@@ -29,7 +29,7 @@ namespace Zio.FileSystems
         }
 
         /// <summary>
-        /// Gets the sub path relative to the delegate <see cref="ComposeFileSystem.NextFileSystem"/>
+        /// Gets the sub path relative to the delegate <see cref="ComposeFileSystem.Fallback"/>
         /// </summary>
         public UPath SubPath { get; }
 
