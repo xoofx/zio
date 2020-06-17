@@ -46,6 +46,14 @@ namespace Zio.FileSystems
         /// </summary>
         protected bool IsDisposed { get; private set; }
 
+        /// <summary>
+        /// Gets or sets a name associated with this filesystem.
+        /// </summary>
+        /// <remarks>
+        /// This is can be used for debugging purpose or to identify different filesystems of a same kind.
+        /// </remarks>
+        public string Name { get; set; }
+
         // ----------------------------------------------
         // Directory API
         // ----------------------------------------------

@@ -154,10 +154,12 @@ namespace Zio.Tests.FileSystems
             // f.i1               -> fs3
             // E                  -> fs2
 
-            fs1 = new MemoryFileSystem();
+            fs1 = new MemoryFileSystem() {Name = "mem0"};
             CreateFolderStructure(fs1);
             fs2 = fs1.Clone();
+            fs2.Name = "mem1";
             fs3 = fs2.Clone();
+            fs3.Name = "mem2";
 
             // Delete part of fs2 so that it will fallback to fs1
             fs2.DeleteDirectory("/a/a", true);
