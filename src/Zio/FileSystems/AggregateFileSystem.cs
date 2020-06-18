@@ -420,14 +420,14 @@ namespace Zio.FileSystems
             {
                 var watcher = new Watcher(this, path);
 
-                if (Fallback != null && Fallback.CanWatch(path))
+                if (Fallback != null && Fallback.CanWatch(path) && Fallback.DirectoryExists(path))
                 {
                     watcher.Add(Fallback.Watch(path));
                 }
 
                 foreach (var fs in _fileSystems)
                 {
-                    if (fs.CanWatch(path))
+                    if (fs.CanWatch(path) && fs.DirectoryExists(path))
                     {
                         watcher.Add(fs.Watch(path));
                     }
