@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.1 (17 Jun 2020)
+- Fix AggregateFileSystem.Watch to watch only existing folders from sources.
+
 ## 0.9.0 (17 Jun 2020)
 - Add FileSystem.Name for debugging purpose.
 - Add DebuggerDisplay/DebuggerTypeProxy to all FileSystem
