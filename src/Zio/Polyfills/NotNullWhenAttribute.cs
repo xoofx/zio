@@ -1,4 +1,5 @@
-﻿namespace System.Diagnostics.CodeAnalysis
+﻿#if !HAS_NULLABLEANNOTATIONS
+namespace System.Diagnostics.CodeAnalysis
 {
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     internal sealed class NotNullWhenAttribute : Attribute
@@ -11,3 +12,4 @@
         public bool ReturnValue { get; }
     }
 }
+#endif

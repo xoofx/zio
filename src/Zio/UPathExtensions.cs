@@ -246,7 +246,6 @@ namespace Zio
         {
             if (path.FullName is null)
                 throw new ArgumentNullException(name);
-
             return path;
         }
 
