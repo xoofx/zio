@@ -132,10 +132,10 @@ namespace Zio
         /// <exception cref="System.ArgumentException">If an error occurs while trying to combine paths.</exception>
         public static UPath Combine(UPath path1, UPath path2)
         {
-            if (path1.FullName == null)
+            if (path1.FullName is null)
                 throw new ArgumentNullException(nameof(path1));
 
-            if (path2.FullName == null)
+            if (path2.FullName is null)
                 throw new ArgumentNullException(nameof(path2));
 
             if (path1.IsEmpty && path2.IsEmpty)

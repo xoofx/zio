@@ -457,7 +457,7 @@ namespace Zio.FileSystems
             }
             else
             {
-                if (srcfs == null)
+                if (srcfs is null)
                 {
                     throw NewFileNotFoundException(originalSrcPath);
                 }

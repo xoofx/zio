@@ -244,8 +244,9 @@ namespace Zio
         /// <exception cref="System.ArgumentNullException">If the path was null using the parameter name from <paramref name="name"/></exception>
         public static UPath AssertNotNull(this UPath path, string name = "path")
         {
-            if (path.FullName == null)
+            if (path.FullName is null)
                 throw new ArgumentNullException(name);
+
             return path;
         }
 

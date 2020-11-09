@@ -110,7 +110,7 @@ namespace Zio.FileSystems
         /// </exception>
         public void SetFileSystems(IEnumerable<IFileSystem> fileSystems)
         {
-            if (fileSystems == null) throw new ArgumentNullException(nameof(fileSystems));
+            if (fileSystems is null) throw new ArgumentNullException(nameof(fileSystems));
             lock (_fileSystems)
             {
                 _fileSystems.Clear();
@@ -122,7 +122,7 @@ namespace Zio.FileSystems
 
                 foreach (var fileSystem in fileSystems)
                 {
-                    if (fileSystem == null) throw new ArgumentException("A null filesystem is invalid");
+                    if (fileSystem is null) throw new ArgumentException("A null filesystem is invalid");
                     if (fileSystem == this) throw new ArgumentException("Cannot add this instance as an aggregate delegate of itself");
                     _fileSystems.Add(fileSystem);
 
@@ -148,7 +148,7 @@ namespace Zio.FileSystems
         /// <exception cref="System.ArgumentException">The filesystem is already added</exception>
         public virtual void AddFileSystem(IFileSystem fs)
         {
-            if (fs == null) throw new ArgumentNullException(nameof(fs));
+            if (fs is null) throw new ArgumentNullException(nameof(fs));
             if (fs == this) throw new ArgumentException("Cannot add this instance as an aggregate delegate of itself");
 
             lock (_fileSystems)
@@ -181,7 +181,7 @@ namespace Zio.FileSystems
         /// <exception cref="System.ArgumentException">FileSystem was not found - fs</exception>
         public virtual void RemoveFileSystem(IFileSystem fs)
         {
-            if (fs == null) throw new ArgumentNullException(nameof(fs));
+            if (fs is null) throw new ArgumentNullException(nameof(fs));
             lock (_fileSystems)
             {
                 if (_fileSystems.Contains(fs))

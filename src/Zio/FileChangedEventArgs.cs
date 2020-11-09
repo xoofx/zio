@@ -32,7 +32,7 @@ namespace Zio
 
         public FileChangedEventArgs(IFileSystem fileSystem, WatcherChangeTypes changeType, UPath fullPath)
         {
-            if (fileSystem == null) throw new ArgumentNullException(nameof(fileSystem));
+            if (fileSystem is null) throw new ArgumentNullException(nameof(fileSystem));
             fullPath.AssertNotNull(nameof(fullPath));
             fullPath.AssertAbsolute(nameof(fullPath));
 
