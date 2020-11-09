@@ -32,7 +32,7 @@ namespace Zio.FileSystems
         /// <param name="watcher">The <see cref="IFileSystemWatcher"/> instance to add.</param>
         public void Add(IFileSystemWatcher watcher)
         {
-            if (watcher == null)
+            if (watcher is null)
             {
                 throw new ArgumentNullException(nameof(watcher));
             }
@@ -61,7 +61,7 @@ namespace Zio.FileSystems
         /// <param name="fileSystem">The <see cref="IFileSystem"/> to stop aggregating events from.</param>
         public void RemoveFrom(IFileSystem fileSystem)
         {
-            if (fileSystem == null)
+            if (fileSystem is null)
             {
                 throw new ArgumentNullException(nameof(fileSystem));
             }

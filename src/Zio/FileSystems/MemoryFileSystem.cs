@@ -226,7 +226,7 @@ namespace Zio.FileSystems
                     {
                         throw new UnauthorizedAccessException($"Cannot copy file. The path `{srcPath}` is a directory");
                     }
-                    if (srcNode == null)
+                    if (srcNode is null)
                     {
                         throw NewFileNotFoundException(srcPath);
                     }
@@ -248,7 +248,7 @@ namespace Zio.FileSystems
                         }
 
                         // If the destination is empty, we need to create it
-                        if (destNode == null)
+                        if (destNode is null)
                         {
                             // Constructor copies and attaches to directory for us
                             var newFileNode = new FileNode(this, destDirectory, destFileName, (FileNode)srcNode);
@@ -460,7 +460,7 @@ namespace Zio.FileSystems
                 try
                 {
                     var srcNode = result.Node;
-                    if (srcNode == null)
+                    if (srcNode is null)
                     {
                         // If the file to be deleted does not exist, no exception is thrown.
                         return;
@@ -504,13 +504,13 @@ namespace Zio.FileSystems
             try
             {
                 var result = EnterFindNode(path, (isExclusive ? FindNodeFlags.NodeExclusive : FindNodeFlags.NodeShared) | FindNodeFlags.KeepParentNodeExclusive, share);
-                if (result.Directory == null)
+                if (result.Directory is null)
                 {
                     ExitFindNode(result);
                     throw NewDirectoryNotFoundException(path);
                 }
 
-                if (result.Node is DirectoryNode || (isWriting && result.Node is { IsReadOnly: true }))
+                if (result.Node is DirectoryNode || (isWriting && result.Node != null && result.Node.IsReadOnly))
                 {
                     ExitFindNode(result);
                     throw new UnauthorizedAccessException($"Access to the path `{path}` is denied.");
@@ -632,7 +632,7 @@ namespace Zio.FileSystems
                 }
                 else
                 {
-                    if (fileNode == null)
+                    if (fileNode is null)
                     {
                         throw NewFileNotFoundException(path);
                     }
@@ -1064,7 +1064,7 @@ namespace Zio.FileSystems
         {
             var node = TryFindNodeSafe(path);
 
-            if (node == null)
+            if (node is null)
             {
                 if (expectFileOnly)
                 {
@@ -1141,7 +1141,7 @@ namespace Zio.FileSystems
                 }
             }
 
-            if (nodeResult.Directory == null)
+            if (nodeResult.Directory is null)
             {
                 return;
             }
@@ -1329,11 +1329,8 @@ namespace Zio.FileSystems
         {
             lock (_dispatcherLock)
             {
-                if (_dispatcher == null)
-                {
-                    _dispatcher = new FileSystemEventDispatcher<Watcher>(this);
-                }
-
+                _dispatcher ??= new FileSystemEventDispatcher<Watcher>(this);
+                
                 return _dispatcher;
             }
         }
@@ -1452,7 +1449,7 @@ namespace Zio.FileSystems
 
         private void TryLockExclusive(FileSystemNode node, ListFileSystemNodes locks, bool recursive, UPath context)
         {
-            if (locks == null) throw new ArgumentNullException(nameof(locks));
+            if (locks is null) throw new ArgumentNullException(nameof(locks));
 
             if (node is DirectoryNode directory)
             {
@@ -1484,7 +1481,7 @@ namespace Zio.FileSystems
 
             protected FileSystemNode(MemoryFileSystem fileSystem, DirectoryNode? parentNode, string? name, FileSystemNode? copyNode)
             {
-                Debug.Assert((parentNode == null) == string.IsNullOrEmpty(name));
+                Debug.Assert((parentNode is null) == string.IsNullOrEmpty(name));
 
                 FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
@@ -1543,7 +1540,7 @@ namespace Zio.FileSystems
 
                 Debug.Assert(parentNode.IsLocked);
                 Debug.Assert(IsLocked);
-                Debug.Assert(Parent == null);
+                Debug.Assert(Parent is null);
 
                 Parent = parentNode;
                 Parent.Children.Add(name, this);
@@ -1559,7 +1556,7 @@ namespace Zio.FileSystems
 
             public virtual FileSystemNode Clone(DirectoryNode? newParent, string? newName)
             {
-                Debug.Assert((newParent == null) == string.IsNullOrEmpty(newName));
+                Debug.Assert((newParent is null) == string.IsNullOrEmpty(newName));
 
                 var clone = (FileSystemNode)Clone();
                 clone.Parent = newParent;
@@ -1627,7 +1624,7 @@ namespace Zio.FileSystems
 
             public override string DebuggerDisplay()
             {
-                return Name == null ? $"Count = {_children.Count}{base.DebuggerDisplay()}"  : $"Folder: {Name}, Count = {_children.Count}{base.DebuggerDisplay()}";
+                return Name is null ? $"Count = {_children.Count}{base.DebuggerDisplay()}"  : $"Folder: {Name}, Count = {_children.Count}{base.DebuggerDisplay()}";
             }
 
             private sealed class DebuggerProxyInternal

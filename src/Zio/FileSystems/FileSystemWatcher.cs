@@ -184,7 +184,7 @@ namespace Zio.FileSystems
         /// <param name="watcher">Other instance to listen to.</param>
         protected void RegisterEvents(IFileSystemWatcher watcher)
         {
-            if (watcher == null)
+            if (watcher is null)
             {
                 throw new ArgumentNullException(nameof(watcher));
             }
@@ -202,7 +202,7 @@ namespace Zio.FileSystems
         /// <param name="watcher">Instance to remove event handlers from.</param>
         protected void UnregisterEvents(IFileSystemWatcher watcher)
         {
-            if (watcher == null)
+            if (watcher is null)
             {
                 throw new ArgumentNullException(nameof(watcher));
             }

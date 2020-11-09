@@ -30,7 +30,7 @@ namespace Zio
             path.AssertNotNull();
             var name = path.GetName();
             // if _execMatch is null and _regexMatch is null, we have a * match
-            return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
+            return _exactMatch != null ? _exactMatch == name : _regexMatch is null || _regexMatch.IsMatch(name);
         }
 
         /// <summary>
@@ -40,14 +40,14 @@ namespace Zio
         /// <returns><c>true</c> if the file name was matched, <c>false</c> otherwise.</returns>
         public bool Match(string fileName)
         {
-            if (fileName == null) throw new ArgumentNullException(nameof(fileName));
+            if (fileName is null) throw new ArgumentNullException(nameof(fileName));
             // if _execMatch is null and _regexMatch is null, we have a * match
-            return _exactMatch != null ? _exactMatch == fileName : _regexMatch == null || _regexMatch.IsMatch(fileName);
+            return _exactMatch != null ? _exactMatch == fileName : _regexMatch is null || _regexMatch.IsMatch(fileName);
         }
 
         public FilterPattern(string filter)
         {
-            if (filter == null)
+            if (filter is null)
             {
                 throw new ArgumentNullException(nameof(filter));
             }
@@ -75,7 +75,7 @@ namespace Zio
                 int nextIndex;
                 while ((nextIndex = filter.IndexOfAny(SpecialChars, startIndex)) >= 0)
                 {
-                    if (builder == null)
+                    if (builder is null)
                     {
                         builder = UPath.GetSharedStringBuilder();
                         builder.Append("^");
@@ -103,7 +103,7 @@ namespace Zio
 
                     startIndex = nextIndex + 1;
                 }
-                if (builder == null)
+                if (builder is null)
                 {
                     _exactMatch = filter;
                 }

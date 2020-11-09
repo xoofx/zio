@@ -29,7 +29,7 @@ namespace Zio
             path.AssertNotNull();
             var name = path.GetName();
             // if _execMatch is null and _regexMatch is null, we have a * match
-            return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
+            return _exactMatch != null ? _exactMatch == name : _regexMatch is null || _regexMatch.IsMatch(name);
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace Zio
         {
             if (name is null) throw new ArgumentNullException(nameof(name));
             // if _execMatch is null and _regexMatch is null, we have a * match
-            return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
+            return _exactMatch != null ? _exactMatch == name : _regexMatch is null || _regexMatch.IsMatch(name);
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace Zio
         private SearchPattern(ref UPath path, ref string searchPattern)
         {
             path.AssertAbsolute();
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
 
             _exactMatch = null;
             _regexMatch = null;
@@ -111,7 +111,7 @@ namespace Zio
             {
                 while ((nextIndex = searchPattern.IndexOfAny(SpecialChars, startIndex)) >= 0)
                 {
-                    if (builder == null)
+                    if (builder is null)
                     {
                         builder = UPath.GetSharedStringBuilder();
                         builder.Append("^");
@@ -130,7 +130,7 @@ namespace Zio
 
                     startIndex = nextIndex + 1;
                 }
-                if (builder == null)
+                if (builder is null)
                 {
                     _exactMatch = searchPattern;
                 }

@@ -15,7 +15,7 @@ namespace Zio
 
         public FileSystemErrorEventArgs(Exception exception)
         {
-            if (exception == null)
+            if (exception is null)
             {
                 throw new ArgumentNullException(nameof(exception));
             }

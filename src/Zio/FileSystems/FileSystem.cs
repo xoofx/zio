@@ -443,7 +443,7 @@ namespace Zio.FileSystems
         public IEnumerable<UPath> EnumeratePaths(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             AssertNotDisposed();
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumeratePathsImpl(ValidatePath(path), searchPattern, searchOption, searchTarget);
         }
 
@@ -528,7 +528,7 @@ namespace Zio.FileSystems
         public UPath ConvertPathFromInternal(string systemPath)
         {
             AssertNotDisposed();
-            if (systemPath == null) throw new ArgumentNullException(nameof(systemPath));
+            if (systemPath is null) throw new ArgumentNullException(nameof(systemPath));
             return ValidatePath(ConvertPathFromInternalImpl(systemPath));
         }
         /// <summary>

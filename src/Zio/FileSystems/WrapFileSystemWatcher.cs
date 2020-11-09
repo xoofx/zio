@@ -12,7 +12,7 @@ namespace Zio.FileSystems
         public WrapFileSystemWatcher(IFileSystem fileSystem, UPath path, IFileSystemWatcher watcher)
             : base(fileSystem, path)
         {
-            if (watcher == null)
+            if (watcher is null)
             {
                 throw new ArgumentNullException(nameof(watcher));
             }

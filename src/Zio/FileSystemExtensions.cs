@@ -40,7 +40,7 @@ namespace Zio
         /// <param name="overwrite"><c>true</c> to overwrite files.</param>
         public static void CopyTo(this IFileSystem fs, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
         {
-            if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
+            if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
             CopyDirectory(fs, UPath.Root, destFileSystem, dstFolder, overwrite);
         }
@@ -55,7 +55,7 @@ namespace Zio
         /// <param name="overwrite"><c>true</c> to overwrite files.</param>
         public static void CopyDirectory(this IFileSystem fs, UPath srcFolder, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
         {
-            if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
+            if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
             if (!fs.DirectoryExists(srcFolder)) throw new DirectoryNotFoundException($"{srcFolder} folder not found from source file system.");
 
@@ -97,7 +97,7 @@ namespace Zio
         /// <param name="overwrite"><c>true</c> to overwrite an existing destination file</param>
         public static void CopyFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath, bool overwrite)
         {
-            if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
+            if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
             // If this is the same filesystem, use the file system directly to perform the action
             if (fs == destFileSystem)
@@ -169,7 +169,7 @@ namespace Zio
         /// <param name="destPath">The destination path of the file in the destination filesystem</param>
         public static void MoveFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath)
         {
-            if (destFileSystem == null) throw new ArgumentNullException(nameof(destFileSystem));
+            if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
             // If this is the same filesystem, use the file system directly to perform the action
             if (fs == destFileSystem)
@@ -304,7 +304,7 @@ namespace Zio
         /// <returns>A string containing all lines of the file.</returns>
         public static string ReadAllText(this IFileSystem fs, UPath path, Encoding encoding)
         {
-            if (encoding == null) throw new ArgumentNullException(nameof(encoding));
+            if (encoding is null) throw new ArgumentNullException(nameof(encoding));
             var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             {
                 using (var reader = new StreamReader(stream, encoding))
@@ -328,7 +328,7 @@ namespace Zio
         /// </remarks>
         public static void WriteAllBytes(this IFileSystem fs, UPath path, byte[] content)
         {
-            if (content == null) throw new ArgumentNullException(nameof(content));
+            if (content is null) throw new ArgumentNullException(nameof(content));
             using (var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
                 stream.Write(content, 0, content.Length);
@@ -371,7 +371,7 @@ namespace Zio
         /// <returns>An array of strings containing all lines of the file.</returns>
         public static string[] ReadAllLines(this IFileSystem fs, UPath path, Encoding encoding)
         {
-            if (encoding == null) throw new ArgumentNullException(nameof(encoding));
+            if (encoding is null) throw new ArgumentNullException(nameof(encoding));
             var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             {
                 using (var reader = new StreamReader(stream, encoding))
@@ -403,7 +403,7 @@ namespace Zio
         /// </remarks>
         public static void WriteAllText(this IFileSystem fs, UPath path, string content)
         {
-            if (content == null) throw new ArgumentNullException(nameof(content));
+            if (content is null) throw new ArgumentNullException(nameof(content));
             var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream))
@@ -430,8 +430,8 @@ namespace Zio
         /// </remarks>
         public static void WriteAllText(this IFileSystem fs, UPath path, string content, Encoding encoding)
         {
-            if (content == null) throw new ArgumentNullException(nameof(content));
-            if (encoding == null) throw new ArgumentNullException(nameof(encoding));
+            if (content is null) throw new ArgumentNullException(nameof(content));
+            if (encoding is null) throw new ArgumentNullException(nameof(encoding));
             var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream, encoding))
@@ -458,7 +458,7 @@ namespace Zio
         /// </remarks>
         public static void AppendAllText(this IFileSystem fs, UPath path, string content)
         {
-            if (content == null) throw new ArgumentNullException(nameof(content));
+            if (content is null) throw new ArgumentNullException(nameof(content));
             var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream))
@@ -485,8 +485,8 @@ namespace Zio
         /// </remarks>
         public static void AppendAllText(this IFileSystem fs, UPath path, string content, Encoding encoding)
         {
-            if (content == null) throw new ArgumentNullException(nameof(content));
-            if (encoding == null) throw new ArgumentNullException(nameof(encoding));
+            if (content is null) throw new ArgumentNullException(nameof(content));
+            if (encoding is null) throw new ArgumentNullException(nameof(encoding));
             var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream, encoding))
@@ -530,7 +530,7 @@ namespace Zio
         /// <returns>An enumerable collection of the full names (including paths) for the directories in the directory specified by path.</returns>
         public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateDirectories(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
@@ -547,7 +547,7 @@ namespace Zio
         /// <returns>An enumerable collection of the full names (including paths) for the directories in the directory specified by path.</returns>
         public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Directory))
                 yield return subPath;
         }
@@ -573,7 +573,7 @@ namespace Zio
         /// <returns>An enumerable collection of the full names (including paths) for the files in the directory specified by path.</returns>
         public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateFiles(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
@@ -590,7 +590,7 @@ namespace Zio
         /// <returns>An enumerable collection of the full names (including paths) for the files in the directory specified by path.</returns>
         public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.File))
                 yield return subPath;
         }
@@ -616,7 +616,7 @@ namespace Zio
         /// <returns>An enumerable collection of the full names (including paths) for the files and directories in the directory specified by path.</returns>
         public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumeratePaths(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
@@ -633,7 +633,7 @@ namespace Zio
         /// <returns>An enumerable collection of the full names (including paths) for the files and directories in the directory specified by path.</returns>
         public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Both);
         }
 
@@ -658,7 +658,7 @@ namespace Zio
         /// <returns>An enumerable collection of <see cref="FileEntry"/> from the specified path.</returns>
         public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateFileEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
@@ -675,7 +675,7 @@ namespace Zio
         /// <returns>An enumerable collection of <see cref="FileEntry"/> from the specified path.</returns>
         public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             foreach (var subPath in EnumerateFiles(fileSystem, path, searchPattern, searchOption))
             {
                 yield return new FileEntry(fileSystem, subPath);
@@ -703,7 +703,7 @@ namespace Zio
         /// <returns>An enumerable collection of <see cref="DirectoryEntry"/> from the specified path.</returns>
         public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateDirectoryEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
@@ -720,7 +720,7 @@ namespace Zio
         /// <returns>An enumerable collection of <see cref="DirectoryEntry"/> from the specified path.</returns>
         public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             foreach (var subPath in EnumerateDirectories(fileSystem, path, searchPattern, searchOption))
             {
                 yield return new DirectoryEntry(fileSystem, subPath);
@@ -748,7 +748,7 @@ namespace Zio
         /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
         public static IEnumerable<FileSystemEntry> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateFileSystemEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
         }
 
@@ -766,7 +766,7 @@ namespace Zio
         /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
         public static IEnumerable<FileSystemEntry> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget = SearchTarget.Both)
         {
-            if (searchPattern == null) throw new ArgumentNullException(nameof(searchPattern));
+            if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, searchTarget))
             {
                 yield return fileSystem.DirectoryExists(subPath) ? (FileSystemEntry) new DirectoryEntry(fileSystem, subPath) : new FileEntry(fileSystem, subPath);
