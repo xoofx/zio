@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -24,7 +25,7 @@ namespace Zio.FileSystems
         private readonly DirectoryNode _rootDirectory;
         private readonly FileSystemNodeReadWriteLock _globalLock;
         private readonly object _dispatcherLock;
-        private FileSystemEventDispatcher<Watcher> _dispatcher;
+        private FileSystemEventDispatcher<Watcher>? _dispatcher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MemoryFileSystem"/> class.
@@ -42,7 +43,7 @@ namespace Zio.FileSystems
         /// <param name="copyFrom">The MemoryFileStream to clone from</param>
         protected MemoryFileSystem(MemoryFileSystem copyFrom)
         {
-            if (copyFrom == null) throw new ArgumentNullException(nameof(copyFrom));
+            if (copyFrom is null) throw new ArgumentNullException(nameof(copyFrom));
             Debug.Assert(copyFrom._globalLock.IsLocked);
             _rootDirectory = (DirectoryNode)copyFrom._rootDirectory.Clone(null, null);
             _globalLock = new FileSystemNodeReadWriteLock();
@@ -152,7 +153,7 @@ namespace Zio.FileSystems
                 bool deleteRootDirectory = false;
                 try
                 {
-                    AssertDirectory(result.Node, path);
+                    ValidateDirectory(result.Node, path);
 
                     if (result.Node.IsReadOnly)
                     {
@@ -237,7 +238,7 @@ namespace Zio.FileSystems
                     try
                     {
                         // The dest file may exist
-                        if (destDirectory == null)
+                        if (destDirectory is null)
                         {
                             throw NewDirectoryNotFoundException(destPath);
                         }
@@ -355,17 +356,17 @@ namespace Zio.FileSystems
                     var srcResult = results[0];
                     var destResult = results[1];
 
-                    AssertFile(srcResult.Node, srcPath);
-                    AssertFile(destResult.Node, destPath);
+                    ValidateFile(srcResult.Node, srcPath);
+                    ValidateFile(destResult.Node, destPath);
 
                     if (!destBackupPath.IsNull)
                     {
                         var backupResult = results[2];
-                        AssertDirectory(backupResult.Directory, destPath);
+                        ValidateDirectory(backupResult.Directory, destPath);
 
                         if (backupResult.Node != null)
                         {
-                            AssertFile(backupResult.Node, destBackupPath);
+                            ValidateFile(backupResult.Node, destBackupPath);
                             backupResult.Node.DetachFromParent();
                             backupResult.Node.Dispose();
 
@@ -373,7 +374,7 @@ namespace Zio.FileSystems
                         }
 
                         destResult.Node.DetachFromParent();
-                        destResult.Node.AttachToParent(backupResult.Directory, backupResult.Name);
+                        destResult.Node.AttachToParent(backupResult.Directory!, backupResult.Name!);
 
                         TryGetDispatcher()?.RaiseRenamed(destBackupPath, destPath);
                     }
@@ -386,7 +387,7 @@ namespace Zio.FileSystems
                     }
 
                     srcResult.Node.DetachFromParent();
-                    srcResult.Node.AttachToParent(destResult.Directory, destResult.Name);
+                    srcResult.Node.AttachToParent(destResult.Directory!, destResult.Name!);
 
                     TryGetDispatcher()?.RaiseRenamed(destPath, srcPath);
                 }
@@ -498,8 +499,8 @@ namespace Zio.FileSystems
             var isExclusive = share == FileShare.None;
 
             EnterFileSystemShared();
-            DirectoryNode parentDirectory = null;
-            FileNode fileNodeToRelease = null;
+            DirectoryNode? parentDirectory = null;
+            FileNode? fileNodeToRelease = null;
             try
             {
                 var result = EnterFindNode(path, (isExclusive ? FindNodeFlags.NodeExclusive : FindNodeFlags.NodeShared) | FindNodeFlags.KeepParentNodeExclusive, share);
@@ -509,7 +510,7 @@ namespace Zio.FileSystems
                     throw NewDirectoryNotFoundException(path);
                 }
 
-                if (result.Node is DirectoryNode || (isWriting && result.Node != null && result.Node.IsReadOnly))
+                if (result.Node is DirectoryNode || (isWriting && result.Node is { IsReadOnly: true }))
                 {
                     ExitFindNode(result);
                     throw new UnauthorizedAccessException($"Access to the path `{path}` is denied.");
@@ -519,7 +520,7 @@ namespace Zio.FileSystems
                 parentDirectory = result.Directory;
                 var srcNode = result.Node;
 
-                var fileNode = (FileNode)srcNode;
+                var fileNode = (FileNode)srcNode!;
 
                 // Append: Opens the file if it exists and seeks to the end of the file, or creates a new file. 
                 //         This requires FileIOPermissionAccess.Append permission. FileMode.Append can be used only in 
@@ -702,8 +703,8 @@ namespace Zio.FileSystems
             // We don't store the attributes Normal or directory
             // As they are returned by GetAttributes and we don't want
             // to duplicate the information with the type inheritance (FileNode or DirectoryNode)
-            attributes = attributes & ~FileAttributes.Normal;
-            attributes = attributes & ~FileAttributes.Directory;
+            attributes &= ~FileAttributes.Normal;
+            attributes &= ~FileAttributes.Directory;
 
             var node = FindNodeSafe(path, false);
             node.Attributes = attributes;
@@ -788,7 +789,7 @@ namespace Zio.FileSystems
                         if (directoryPath == path)
                         {
                             // The first folder must be a directory, if it is not, throw an error
-                            AssertDirectory(result.Node, directoryPath);
+                            ValidateDirectory(result.Node, directoryPath);
                         }
                         else
                         {
@@ -923,12 +924,12 @@ namespace Zio.FileSystems
             }
 
             // Same directory move
-            var isSamefolder = parentSrcPath == parentDestPath;
+            bool isSamefolder = parentSrcPath == parentDestPath;
             // Check that Destination folder is not a subfolder of source directory
             if (!isSamefolder && expectDirectory)
             {
                 var checkParentDestDirectory = destPath.GetDirectory();
-                while (checkParentDestDirectory != null)
+                while (!checkParentDestDirectory.IsNull)
                 {
                     if (checkParentDestDirectory == srcPath)
                     {
@@ -972,18 +973,18 @@ namespace Zio.FileSystems
 
                     if (expectDirectory)
                     {
-                        AssertDirectory(srcResult.Node, srcPath);
+                        ValidateDirectory(srcResult.Node, srcPath);
                     }
                     else
                     {
-                        AssertFile(srcResult.Node, srcPath);
+                        ValidateFile(srcResult.Node, srcPath);
                     }
-                    AssertDirectory(destResult.Directory, destPath);
+                    ValidateDirectory(destResult.Directory, destPath);
 
                     AssertNoDestination(destResult.Node);
 
                     srcResult.Node.DetachFromParent();
-                    srcResult.Node.AttachToParent(destResult.Directory, destResult.Name);
+                    srcResult.Node.AttachToParent(destResult.Directory, destResult.Name!);
 
                     TryGetDispatcher()?.RaiseDeleted(srcPath);
                     TryGetDispatcher()?.RaiseCreated(destPath);
@@ -1015,22 +1016,23 @@ namespace Zio.FileSystems
             }
         }
 
-
-        private void AssertDirectory(FileSystemNode node, UPath srcPath)
+        
+        private void ValidateDirectory([NotNull] FileSystemNode? node, UPath srcPath)
         {
             if (node is FileNode)
             {
                 throw new IOException($"The source directory `{srcPath}` is a file");
             }
-            if (node == null)
+
+            if (node is null)
             {
                 throw NewDirectoryNotFoundException(srcPath);
             }
         }
 
-        private void AssertFile(FileSystemNode node, UPath srcPath)
+        private void ValidateFile([NotNull] FileSystemNode? node, UPath srcPath)
         {
-            if (node == null)
+            if (node is null)
             {
                 throw NewFileNotFoundException(srcPath);
             }
@@ -1089,7 +1091,7 @@ namespace Zio.FileSystems
 
         private struct NodeResult
         {
-            public NodeResult(DirectoryNode directory, FileSystemNode node, string name, FindNodeFlags flags)
+            public NodeResult(DirectoryNode? directory, FileSystemNode node, string? name, FindNodeFlags flags)
             {
                 Directory = directory;
                 Node = node;
@@ -1097,11 +1099,11 @@ namespace Zio.FileSystems
                 Flags = flags;
             }
 
-            public readonly DirectoryNode Directory;
+            public readonly DirectoryNode? Directory;
 
             public readonly FileSystemNode Node;
 
-            public readonly string Name;
+            public readonly string? Name;
 
             public readonly FindNodeFlags Flags;
         }
@@ -1225,11 +1227,11 @@ namespace Zio.FileSystems
                 var name = names[i];
                 bool isLast = i + 1 == names.Count;
 
-                DirectoryNode nextParent = null;
+                DirectoryNode? nextParent = null;
                 bool isNextParentLockTaken = false;
                 try
                 {
-                    FileSystemNode subNode;
+                    FileSystemNode? subNode;
                     if (!parentNode.Children.TryGetValue(name, out subNode))
                     {
                         if ((flags & FindNodeFlags.CreatePathIfNotExist) != 0)
@@ -1336,7 +1338,7 @@ namespace Zio.FileSystems
             }
         }
 
-        private FileSystemEventDispatcher<Watcher> TryGetDispatcher()
+        private FileSystemEventDispatcher<Watcher>? TryGetDispatcher()
         {
             lock (_dispatcherLock)
             {
@@ -1480,14 +1482,13 @@ namespace Zio.FileSystems
         {
             protected readonly MemoryFileSystem FileSystem;
 
-            protected FileSystemNode(MemoryFileSystem fileSystem, DirectoryNode parentNode, string name, FileSystemNode copyNode)
+            protected FileSystemNode(MemoryFileSystem fileSystem, DirectoryNode? parentNode, string? name, FileSystemNode? copyNode)
             {
-                Debug.Assert(fileSystem != null);
                 Debug.Assert((parentNode == null) == string.IsNullOrEmpty(name));
 
-                FileSystem = fileSystem;
+                FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
-                if (parentNode != null && !string.IsNullOrEmpty(name))
+                if (parentNode != null && name is { Length: > 0 })
                 {
                     Debug.Assert(parentNode.IsLocked);
 
@@ -1505,9 +1506,9 @@ namespace Zio.FileSystems
                 LastAccessTime = copyNode?.LastAccessTime ?? CreationTime;
             }
 
-            public DirectoryNode Parent { get; private set; }
+            public DirectoryNode? Parent { get; private set; }
 
-            public string Name { get; private set; }
+            public string? Name { get; private set; }
 
             public FileAttributes Attributes { get; set; }
 
@@ -1524,18 +1525,22 @@ namespace Zio.FileSystems
             public void DetachFromParent()
             {
                 Debug.Assert(IsLocked);
-                var parent = Parent;
+                var parent = Parent!;
                 Debug.Assert(parent.IsLocked);
 
-                parent.Children.Remove(Name);
-                Parent = null;
-                Name = null;
+                parent.Children.Remove(Name!);
+                Parent = null!;
+                Name = null!;
             }
 
             public void AttachToParent(DirectoryNode parentNode, string name)
             {
-                if (parentNode == null) throw new ArgumentNullException(nameof(parentNode));
-                if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
+                if (parentNode is null) 
+                    throw new ArgumentNullException(nameof(parentNode));
+
+                if (string.IsNullOrEmpty(name)) 
+                    throw new ArgumentNullException(nameof(name));
+
                 Debug.Assert(parentNode.IsLocked);
                 Debug.Assert(IsLocked);
                 Debug.Assert(Parent == null);
@@ -1552,7 +1557,7 @@ namespace Zio.FileSystems
                 IsDisposed = true;
             }
 
-            public virtual FileSystemNode Clone(DirectoryNode newParent, string newName)
+            public virtual FileSystemNode Clone(DirectoryNode? newParent, string? newName)
             {
                 Debug.Assert((newParent == null) == string.IsNullOrEmpty(newName));
 
@@ -1569,8 +1574,7 @@ namespace Zio.FileSystems
             
             public ListFileSystemNodes(MemoryFileSystem fs)
             {
-                Debug.Assert(fs != null);
-                _fs = fs;
+                _fs = fs ?? throw new ArgumentNullException(nameof(fs));
             }
 
             public void Dispose()
@@ -1610,7 +1614,7 @@ namespace Zio.FileSystems
                 }
             }
 
-            public override FileSystemNode Clone(DirectoryNode newParent, string newName)
+            public override FileSystemNode Clone(DirectoryNode? newParent, string? newName)
             {
                 var dir = (DirectoryNode)base.Clone(newParent, newName);
                 dir._children = new Dictionary<string, FileSystemNode>();
@@ -1641,9 +1645,9 @@ namespace Zio.FileSystems
         }
 
         [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
-        private class FileNode : FileSystemNode
+        private sealed class FileNode : FileSystemNode
         {
-            public FileNode(MemoryFileSystem fileSystem, DirectoryNode parentNode, string name, FileNode copyNode)
+            public FileNode(MemoryFileSystem fileSystem, DirectoryNode parentNode, string? name, FileNode? copyNode)
                 : base(fileSystem, parentNode, name, copyNode)
             {
                 if (copyNode != null)
@@ -1659,8 +1663,7 @@ namespace Zio.FileSystems
 
             public FileContent Content { get; private set; }
 
-
-            public override FileSystemNode Clone(DirectoryNode newParent, string newName)
+            public override FileSystemNode Clone(DirectoryNode? newParent, string? newName)
             {
                 var copy = (FileNode)base.Clone(newParent, newName);
                 copy.Content = new FileContent(copy, Content);
@@ -1703,26 +1706,22 @@ namespace Zio.FileSystems
             }
         }
 
-        private class FileContent
+        private sealed class FileContent
         {
             private readonly FileNode _fileNode;
             private readonly MemoryStream _stream;
 
             public FileContent(FileNode fileNode)
             {
-                Debug.Assert(fileNode != null);
-
-                _fileNode = fileNode;
+                _fileNode = fileNode ?? throw new ArgumentNullException(nameof(fileNode));
                 _stream = new MemoryStream();
             }
 
             public FileContent(FileNode fileNode, FileContent copy)
             {
-                Debug.Assert(fileNode != null);
-
-                _fileNode = fileNode;
+                _fileNode = fileNode ?? throw new ArgumentNullException(nameof(fileNode));
                 var length = copy.Length;
-                _stream = new MemoryStream(length <= Int32.MaxValue ? (int)length : Int32.MaxValue);
+                _stream = new MemoryStream(length <= int.MaxValue ? (int)length : int.MaxValue);
                 CopyFrom(copy);
             }
 
@@ -1810,15 +1809,14 @@ namespace Zio.FileSystems
 
             public MemoryFileStream(MemoryFileSystem fs, FileNode fileNode, bool canRead, bool canWrite, bool isExclusive)
             {
-                Debug.Assert(fs != null);
-                Debug.Assert(fileNode != null);
-                Debug.Assert(fileNode.IsLocked);
-                _fs = fs;
-                _fileNode = fileNode;
+                _fs = fs ?? throw new ArgumentNullException(nameof(fs));
+                _fileNode = fileNode ?? throw new ArgumentNullException(nameof(fs));
                 _canWrite = canWrite;
                 _canRead = canRead;
                 _isExclusive = isExclusive;
                 _position = 0;
+
+                Debug.Assert(fileNode.IsLocked);
             }
 
             public override bool CanRead => _isDisposed == 0 && _canRead;

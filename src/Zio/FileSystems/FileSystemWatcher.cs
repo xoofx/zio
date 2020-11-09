@@ -8,19 +8,19 @@ namespace Zio.FileSystems
         private FilterPattern _filterPattern;
 
         /// <inheritdoc />
-        public event EventHandler<FileChangedEventArgs> Changed;
+        public event EventHandler<FileChangedEventArgs>? Changed;
 
         /// <inheritdoc />
-        public event EventHandler<FileChangedEventArgs> Created;
+        public event EventHandler<FileChangedEventArgs>? Created;
 
         /// <inheritdoc />
-        public event EventHandler<FileChangedEventArgs> Deleted;
+        public event EventHandler<FileChangedEventArgs>? Deleted;
 
         /// <inheritdoc />
-        public event EventHandler<FileSystemErrorEventArgs> Error;
+        public event EventHandler<FileSystemErrorEventArgs>? Error;
 
         /// <inheritdoc />
-        public event EventHandler<FileRenamedEventArgs> Renamed;
+        public event EventHandler<FileRenamedEventArgs>? Renamed;
 
         /// <inheritdoc />
         public IFileSystem FileSystem { get; }
@@ -67,13 +67,9 @@ namespace Zio.FileSystems
 
         public FileSystemWatcher(IFileSystem fileSystem, UPath path)
         {
-            if (fileSystem == null)
-            {
-                throw new ArgumentNullException(nameof(fileSystem));
-            }
             path.AssertAbsolute();
 
-            FileSystem = fileSystem;
+            FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
             Path = path;
             _filter = "*.*";
         }

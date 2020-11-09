@@ -87,7 +87,7 @@ namespace Zio.FileSystems
         /// Removes all <see cref="IFileSystemWatcher"/> instances from this instance.
         /// </summary>
         /// <param name="excludeFileSystem">Exclude this filesystem from removal.</param>
-        public void Clear(IFileSystem excludeFileSystem = null)
+        public void Clear(IFileSystem? excludeFileSystem = null)
         {
             lock (_children)
             {

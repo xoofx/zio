@@ -55,7 +55,7 @@ namespace Zio.FileSystems
         /// <remarks>
         /// This is can be used for debugging purpose or to identify different filesystems of a same kind.
         /// </remarks>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         // ----------------------------------------------
         // Directory API

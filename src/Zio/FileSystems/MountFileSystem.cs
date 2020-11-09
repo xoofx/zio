@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -36,7 +35,7 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="defaultBackupFileSystem">The default backup file system.</param>
         /// <param name="owned">True if <paramref name="defaultBackupFileSystem"/> and mounted filesytems should be disposed when this instance is disposed.</param>
-        public MountFileSystem(IFileSystem defaultBackupFileSystem, bool owned = true) : base(defaultBackupFileSystem, owned)
+        public MountFileSystem(IFileSystem? defaultBackupFileSystem, bool owned = true) : base(defaultBackupFileSystem, owned)
         {
             _mounts = new SortedList<UPath, IFileSystem>(new UPathLengthComparer());
             _watchers = new List<AggregateWatcher>();
@@ -88,12 +87,12 @@ namespace Zio.FileSystems
         /// </exception>
         public void Mount(UPath name, IFileSystem fileSystem)
         {
-            if (fileSystem == null) throw new ArgumentNullException(nameof(fileSystem));
+            if (fileSystem is null) throw new ArgumentNullException(nameof(fileSystem));
             if (fileSystem == this)
             {
                 throw new ArgumentException("Cannot recursively mount the filesystem to self", nameof(fileSystem));
             }
-            AssertMountName(name);
+            ValidateMountName(name);
 
             lock (_mounts)
             {
@@ -129,7 +128,7 @@ namespace Zio.FileSystems
         /// <returns><c>true</c> if the specified name is mounted; otherwise, <c>false</c>.</returns>
         public bool IsMounted(UPath name)
         {
-            AssertMountName(name);
+            ValidateMountName(name);
 
             lock (_mounts)
             {
@@ -162,7 +161,7 @@ namespace Zio.FileSystems
         /// <exception cref="System.ArgumentException">The mount with the name <paramref name="name"/> was not found</exception>
         public IFileSystem Unmount(UPath name)
         {
-            AssertMountName(name);
+            ValidateMountName(name);
 
             IFileSystem mountFileSystem;
 
@@ -197,16 +196,16 @@ namespace Zio.FileSystems
         /// <returns>True if the <paramref name="path"/> was found in a mounted filesystem.</returns>
         /// <exception cref="System.ArgumentNullException">The <paramref name="path"/> must not be null.</exception>
         /// <exception cref="System.ArgumentException">The <paramref name="path"/> must be absolute.</exception>
-        public bool TryGetMount(UPath path, out UPath name, out IFileSystem fileSystem, out UPath fileSystemPath)
+        public bool TryGetMount(UPath path, out UPath name, out IFileSystem? fileSystem, out UPath? fileSystemPath)
         {
             path.AssertNotNull();
             path.AssertAbsolute();
 
             var fs = TryGetMountOrNext(ref path, out name);
 
-            if (fs == null || name.IsNull)
+            if (fs is null || name.IsNull)
             {
-                name = null;
+                name = UPath.Null;
                 fileSystem = null;
                 fileSystemPath = null;
                 return false;
@@ -223,10 +222,10 @@ namespace Zio.FileSystems
         /// <param name="fileSystem">The mounted filesystem to search for.</param>
         /// <param name="name">The mount name that the <paramref name="fileSystem"/> is mounted with.</param>
         /// <returns>True if the <paramref name="fileSystem"/> is mounted.</returns>
-        /// <exception cref="System.ArgumentNullException">The <paramref name="fileSystem"/> must not be null.</exception>
+        /// <exception cref="ArgumentNullException">The <paramref name="fileSystem"/> must not be null.</exception>
         public bool TryGetMountName(IFileSystem fileSystem, out UPath name)
         {
-            if (fileSystem == null)
+            if (fileSystem is null)
                 throw new ArgumentNullException(nameof(fileSystem));
 
             lock (_mounts)
@@ -241,7 +240,7 @@ namespace Zio.FileSystems
                 }
             }
 
-            name = null;
+            name = UPath.Null;
             return false;
         }
 
@@ -363,7 +362,7 @@ namespace Zio.FileSystems
             }
             else
             {
-                if (srcfs == null)
+                if (srcfs is null)
                 {
                     throw NewFileNotFoundException(originalSrcPath);
                 }
@@ -629,7 +628,7 @@ namespace Zio.FileSystems
 
                 if (!matchedMount && Fallback != null && Fallback.DirectoryExists(basePath))
                 {
-                    locations.Add(new SearchLocation(Fallback, null, basePath));
+                    locations.Add(new SearchLocation(Fallback, UPath.Null, basePath));
                 }
 
                 return locations;
@@ -772,7 +771,7 @@ namespace Zio.FileSystems
                 if (Fallback != null && Fallback.CanWatch(path))
                 {
                     var internalWatcher = Fallback.Watch(path);
-                    watcher.Add(new WrapWatcher(Fallback, null, path, internalWatcher));
+                    watcher.Add(new WrapWatcher(Fallback, UPath.Null, path, internalWatcher));
                 }
 
                 _watchers.Add(watcher);
@@ -838,20 +837,20 @@ namespace Zio.FileSystems
             return path;
         }
 
-        private IFileSystem TryGetMountOrNext(ref UPath path)
+        private IFileSystem? TryGetMountOrNext(ref UPath path)
         {
             return TryGetMountOrNext(ref path, out var _);
         }
 
-        private IFileSystem TryGetMountOrNext(ref UPath path, out UPath mountPath)
+        private IFileSystem? TryGetMountOrNext(ref UPath path, out UPath mountPath)
         {
-            mountPath = null;
+            mountPath = UPath.Null;
             if (path.IsNull)
             {
                 return null;
             }
 
-            IFileSystem mountfs = null;
+            IFileSystem? mountfs = null;
             lock (_mounts)
             {
                 foreach (var kvp in _mounts)
@@ -874,7 +873,7 @@ namespace Zio.FileSystems
                 return mountfs;
             }
             
-            mountPath = null;
+            mountPath = UPath.Null;
             return Fallback;
         }
 
@@ -904,7 +903,7 @@ namespace Zio.FileSystems
         {
             if (!path.IsInDirectory(prefix, true))
             {
-                return null;
+                return null!;
             }
 
             var remaining = path.FullName.Substring(prefix.FullName.Length);
@@ -919,7 +918,7 @@ namespace Zio.FileSystems
                 : prefix / remaining.ToRelative();
         }
 
-        private void AssertMountName(UPath name)
+        private void ValidateMountName(UPath name)
         {
             name.AssertAbsolute(nameof(name));
             if (name == UPath.Root)
@@ -944,7 +943,7 @@ namespace Zio.FileSystems
             }
         }
 
-        private struct SearchLocation
+        private readonly struct SearchLocation
         {
             public IFileSystem FileSystem { get; }
             public UPath Prefix { get; }
@@ -970,7 +969,7 @@ namespace Zio.FileSystems
             [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
             public KeyValuePair<string, IFileSystem>[] Mounts => _fs._mounts.Select(x => new KeyValuePair<string, IFileSystem>(x.Key.ToString(), x.Value)).ToArray();
 
-            public IFileSystem Fallback => _fs.Fallback;
+            public IFileSystem? Fallback => _fs.Fallback;
         }
     }
 }

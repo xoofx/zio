@@ -34,7 +34,7 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="fileSystem">The final backup filesystem (can be null).</param>
         /// <param name="owned">True if <paramref name="fileSystem"/> and other filesystems should be disposed when this instance is disposed.</param>
-        public AggregateFileSystem(IFileSystem fileSystem, bool owned = true) : base(fileSystem, owned)
+        public AggregateFileSystem(IFileSystem? fileSystem, bool owned = true) : base(fileSystem, owned)
         {
             _fileSystems = new List<IFileSystem>();
             _watchers = new List<Watcher>();
@@ -438,7 +438,7 @@ namespace Zio.FileSystems
             }
         }
 
-        private class Watcher : AggregateFileSystemWatcher
+        private sealed class Watcher : AggregateFileSystemWatcher
         {
             private readonly AggregateFileSystem _fileSystem;
 
@@ -519,7 +519,7 @@ namespace Zio.FileSystems
                 {
                     var fileSystem = i < 0 ? Fallback : _fileSystems[i];
 
-                    if (fileSystem == null)
+                    if (fileSystem is null)
                     {
                         break;
                     }
@@ -563,7 +563,7 @@ namespace Zio.FileSystems
             [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
             public IFileSystem[] FileSystems => _fs._fileSystems.ToArray();
 
-            public IFileSystem Fallback => _fs.Fallback;
+            public IFileSystem? Fallback => _fs.Fallback;
         }
     }
 }

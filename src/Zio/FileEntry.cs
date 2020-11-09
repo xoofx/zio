@@ -30,7 +30,7 @@ namespace Zio
         ///     The specified path is invalid, such as being on an unmapped
         ///     drive.
         /// </exception>
-        public DirectoryEntry Directory => Parent;
+        public DirectoryEntry Directory => Parent!;
 
         /// <summary>Gets or sets a value that determines if the current file is read only.</summary>
         /// <returns>true if the current file is read only; otherwise, false.</returns>
@@ -133,7 +133,7 @@ namespace Zio
         /// </exception>
         public FileEntry CopyTo(FileEntry destFile, bool overwrite)
         {
-            if (destFile == null) throw new ArgumentNullException(nameof(destFile));
+            if (destFile is null) throw new ArgumentNullException(nameof(destFile));
             FileSystem.CopyFileCross(Path, destFile.FileSystem, destFile.Path, overwrite);
             return destFile;
         }

@@ -801,7 +801,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The file or directory path.</param>
         /// <returns>A new <see cref="FileSystemEntry"/> from the specified path.</returns>
-        public static FileSystemEntry TryGetFileSystemEntry(this IFileSystem fileSystem, UPath path)
+        public static FileSystemEntry? TryGetFileSystemEntry(this IFileSystem fileSystem, UPath path)
         {
             var fileExists = fileSystem.FileExists(path);
             if (fileExists)
@@ -853,7 +853,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The path to watch for changes.</param>
         /// <returns>An <see cref="IFileSystemWatcher"/> instance or null if not supported.</returns>
-        public static IFileSystemWatcher TryWatch(this IFileSystem fileSystem, UPath path)
+        public static IFileSystemWatcher? TryWatch(this IFileSystem fileSystem, UPath path)
         {
             if (!fileSystem.CanWatch(path))
             {

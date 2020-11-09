@@ -25,7 +25,7 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
-        public ReadOnlyFileSystem(IFileSystem fileSystem, bool owned = true) : base(fileSystem, owned)
+        public ReadOnlyFileSystem(IFileSystem? fileSystem, bool owned = true) : base(fileSystem, owned)
         {
         }
 
