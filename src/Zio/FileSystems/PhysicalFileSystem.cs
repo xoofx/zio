@@ -544,16 +544,16 @@ namespace Zio.FileSystems
             return new Watcher(this, path);
         }
 
-        private class Watcher : IFileSystemWatcher
+        private sealed class Watcher : IFileSystemWatcher
         {
             private readonly PhysicalFileSystem _fileSystem;
             private readonly System.IO.FileSystemWatcher _watcher;
 
-            public event EventHandler<FileChangedEventArgs> Changed;
-            public event EventHandler<FileChangedEventArgs> Created;
-            public event EventHandler<FileChangedEventArgs> Deleted;
-            public event EventHandler<FileSystemErrorEventArgs> Error;
-            public event EventHandler<FileRenamedEventArgs> Renamed;
+            public event EventHandler<FileChangedEventArgs>? Changed;
+            public event EventHandler<FileChangedEventArgs>? Created;
+            public event EventHandler<FileChangedEventArgs>? Deleted;
+            public event EventHandler<FileSystemErrorEventArgs>? Error;
+            public event EventHandler<FileRenamedEventArgs>? Renamed;
 
             public IFileSystem FileSystem => _fileSystem;
             public UPath Path { get; }

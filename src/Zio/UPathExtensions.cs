@@ -121,7 +121,7 @@ namespace Zio
 
             var paths = new List<string>();
             int previousIndex = path.IsAbsolute ? 1 : 0;
-            int nextIndex = 0;
+            int nextIndex;
             while ((nextIndex = fullname.IndexOf(UPath.DirectorySeparator, previousIndex)) >= 0)
             {
                 if (nextIndex != 0)
@@ -146,7 +146,7 @@ namespace Zio
         /// <returns>The characters after the last directory character in path. If path is null, this method returns null.</returns>
         public static string GetName(this UPath path)
         {
-            return path.IsNull ? null : Path.GetFileName(path.FullName);
+            return path.IsNull ? null! : Path.GetFileName(path.FullName);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace Zio
         /// </summary>
         /// <param name="path">The path string from which to obtain the file name without the extension.</param>
         /// <returns>The characters after the last directory character in path without the extension. If path is null, this method returns null.</returns>
-        public static string GetNameWithoutExtension(this UPath path)
+        public static string? GetNameWithoutExtension(this UPath path)
         {
             return path.IsNull ? null : Path.GetFileNameWithoutExtension(path.FullName);
         }
@@ -164,7 +164,7 @@ namespace Zio
         /// </summary>
         /// <param name="path">The path string from which to obtain the extension with a leading dot `.`.</param>
         /// <returns>The extension of the specified path (including the period "."), or null, or String.Empty. If path is null, GetExtension returns null. If path does not have extension information, GetExtension returns String.Empty..</returns>
-        public static string GetExtensionWithDot(this UPath path)
+        public static string? GetExtensionWithDot(this UPath path)
         {
             return path.IsNull ? null : Path.GetExtension(path.FullName);
         }

@@ -14,7 +14,7 @@ namespace Zio
     /// <seealso cref="UPath" />
     public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
     {
-        [ThreadStatic] private static InternalHelper _internalHelperTls;
+        [ThreadStatic] private static InternalHelper? _internalHelperTls;
 
         /// <summary>
         /// An empty path.
@@ -26,12 +26,14 @@ namespace Zio
         /// </summary>
         public static readonly UPath Root = new UPath("/", true);
 
+        internal static readonly UPath Null = new UPath(null!);
+
         /// <summary>
         /// The directory separator `/`
         /// </summary>
         public const char DirectorySeparator = '/';
 
-        private static InternalHelper InternalHelperTls => _internalHelperTls ?? (_internalHelperTls = new InternalHelper());
+        private static InternalHelper InternalHelperTls => _internalHelperTls ??= new InternalHelper();
 
         /// <summary>
         /// The default comparer for a <see cref="UPath"/> that is case sensitive.
@@ -59,8 +61,8 @@ namespace Zio
             }
             else
             {
-                string errorMessage;
-                FullName = ValidateAndNormalize(path, out errorMessage);
+                string? errorMessage;
+                FullName = ValidateAndNormalize(path, out errorMessage)!;
                 if (errorMessage != null)
                     throw new ArgumentException(errorMessage, nameof(path));
             }
@@ -76,7 +78,7 @@ namespace Zio
         /// Gets a value indicating whether this path is null.
         /// </summary>
         /// <value><c>true</c> if this instance is null; otherwise, <c>false</c>.</value>
-        public bool IsNull => FullName == null;
+        public bool IsNull => FullName is null;
 
         /// <summary>
         /// Gets a value indicating whether this path is empty (<see cref="FullName"/> equals to the empty string)
@@ -214,7 +216,7 @@ namespace Zio
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            return obj is UPath && Equals((UPath) obj);
+            return obj is UPath path && Equals(path);
         }
 
         /// <inheritdoc />
@@ -259,10 +261,10 @@ namespace Zio
         /// <returns><c>true</c> if path was parsed successfully, <c>false</c> otherwise.</returns>
         public static bool TryParse(string path, out UPath pathInfo)
         {
-            string errorMessage;
-            path = ValidateAndNormalize(path, out errorMessage);
-            pathInfo = errorMessage == null ? new UPath(path, true) : new UPath();
-            return errorMessage == null;
+            string? errorMessage;
+            path = ValidateAndNormalize(path, out errorMessage)!;
+            pathInfo = errorMessage is null ? new UPath(path!, true) : new UPath();
+            return errorMessage is null;
         }
 
         internal static StringBuilder GetSharedStringBuilder()
@@ -272,7 +274,7 @@ namespace Zio
             return builder;
         }
 
-        private static string ValidateAndNormalize(string path, out string errorMessage)
+        private static string? ValidateAndNormalize(string path, out string? errorMessage)
         {
             errorMessage = null;
 

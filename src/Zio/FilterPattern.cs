@@ -8,12 +8,12 @@ namespace Zio
     /// Filter pattern compiler used for <see cref="Zio.IFileSystemWatcher"/> implementation.
     /// Use the method <see cref="Parse"/> to create a pattern.
     /// </summary>
-    public struct FilterPattern
+    public readonly struct FilterPattern
     {
         private static readonly char[] SpecialChars = {'.', '*', '?'};
 
-        private readonly string _exactMatch;
-        private readonly Regex _regexMatch;
+        private readonly string? _exactMatch;
+        private readonly Regex? _regexMatch;
 
         public static FilterPattern Parse(string filter)
         {
@@ -68,7 +68,7 @@ namespace Zio
 
             bool appendSpecialCaseForWildcardExt = false;
             var startIndex = 0;
-            StringBuilder builder = null;
+            StringBuilder? builder = null;
 
             try
             {

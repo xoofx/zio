@@ -11,27 +11,27 @@ namespace Zio
         /// <summary>
         /// Event for when a file or directory changes.
         /// </summary>
-        event EventHandler<FileChangedEventArgs> Changed;
+        event EventHandler<FileChangedEventArgs>? Changed;
 
         /// <summary>
         /// Event for when a file or directory is created.
         /// </summary>
-        event EventHandler<FileChangedEventArgs> Created;
+        event EventHandler<FileChangedEventArgs>? Created;
 
         /// <summary>
         /// Event for when a file or directory is deleted.
         /// </summary>
-        event EventHandler<FileChangedEventArgs> Deleted;
+        event EventHandler<FileChangedEventArgs>? Deleted;
 
         /// <summary>
         /// Event for when the filesystem encounters an error.
         /// </summary>
-        event EventHandler<FileSystemErrorEventArgs> Error;
+        event EventHandler<FileSystemErrorEventArgs>? Error;
 
         /// <summary>
         /// Event for when a file or directory is renamed.
         /// </summary>
-        event EventHandler<FileRenamedEventArgs> Renamed;
+        event EventHandler<FileRenamedEventArgs>? Renamed;
 
         /// <summary>
         /// The <see cref="IFileSystem"/> this instance is watching.

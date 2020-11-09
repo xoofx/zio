@@ -16,8 +16,8 @@ namespace Zio
     {
         private static readonly char[] SpecialChars = {'?', '*'};
 
-        private readonly string _exactMatch;
-        private readonly Regex _regexMatch;
+        private readonly string? _exactMatch;
+        private readonly Regex? _regexMatch;
 
         /// <summary>
         /// Tries to match the specified path with this instance.
@@ -39,7 +39,7 @@ namespace Zio
         /// <returns><c>true</c> if the path was matched, <c>false</c> otherwise.</returns>
         public bool Match(string name)
         {
-            if (name == null) throw new ArgumentNullException(nameof(name));
+            if (name is null) throw new ArgumentNullException(nameof(name));
             // if _execMatch is null and _regexMatch is null, we have a * match
             return _exactMatch != null ? _exactMatch == name : _regexMatch == null || _regexMatch.IsMatch(name);
         }
@@ -98,15 +98,15 @@ namespace Zio
                 searchPattern = pathPattern.GetName();
 
                 // If the search pattern is again a plain any, optimized path
-                if (searchPattern == "*")
+                if (searchPattern is "*")
                 {
                     return;
                 }
             }
 
-            var startIndex = 0;
+            int startIndex = 0;
             int nextIndex;
-            StringBuilder builder = null;
+            StringBuilder? builder = null;
             try
             {
                 while ((nextIndex = searchPattern.IndexOfAny(SpecialChars, startIndex)) >= 0)

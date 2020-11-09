@@ -21,7 +21,7 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="fileSystem">The delegated file system (can be null).</param>
         /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
-        protected ComposeFileSystem(IFileSystem fileSystem, bool owned = true)
+        protected ComposeFileSystem(IFileSystem? fileSystem, bool owned = true)
         {
             Fallback = fileSystem;
             Owned = owned;
@@ -38,7 +38,7 @@ namespace Zio.FileSystems
         /// <summary>
         /// Gets the next delegated file system (may be null).
         /// </summary>
-        protected IFileSystem Fallback { get; }
+        protected IFileSystem? Fallback { get; }
 
         /// <summary>
         /// Gets the next delegated file system or throws an error if it is null.
@@ -48,7 +48,7 @@ namespace Zio.FileSystems
         {
             get
             {
-                if (Fallback == null)
+                if (Fallback is null)
                 {
                     throw new InvalidOperationException("The delegate filesystem for this instance is null");
                 }
@@ -58,7 +58,7 @@ namespace Zio.FileSystems
 
         protected override string DebuggerDisplay()
         {
-            return $"{base.DebuggerDisplay()} (Fallback: {(Fallback is FileSystem fs ? fs.DebuggerKindName() : Fallback.GetType().Name.Replace("FileSystem", "fs").ToLowerInvariant())})";
+            return $"{base.DebuggerDisplay()} (Fallback: {(Fallback is FileSystem fs ? fs.DebuggerKindName() : Fallback?.GetType().Name.Replace("FileSystem", "fs").ToLowerInvariant())})";
         }
 
         // ----------------------------------------------
