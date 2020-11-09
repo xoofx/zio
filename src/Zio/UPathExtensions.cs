@@ -28,7 +28,7 @@ namespace Zio
                 return path;
             }
 
-            return path.FullName == "/" ? UPath.Empty : new UPath(path.FullName.Substring(1), true);
+            return path.FullName is "/" ? UPath.Empty : new UPath(path.FullName.Substring(1), true);
         }
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace Zio
 
             var fullname = path.FullName;
 
-            if (fullname == "/")
+            if (fullname is "/")
             {
                 return new UPath();
             }
