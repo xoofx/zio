@@ -61,7 +61,7 @@ namespace Zio
             _regexMatch = null;
 
             // Optimized path, most common cases
-            if (filter == "" || filter == "*" || filter == "*.*")
+            if (filter is "" or "*" or "*.*")
             {
                 return;
             }

@@ -74,7 +74,7 @@ namespace Zio
             _regexMatch = null;
 
             // Optimized path, most common case
-            if (searchPattern == "*")
+            if (searchPattern is "*")
             {
                 return;
             }
