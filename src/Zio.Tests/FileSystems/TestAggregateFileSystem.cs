@@ -140,6 +140,15 @@ namespace Zio.Tests.FileSystems
                 Assert.Equal(memfs2, entries[0].FileSystem);
                 Assert.Equal("/b", entries[0].Path.FullName);
             }
+
+            {
+                var entry = fs.FindFirstFileSystemEntry("/a.txt");
+                Assert.NotNull(entry);
+
+                Assert.IsType<FileEntry>(entry);
+                Assert.Equal(memfs2, entry.FileSystem);
+                Assert.Equal("/a.txt", entry.Path.FullName);
+            }
         }
     }
 }

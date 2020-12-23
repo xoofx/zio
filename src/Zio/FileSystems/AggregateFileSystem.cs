@@ -201,6 +201,22 @@ namespace Zio.FileSystems
         }
 
         /// <summary>
+        /// Finds the first <see cref="FileSystemEntry"/> from this aggregate system found at the specified path for each registered filesystems (in order).
+        /// The type of the first entry (file or directory) dictates the type of the following entries in the list (e.g if a file is coming first, only files will be showned for the specified path).
+        /// </summary>
+        /// <param name="path">To check for an entry</param>
+        /// <returns>A file system entry or null if it was not found.</returns>
+        public FileSystemEntry FindFirstFileSystemEntry(UPath path)
+        {
+            path.AssertAbsolute();
+            var entry  = TryGetPath(path);
+            if (!entry.HasValue) return null;
+
+            var pathItem = entry.Value;
+            return pathItem.IsFile ? (FileSystemEntry) new FileEntry(pathItem.FileSystem, pathItem.Path) : new DirectoryEntry(pathItem.FileSystem, pathItem.Path);
+        }
+
+        /// <summary>
         /// Finds the list of <see cref="FileSystemEntry"/> for each file or directory found at the specified path for each registered filesystems (in order).
         /// The type of the first entry (file or directory) dictates the type of the following entries in the list (e.g if a file is coming first, only files will be showned for the specified path).
         /// </summary>
@@ -209,7 +225,8 @@ namespace Zio.FileSystems
         public List<FileSystemEntry> FindFileSystemEntries(UPath path)
         {
             path.AssertAbsolute();
-            var paths = FindPaths(path, SearchTarget.Both);
+            var paths = new List<FileSystemPath>();
+            FindPaths(path, SearchTarget.Both, paths);
             var result = new List<FileSystemEntry>(paths.Count);
             if (paths.Count == 0)
             {
@@ -480,14 +497,12 @@ namespace Zio.FileSystems
 
         private FileSystemPath? TryGetFile(UPath path)
         {
-            var entries = FindPaths(path, SearchTarget.File);
-            return entries.Count > 0 ? (FileSystemPath?)entries[0] : null;
+            return TryGetPath(path, SearchTarget.File);
         }
 
         private FileSystemPath? TryGetDirectory(UPath path)
         {
-            var entries = FindPaths(path, SearchTarget.Directory);
-            return entries.Count > 0 ? (FileSystemPath?)entries[0] : null;
+            return TryGetPath(path, SearchTarget.Directory);
         }
 
         private FileSystemPath GetPath(UPath path)
@@ -500,16 +515,11 @@ namespace Zio.FileSystems
             return entry.Value;
         }
 
-        private FileSystemPath? TryGetPath(UPath path)
+        /// <summary>
+        /// Get a single path. Optimized version of <see cref="FindPaths"/>.
+        /// </summary>
+        private FileSystemPath? TryGetPath(UPath path, SearchTarget searchTarget = SearchTarget.Both)
         {
-            var entries = FindPaths(path, SearchTarget.Both);
-            return entries.Count > 0 ? (FileSystemPath?)entries[0] : null;
-        }
-
-        private List<FileSystemPath> FindPaths(UPath path, SearchTarget searchTarget)
-        {
-            var paths = new List<FileSystemPath>();
-
             bool queryDirectory = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.Directory;
             bool queryFile = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.File;
 
@@ -524,18 +534,59 @@ namespace Zio.FileSystems
                         break;
                     }
 
-                    bool isFile = false;
-                    if ((queryDirectory && fileSystem.DirectoryExists(path)) || (queryFile && (isFile = fileSystem.FileExists(path))))
+                    // Go through aggregates
+                    if (fileSystem is AggregateFileSystem aggregate)
                     {
-                        paths.Add(new FileSystemPath(fileSystem, path, isFile));
+                        return aggregate.TryGetPath(path, searchTarget);
+                    }
+                    else
+                    {
+                        bool isFile = false;
+                        if ((queryDirectory && fileSystem.DirectoryExists(path)) || (queryFile && (isFile = fileSystem.FileExists(path))))
+                        {
+                            return new FileSystemPath(fileSystem, path, isFile);
+                        }
                     }
                 }
             }
 
-            return paths;
+            return null;
         }
 
-        private struct FileSystemPath
+        private void FindPaths(UPath path, SearchTarget searchTarget, List<FileSystemPath> paths)
+        {
+            bool queryDirectory = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.Directory;
+            bool queryFile = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.File;
+
+            lock (_fileSystems)
+            {
+                for (var i = _fileSystems.Count - 1; i >= -1; i--)
+                {
+                    var fileSystem = i < 0 ? Fallback : _fileSystems[i];
+
+                    if (fileSystem is null)
+                    {
+                        break;
+                    }
+
+                    // Go through aggregates
+                    if (fileSystem is AggregateFileSystem aggregate)
+                    {
+                        aggregate.FindPaths(path, searchTarget, paths);
+                    }
+                    else
+                    {
+                        bool isFile = false;
+                        if ((queryDirectory && fileSystem.DirectoryExists(path)) || (queryFile && (isFile = fileSystem.FileExists(path))))
+                        {
+                            paths.Add(new FileSystemPath(fileSystem, path, isFile));
+                        }
+                    }
+                }
+            }
+        }
+
+        private readonly struct FileSystemPath
         {
             public FileSystemPath(IFileSystem fileSystem, UPath path, bool isFile)
             {
