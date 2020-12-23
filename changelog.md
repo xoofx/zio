@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0 (23 Dec 2020)
+- Improve performance of AggregateFileSystem single file resolution
+- Add AggregateFileSystem.FindFirstFileSystemEntry
+
 ## 0.9.1 (17 Jun 2020)
 - Fix AggregateFileSystem.Watch to watch only existing folders from sources.
 

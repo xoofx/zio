@@ -4,14 +4,14 @@
     <Copyright>Alexandre Mutel</Copyright>
     <AssemblyTitle>Zio</AssemblyTitle>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <VersionPrefix>0.9.1</VersionPrefix>
+    <VersionPrefix>0.10.0</VersionPrefix>
     <Authors>Alexandre Mutel</Authors>
     <TargetFrameworks>net40;net45;netstandard1.3;netstandard2.0;netstandard2.1</TargetFrameworks>
     <AssemblyName>Zio</AssemblyName>
     <PackageId>Zio</PackageId>
     <PackageTags>filesystem;vfs;VirtualFileSystem;virtual;abstract;directory;files;io;mock</PackageTags>
     <PackageReleaseNotes>https://github.com/xoofx/zio/blob/master/changelog.md</PackageReleaseNotes>
-    <PackageIconUrl>https://raw.githubusercontent.com/xoofx/zio/master/img/zio.png</PackageIconUrl>
+    <PackageIcon>zio.png</PackageIcon>
     <PackageProjectUrl>https://github.com/xoofx/zio</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/xoofx/zio/blob/master/license.txt</PackageLicenseUrl>
     <LangVersion>9</LangVersion>
@@ -23,6 +23,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="../../img/zio.png" Pack="true" PackagePath="" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   
