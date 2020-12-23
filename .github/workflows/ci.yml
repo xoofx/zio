@@ -20,10 +20,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v1
 
-    - name: Install .NET Core
+    - name: Install .NET 5.0
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '3.1.x'
+        dotnet-version: '5.0.x'
 
     - name: Build (Release)
       run: dotnet build src -c Release
@@ -32,7 +32,7 @@ jobs:
       run: dotnet test src -c Release
 
     - name: Coverlet
-      run: dotnet test src -c Release -f netcoreapp3.1 /p:Include=\"[${{env.PROJECT_NAME}}]*\" /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
+      run: dotnet test src -c Release -f net5.0 /p:Include=\"[${{env.PROJECT_NAME}}]*\" /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
 
     - name: Coveralls Upload
       uses: coverallsapp/github-action@v1.0.1
