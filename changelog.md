@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.0 (24 Dec 2020)
+- Add overload methods to `FileSystemExtensions` to not copy attributes from source filesystem. 
+
 ## 0.10.0 (23 Dec 2020)
 - Improve performance of AggregateFileSystem single file resolution
 - Add AggregateFileSystem.FindFirstFileSystemEntry
