@@ -206,7 +206,7 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">To check for an entry</param>
         /// <returns>A file system entry or null if it was not found.</returns>
-        public FileSystemEntry FindFirstFileSystemEntry(UPath path)
+        public FileSystemEntry? FindFirstFileSystemEntry(UPath path)
         {
             path.AssertAbsolute();
             var entry  = TryGetPath(path);
