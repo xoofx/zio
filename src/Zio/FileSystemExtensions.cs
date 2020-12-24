@@ -38,11 +38,27 @@ namespace Zio
         /// <param name="destFileSystem">The destination filesystem.</param>
         /// <param name="dstFolder">The destination folder in the destination filesystem.</param>
         /// <param name="overwrite"><c>true</c> to overwrite files.</param>
+        /// <remarks>
+        /// By default, this method copy attributes from source files. Use the overload method to disable this.
+        /// </remarks>
         public static void CopyTo(this IFileSystem fs, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
+        {
+            CopyTo(fs, destFileSystem, dstFolder, overwrite, true);
+        }
+
+        /// <summary>
+        /// Copies a filesystem to a destination filesystem and folder.
+        /// </summary>
+        /// <param name="fs">The source filesystem.</param>
+        /// <param name="destFileSystem">The destination filesystem.</param>
+        /// <param name="dstFolder">The destination folder in the destination filesystem.</param>
+        /// <param name="overwrite"><c>true</c> to overwrite files.</param>
+        /// <param name="copyAttributes">`true` to copy the attributes of the source file system if filesystem source and destination are different, false otherwise.</param>
+        public static void CopyTo(this IFileSystem fs, IFileSystem destFileSystem, UPath dstFolder, bool overwrite, bool copyAttributes)
         {
             if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
-            CopyDirectory(fs, UPath.Root, destFileSystem, dstFolder, overwrite);
+            CopyDirectory(fs, UPath.Root, destFileSystem, dstFolder, overwrite, copyAttributes);
         }
 
         /// <summary>
@@ -53,7 +69,24 @@ namespace Zio
         /// <param name="destFileSystem">The destination filesystem.</param>
         /// <param name="dstFolder">The destination folder in the destination filesystem.</param>
         /// <param name="overwrite"><c>true</c> to overwrite files.</param>
+        /// <remarks>
+        /// By default, this method copy attributes from source files. Use the overload method to disable this.
+        /// </remarks>
         public static void CopyDirectory(this IFileSystem fs, UPath srcFolder, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
+        {
+            CopyDirectory(fs, srcFolder, destFileSystem, dstFolder, overwrite, true);
+        }
+
+        /// <summary>
+        /// Copies a directory from a source filesystem to a destination filesystem and folder.
+        /// </summary>
+        /// <param name="fs">The source filesystem.</param>
+        /// <param name="srcFolder">The source folder.</param>
+        /// <param name="destFileSystem">The destination filesystem.</param>
+        /// <param name="dstFolder">The destination folder in the destination filesystem.</param>
+        /// <param name="overwrite"><c>true</c> to overwrite files.</param>
+        /// <param name="copyAttributes">`true` to copy the attributes of the source file system if filesystem source and destination are different, false otherwise.</param>
+        public static void CopyDirectory(this IFileSystem fs, UPath srcFolder, IFileSystem destFileSystem, UPath dstFolder, bool overwrite, bool copyAttributes)
         {
             if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
@@ -74,7 +107,7 @@ namespace Zio
                 var relativeFile = file.FullName.Substring(srcFolderFullName.Length + deltaSubString);
                 var destFile = UPath.Combine(dstFolder, relativeFile);
 
-                fs.CopyFileCross(file, destFileSystem, destFile, overwrite);
+                fs.CopyFileCross(file, destFileSystem, destFile, overwrite, copyAttributes);
             }
 
             // Then copy the folder structure recursively
@@ -83,7 +116,7 @@ namespace Zio
                 var relativeDestFolder = srcSubFolder.FullName.Substring(srcFolderFullName.Length + deltaSubString);
 
                 var destSubFolder = UPath.Combine(dstFolder, relativeDestFolder);
-                CopyDirectory(fs, srcSubFolder, destFileSystem, destSubFolder, overwrite);
+                CopyDirectory(fs, srcSubFolder, destFileSystem, destSubFolder, overwrite, copyAttributes);
             }
         }
 
@@ -95,7 +128,24 @@ namespace Zio
         /// <param name="destFileSystem">The destination filesystem</param>
         /// <param name="destPath">The destination path of the file in the destination filesystem</param>
         /// <param name="overwrite"><c>true</c> to overwrite an existing destination file</param>
+        /// <remarks>
+        /// By default, this method copy attributes from source files. Use the overload method to disable this.
+        /// </remarks>
         public static void CopyFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath, bool overwrite)
+        {
+            CopyFileCross(fs, srcPath, destFileSystem, destPath, overwrite, true);
+        }
+
+        /// <summary>
+        ///     Copies a file between two filesystems.
+        /// </summary>
+        /// <param name="fs">The source filesystem</param>
+        /// <param name="srcPath">The source path of the file to copy from the source filesystem</param>
+        /// <param name="destFileSystem">The destination filesystem</param>
+        /// <param name="destPath">The destination path of the file in the destination filesystem</param>
+        /// <param name="overwrite"><c>true</c> to overwrite an existing destination file</param>
+        /// <param name="copyAttributes">`true` to copy the attributes of the source file system if filesystem source and destination are different, false otherwise.</param>
+        public static void CopyFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath, bool overwrite, bool copyAttributes)
         {
             if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
@@ -134,12 +184,15 @@ namespace Zio
                         sourceStream.CopyTo(destStream);
                     }
 
-                    // NOTE: For some reasons, we can sometimes get an Unauthorized access if we try to set the LastWriteTime after the SetAttributes
-                    // So we setup it here.
-                    destFileSystem.SetLastWriteTime(destPath, fs.GetLastWriteTime(srcPath));
+                    if (copyAttributes)
+                    {
+                        // NOTE: For some reasons, we can sometimes get an Unauthorized access if we try to set the LastWriteTime after the SetAttributes
+                        // So we setup it here.
+                        destFileSystem.SetLastWriteTime(destPath, fs.GetLastWriteTime(srcPath));
 
-                    // Preserve attributes and LastWriteTime as a regular File.Copy
-                    destFileSystem.SetAttributes(destPath, fs.GetAttributes(srcPath));
+                        // Preserve attributes and LastWriteTime as a regular File.Copy
+                        destFileSystem.SetAttributes(destPath, fs.GetAttributes(srcPath));
+                    }
 
                     copied = true;
                 }
