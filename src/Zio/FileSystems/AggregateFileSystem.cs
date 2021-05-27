@@ -355,6 +355,9 @@ namespace Zio.FileSystems
             {
                 var fileSystem = fileSystems[i];
 
+                if (!fileSystem.DirectoryExists( path ))
+                    continue;
+
                 foreach (var item in fileSystem.EnumeratePaths( path, searchPattern, searchOption, searchTarget ) )
                 {
                     if (entries.Contains( item )) continue;
