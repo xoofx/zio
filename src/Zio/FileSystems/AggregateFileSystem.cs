@@ -337,6 +337,8 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
+            SearchPattern.Parse( ref path, ref searchPattern );
+
             var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
             var fileSystems = new List<IFileSystem>();
 
