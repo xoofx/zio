@@ -337,13 +337,9 @@ namespace Zio.FileSystems
         /// <inheritdoc />
         protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
-            var search = SearchPattern.Parse(ref path, ref searchPattern);
-
-            var directoryToVisit = new List<UPath>();
-            directoryToVisit.Add(path);
+            SearchPattern.Parse( ref path, ref searchPattern );
 
             var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
-            var sortedDirectories = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
             var fileSystems = new List<IFileSystem>();
 
             if (Fallback != null)
@@ -357,55 +353,28 @@ namespace Zio.FileSystems
                 fileSystems.AddRange(_fileSystems);
             }
 
-            while (directoryToVisit.Count > 0)
+            for (var i = fileSystems.Count - 1; i >= 0; i--)
             {
-                var pathToVisit = directoryToVisit[0];
-                directoryToVisit.RemoveAt(0);
-                int dirIndex = 0;
-                entries.Clear();
-                sortedDirectories.Clear();
+                var fileSystem = fileSystems[i];
 
-                for (var i = fileSystems.Count - 1; i >= 0; i--)
+                if (!fileSystem.DirectoryExists( path ))
+                    continue;
+
+                foreach (var item in fileSystem.EnumeratePaths( path, searchPattern, searchOption, searchTarget ) )
                 {
-                    var fileSystem = fileSystems[i];
-
-                    if (fileSystem.DirectoryExists(pathToVisit))
-                    {
-                        foreach (var item in fileSystem.EnumeratePaths(pathToVisit, "*", SearchOption.TopDirectoryOnly, SearchTarget.Both))
-                        {
-                            if (!entries.Contains(item))
-                            {
-                                var isFile = fileSystem.FileExists(item);
-                                var isDirectory = fileSystem.DirectoryExists(item);
-                                var isMatching = search.Match(item);
-
-                                if (isMatching && ((isFile && searchTarget != SearchTarget.Directory) || (isDirectory && searchTarget != SearchTarget.File)))
-                                {
-                                    entries.Add(item);
-                                }
-
-                                if (searchOption == SearchOption.AllDirectories && isDirectory)
-                                {
-                                    sortedDirectories.Add(item);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Enqueue directories and respect order
-                foreach (var nextDir in sortedDirectories)
-                {
-                    directoryToVisit.Insert(dirIndex++, nextDir);
-                }
-
-                // Return entries
-                foreach (var entry in entries)
-                {
-                    yield return entry;
+                    if (entries.Contains( item )) continue;
+                    
+                    entries.Add(item);
                 }
             }
+
+            // Return entries
+            foreach (var entry in entries)
+            {
+                yield return entry;
+            }
         }
+
 
         /// <inheritdoc />
         protected override UPath ConvertPathToDelegate(UPath path)
