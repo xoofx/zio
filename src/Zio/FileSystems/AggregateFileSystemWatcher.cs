@@ -37,22 +37,19 @@ namespace Zio.FileSystems
                 throw new ArgumentNullException(nameof(watcher));
             }
 
-            lock (_children)
+            if (_children.Contains(watcher))
             {
-                if (_children.Contains(watcher))
-                {
-                    throw new ArgumentException("The filesystem watcher is already added", nameof(watcher));
-                }
-
-                watcher.InternalBufferSize = InternalBufferSize;
-                watcher.NotifyFilter = NotifyFilter;
-                watcher.EnableRaisingEvents = EnableRaisingEvents;
-                watcher.IncludeSubdirectories = IncludeSubdirectories;
-                watcher.Filter = Filter;
-
-                RegisterEvents(watcher);
-                _children.Add(watcher);
+                throw new ArgumentException("The filesystem watcher is already added", nameof(watcher));
             }
+
+            watcher.InternalBufferSize = InternalBufferSize;
+            watcher.NotifyFilter = NotifyFilter;
+            watcher.EnableRaisingEvents = EnableRaisingEvents;
+            watcher.IncludeSubdirectories = IncludeSubdirectories;
+            watcher.Filter = Filter;
+
+            RegisterEvents(watcher);
+            _children.Add(watcher);
         }
 
         /// <summary>
@@ -89,20 +86,17 @@ namespace Zio.FileSystems
         /// <param name="excludeFileSystem">Exclude this filesystem from removal.</param>
         public void Clear(IFileSystem? excludeFileSystem = null)
         {
-            lock (_children)
+            for (var i = _children.Count - 1; i >= 0; i--)
             {
-                for (var i = _children.Count - 1; i >= 0; i--)
+                var watcher = _children[i];
+                if (watcher.FileSystem == excludeFileSystem)
                 {
-                    var watcher = _children[i];
-                    if (watcher.FileSystem == excludeFileSystem)
-                    {
-                        continue;
-                    }
-
-                    UnregisterEvents(watcher);
-                    _children.RemoveAt(i);
-                    watcher.Dispose();
+                    continue;
                 }
+
+                UnregisterEvents(watcher);
+                _children.RemoveAt(i);
+                watcher.Dispose();
             }
         }
 
@@ -125,12 +119,9 @@ namespace Zio.FileSystems
                     return;
                 }
 
-                lock (_children)
+                foreach (var watcher in _children)
                 {
-                    foreach (var watcher in _children)
-                    {
-                        watcher.InternalBufferSize = value;
-                    }
+                    watcher.InternalBufferSize = value;
                 }
 
                 _internalBufferSize = value;
@@ -148,12 +139,9 @@ namespace Zio.FileSystems
                     return;
                 }
 
-                lock (_children)
+                foreach (var watcher in _children)
                 {
-                    foreach (var watcher in _children)
-                    {
-                        watcher.NotifyFilter = value;
-                    }
+                    watcher.NotifyFilter = value;
                 }
 
                 _notifyFilter = value;
@@ -171,12 +159,9 @@ namespace Zio.FileSystems
                     return;
                 }
 
-                lock (_children)
+                foreach (var watcher in _children)
                 {
-                    foreach (var watcher in _children)
-                    {
-                        watcher.EnableRaisingEvents = value;
-                    }
+                    watcher.EnableRaisingEvents = value;
                 }
 
                 _enableRaisingEvents = value;
@@ -194,12 +179,9 @@ namespace Zio.FileSystems
                     return;
                 }
 
-                lock (_children)
+                foreach (var watcher in _children)
                 {
-                    foreach (var watcher in _children)
-                    {
-                        watcher.IncludeSubdirectories = value;
-                    }
+                    watcher.IncludeSubdirectories = value;
                 }
 
                 _includeSubdirectories = value;
@@ -217,12 +199,9 @@ namespace Zio.FileSystems
                     return;
                 }
 
-                lock (_children)
+                foreach (var watcher in _children)
                 {
-                    foreach (var watcher in _children)
-                    {
-                        watcher.Filter = value;
-                    }
+                    watcher.Filter = value;
                 }
 
                 _filter = value;
