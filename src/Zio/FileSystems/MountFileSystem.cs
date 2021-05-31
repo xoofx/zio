@@ -600,8 +600,8 @@ namespace Zio.FileSystems
             var directoryToVisit = new List<UPath>();
             directoryToVisit.Add(path);
 
-            var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
-            var sortedDirectories = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
+            var entries = new SortedSet<UPath>();
+            var sortedDirectories = new SortedSet<UPath>();
 
             var first = true;
 

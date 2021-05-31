@@ -42,13 +42,13 @@ namespace Zio.Tests.FileSystems
         {
             var memfs = GetCommonMemoryFileSystem();
 
-            var file = new FileEntry(memfs, "/a/a/a.txt");
+            var file = new FileEntry(memfs, "/a/a/a1.txt");
             var file2 = new FileEntry(memfs, "/a/b.txt");
 
-            Assert.Equal("/a/a/a.txt", file.ToString());
+            Assert.Equal("/a/a/a1.txt", file.ToString());
 
-            Assert.Equal("/a/a/a.txt", file.FullName);
-            Assert.Equal("a.txt", file.Name);
+            Assert.Equal("/a/a/a1.txt", file.FullName);
+            Assert.Equal("a1.txt", file.Name);
 
             Assert.Equal("b", file2.NameWithoutExtension);
             Assert.Equal(".txt", file2.ExtensionWithDot);

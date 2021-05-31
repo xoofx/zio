@@ -14,7 +14,7 @@ namespace Zio.Tests.FileSystems
     public abstract class TestFileSystemBase : IDisposable
     {
         private static readonly UPath[] Directories = new UPath[] { "a", "b", "C", "d" };
-        private static readonly UPath[] Files = new UPath[] { "b.txt", "c.txt1", "d.i", "f.i1", "A.txt", "a/a.txt", "b/b.i", "E" };
+        private static readonly UPath[] Files = new UPath[] { "b.txt", "c.txt1", "d.i", "f.i1", "A.txt", "a/a1.txt", "b/b.i", "E" };
         private static readonly object Lock = new object();
         private PhysicalDirectoryHelper _physicalDirectoryHelper;
         private readonly EnumeratePathsResult _referenceEnumeratePathsResult;
@@ -25,12 +25,12 @@ namespace Zio.Tests.FileSystems
         // -------------------------------------
         // /a
         //     /a
-        //        a.txt
+        //        a1.txt
         //     /b
         //        b.i
         //     /C
         //     /d
-        //     a.txt
+        //     a1.txt
         //     A.txt
         //     b.txt
         //     c.txt1
@@ -131,12 +131,12 @@ namespace Zio.Tests.FileSystems
             // ----------------------------------------------
             // /a                 -> fs2
             //     /a             -> fs1
-            //        a.txt       -> fs1
+            //        a1.txt      -> fs1
             //     /b             -> fs1
             //        b.i         -> fs1
             //     /C             -> fs2
             //     /d             -> fs2
-            //     a.txt          -> fs2
+            //     a1.txt         -> fs2
             //     A.txt          -> fs2
             //     b.txt          -> fs2
             //     c.txt1         -> fs2
@@ -221,7 +221,7 @@ namespace Zio.Tests.FileSystems
             Assert.Throws<IOException>(() => fs.DeleteFile("/toto.txt"));
             Assert.Throws<IOException>(() => fs.OpenFile("/toto.txt", FileMode.Create, FileAccess.ReadWrite));
             Assert.Throws<IOException>(() => fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Write));
-            Assert.Throws<IOException>(() => fs.ReplaceFile("/a/a/a.txt", "/A.txt", "/titi.txt", true));
+            Assert.Throws<IOException>(() => fs.ReplaceFile("/a/a/a1.txt", "/A.txt", "/titi.txt", true));
 
             Assert.Throws<IOException>(() => fs.SetAttributes("/toto.txt", FileAttributes.ReadOnly));
             Assert.Throws<IOException>(() => fs.SetCreationTime("/toto.txt", DateTime.Now));
@@ -260,7 +260,7 @@ namespace Zio.Tests.FileSystems
             Assert.True(fs.FileExists("/A.txt"));
             Assert.True(fs.FileExists("/b.txt"));
             Assert.True(fs.FileExists("/b/b.i"));
-            Assert.True(fs.FileExists("/a/a/a.txt"));
+            Assert.True(fs.FileExists("/a/a/a1.txt"));
             Assert.False(fs.FileExists("/yoyo.txt"));
 
             Assert.True(fs.DirectoryExists("/a"));
@@ -274,18 +274,18 @@ namespace Zio.Tests.FileSystems
 
             Assert.StartsWith("content", fs.ReadAllText("/A.txt"));
             Assert.StartsWith("content", fs.ReadAllText("/b.txt"));
-            Assert.StartsWith("content", fs.ReadAllText("/a/a/a.txt"));
+            Assert.StartsWith("content", fs.ReadAllText("/a/a/a1.txt"));
 
 
             var readOnlyFlag = isReadOnly ? FileAttributes.ReadOnly : 0;
 
             Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/A.txt"));
             Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/b.txt"));
-            Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/a/a/a.txt"));
+            Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/a/a/a1.txt"));
 
             Assert.True(fs.GetFileLength("/A.txt") > 0);
             Assert.True(fs.GetFileLength("/b.txt") > 0);
-            Assert.True(fs.GetFileLength("/a/a/a.txt") > 0);
+            Assert.True(fs.GetFileLength("/a/a/a1.txt") > 0);
 
             Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a"));
             Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a/a"));
@@ -295,9 +295,9 @@ namespace Zio.Tests.FileSystems
             Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetCreationTime("/A.txt"));
             Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastAccessTime("/A.txt"));
             Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastWriteTime("/A.txt"));
-            Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetCreationTime("/a/a/a.txt"));
-            Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastAccessTime("/a/a/a.txt"));
-            Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastWriteTime("/a/a/a.txt"));
+            Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetCreationTime("/a/a/a1.txt"));
+            Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastAccessTime("/a/a/a1.txt"));
+            Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastWriteTime("/a/a/a1.txt"));
 
             new EnumeratePathsResult(fs).Check(_referenceEnumeratePathsResult);
         }
