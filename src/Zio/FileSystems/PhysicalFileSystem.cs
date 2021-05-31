@@ -9,6 +9,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using static Zio.FileSystemExceptionHelper;
+#if NETSTANDARD2_1
+using System.IO.Enumeration;
+#endif
 
 namespace Zio.FileSystems
 {
@@ -518,10 +521,152 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
+        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        {
+            if (IsOnWindows)
+            {
+                if (IsWithinSpecialDirectory(path))
+                {
+                    if (!SpecialDirectoryExists(path))
+                    {
+                        throw NewDirectoryNotFoundException(path);
+                    }
+
+                    // Only sub folder "/drive/" on root folder /
+                    if (path == UPath.Root)
+                    {
+                        var item = new FileSystemItem(this, PathDrivePrefixOnWindows, true);
+                        if (searchPredicate == null || searchPredicate(ref item))
+                        {
+                            yield return item;
+                        }
+
+                        if (searchOption == SearchOption.AllDirectories)
+                        {
+                            foreach (var subItem in EnumerateItemsImpl(PathDrivePrefixOnWindows, searchOption, searchPredicate))
+                            {
+                                yield return subItem;
+                            }
+                        }
+
+                        yield break;
+                    }
+
+                    // When listing for /drive, return the list of drives available
+                    if (path == PathDrivePrefixOnWindows)
+                    {
+                        var pathDrives = new List<UPath>();
+                        foreach (var drive in DriveInfo.GetDrives())
+                        {
+                            if (drive.Name.Length < 2 || drive.Name[1] != ':')
+                            {
+                                continue;
+                            }
+
+                            var pathDrive = PathDrivePrefixOnWindows / char.ToLowerInvariant(drive.Name[0]).ToString();
+
+                            pathDrives.Add(pathDrive);
+
+                            var item = new FileSystemItem(this, pathDrive, true);
+                            if (searchPredicate == null || searchPredicate(ref item))
+                            {
+                                yield return item;
+                            }
+                        }
+
+                        if (searchOption == SearchOption.AllDirectories)
+                        {
+                            foreach (var pathDrive in pathDrives)
+                            {
+                                foreach (var subItem in EnumerateItemsImpl(pathDrive, searchOption, searchPredicate))
+                                {
+                                    yield return subItem;
+                                }
+                            }
+                        }
+
+                        yield break;
+                    }
+                }
+            }
+            var pathOnDisk = ConvertPathToInternal(path);
+            if (!Directory.Exists(pathOnDisk)) yield break;
+
+#if NETSTANDARD2_1
+            var enumerable = new FileSystemEnumerable<FileSystemItem>(pathOnDisk, TransformToFileSystemItem, searchOption == SearchOption.AllDirectories ? CompatibleRecursive : Compatible);
+
+            foreach (var item in enumerable)
+            {
+                var localItem = item;
+                if (searchPredicate == null || searchPredicate(ref localItem))
+                {
+                    yield return localItem;
+                }
+            }
+#else
+            var results = Directory.EnumerateFileSystemEntries(pathOnDisk, "*", searchOption);
+            foreach (var subPath in results)
+            {
+                var fileInfo = new FileInfo(subPath);
+                var fullPath = ConvertPathFromInternal(subPath);
+                var item = new FileSystemItem
+                {
+                    FileSystem = this,
+                    AbsolutePath = fullPath,
+                    Path = fullPath,
+                    Attributes = fileInfo.Attributes,
+                    CreationTime = fileInfo.CreationTimeUtc.ToLocalTime(),
+                    LastAccessTime = fileInfo.LastAccessTimeUtc.ToLocalTime(),
+                    LastWriteTime = fileInfo.LastWriteTimeUtc.ToLocalTime(),
+                    Length = fileInfo.Length
+                };
+                if (searchPredicate == null || searchPredicate(ref item))
+                {
+                    yield return item;
+                }
+            }
+#endif
+        }
+
+#if NETSTANDARD2_1
+
+        internal static EnumerationOptions Compatible { get; } = new EnumerationOptions()
+        {
+            MatchType = MatchType.Win32,
+            AttributesToSkip = (FileAttributes)0,
+            IgnoreInaccessible = false
+        };
+
+        private static EnumerationOptions CompatibleRecursive { get; } = new EnumerationOptions()
+        {
+            RecurseSubdirectories = true,
+            MatchType = MatchType.Win32,
+            AttributesToSkip = (FileAttributes)0,
+            IgnoreInaccessible = false
+        };
+
+        private FileSystemItem TransformToFileSystemItem(ref System.IO.Enumeration.FileSystemEntry entry)
+        {
+            var fullPath = ConvertPathFromInternal(entry.ToFullPath());
+            return new FileSystemItem
+            {
+                FileSystem = this,
+                AbsolutePath = fullPath,
+                Path = fullPath,
+                Attributes = entry.Attributes,
+                CreationTime = entry.CreationTimeUtc.ToLocalTime(),
+                LastAccessTime = entry.LastAccessTimeUtc.ToLocalTime(),
+                LastWriteTime = entry.LastWriteTimeUtc.ToLocalTime(),
+                Length = entry.Length
+            };
+        }
+#endif
+
         // ----------------------------------------------
         // Watch API
         // ----------------------------------------------
-        
+
         /// <inheritdoc />
         protected override bool CanWatchImpl(UPath path)
         {

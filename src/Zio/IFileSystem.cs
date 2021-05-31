@@ -179,6 +179,15 @@ namespace Zio
         /// <returns>An enumerable collection of file-system paths in the directory specified by path and that match the specified search pattern, option and target.</returns>
         IEnumerable<UPath> EnumeratePaths(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
 
+        /// <summary>
+        /// Returns an enumerable collection of <see cref="FileSystemItem"/> that match a search pattern in a specified path, and optionally searches subdirectories.
+        /// </summary>
+        /// <param name="path">The path to the directory to search.</param>
+        /// <param name="searchPredicate">The search string to match against file-system entries in path. This parameter can contain a combination of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
+        /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory or should include all subdirectories.</param>
+        /// <returns>An enumerable collection of <see cref="FileSystemItem"/> in the directory specified by path and that match the specified search pattern, option and target.</returns>
+        IEnumerable<FileSystemItem> EnumerateItems(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate = null);
+
         // ----------------------------------------------
         // Watch API
         // ----------------------------------------------
@@ -217,4 +226,11 @@ namespace Zio
         /// <returns>The converted path according to the system path.</returns>
         UPath ConvertPathFromInternal(string systemPath);
     }
+    
+    /// <summary>
+    /// Used by <see cref="IFileSystem.EnumerateItems"/>. 
+    /// </summary>
+    /// <param name="item">The file system item to filer.</param>
+    /// <returns><c>true</c> if the item should be kept; otherwise <c>false</c>.</returns>
+    public delegate bool SearchPredicate(ref FileSystemItem item);
 }

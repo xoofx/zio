@@ -126,6 +126,11 @@ namespace Zio.Tests.FileSystems
         {
             return _fs.GetDirectoryEntry(path).EnumerateEntries(searchPattern, searchOption, searchTarget).Select(e => e.Path);
         }
+        
+        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate searchPredicate)
+        {
+            return _fs.GetDirectoryEntry(path).EnumerateItems(searchOption);
+        }
 
         protected override IFileSystemWatcher WatchImpl(UPath path)
         {

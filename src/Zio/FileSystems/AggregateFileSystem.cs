@@ -355,6 +355,35 @@ namespace Zio.FileSystems
 
 
         /// <inheritdoc />
+        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        {
+            var entries = new HashSet<UPath>();
+            for (var i = _fileSystems.Count - 1; i >= 0; i--)
+            {
+                var fileSystem = _fileSystems[i];
+                foreach (var item in fileSystem.EnumerateItems(path, searchOption, searchPredicate))
+                {
+                    if (entries.Add(item.Path))
+                    {
+                        yield return item;
+                    }
+                }
+            }
+
+            var fallback = Fallback;
+            if (fallback != null)
+            {
+                foreach (var item in fallback.EnumerateItems(path, searchOption, searchPredicate))
+                {
+                    if (entries.Add(item.Path))
+                    {
+                        yield return item;
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc />
         protected override UPath ConvertPathToDelegate(UPath path)
         {
             return path;

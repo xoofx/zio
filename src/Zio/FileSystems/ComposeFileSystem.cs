@@ -201,10 +201,21 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
+        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        {
+            foreach (var subItem in FallbackSafe.EnumerateItems(ConvertPathToDelegate(path), searchOption, searchPredicate))
+            {
+                var localItem = subItem;
+                localItem.Path = ConvertPathFromDelegate(localItem.Path);
+                yield return localItem;
+            }
+        }
+
         // ----------------------------------------------
         // Watch API
         // ----------------------------------------------
-        
+
         /// <inheritdoc />
         protected override bool CanWatchImpl(UPath path)
         {

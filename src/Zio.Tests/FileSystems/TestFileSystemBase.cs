@@ -345,16 +345,19 @@ namespace Zio.Tests.FileSystems
                 // Check extension method
                 Assert.Equal(TopDirs, fs.EnumerateDirectories("/").ToList());
                 Assert.Equal(TopDirs, fs.EnumerateDirectoryEntries("/").Select(e => (UPath)e.FullName).ToList());
+                Assert.Equal(TopDirs.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).Where(e => e.IsDirectory).OrderBy(e => e.Path.FullName).Select(e => e.Path).ToList());
 
                 TopFiles = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.File).ToList();
                 // Check extension method
                 Assert.Equal(TopFiles, fs.EnumerateFiles("/").ToList());
                 Assert.Equal(TopFiles, fs.EnumerateFileEntries("/").Select(e => (UPath)e.FullName).ToList());
+                Assert.Equal(TopFiles.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).Where(e => !e.IsDirectory).OrderBy(e => e.Path.FullName.ToLowerInvariant()).Select(e => e.Path).ToList());
 
                 TopEntries = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.Both).ToList();
                 // Check extension method
                 Assert.Equal(TopEntries, fs.EnumeratePaths("/").ToList());
                 Assert.Equal(TopEntries, fs.EnumerateFileSystemEntries("/").Select(e => (UPath)e.FullName).ToList());
+                Assert.Equal(TopEntries.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).OrderBy(e => e.Path.FullName).Select(e => e.Path).ToList());
 
                 AllDirs = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
 
@@ -362,6 +365,9 @@ namespace Zio.Tests.FileSystems
                 // Check extension method
                 Assert.Equal(AllFiles, fs.EnumerateFiles("/", "*", SearchOption.AllDirectories).ToList());
                 Assert.Equal(AllFiles, fs.EnumerateFileEntries("/", "*", SearchOption.AllDirectories).Select(e => (UPath)e.FullName).ToList());
+                var expected = AllFiles.OrderBy(x => x.FullName).ToList();
+                var actual = fs.EnumerateItems("/", SearchOption.AllDirectories).Where(e => !e.IsDirectory).OrderBy(e => e.Path.FullName).Select(e => e.Path).ToList();
+                Assert.Equal(expected, actual);
 
                 AllEntries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList();
 

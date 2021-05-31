@@ -458,6 +458,25 @@ namespace Zio.FileSystems
         /// <returns>An enumerable collection of file-system paths in the directory specified by path and that match the specified search pattern, option and target.</returns>
         protected abstract IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
 
+
+        /// <inheritdoc />
+        public IEnumerable<FileSystemItem> EnumerateItems(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate = null)
+        {
+            AssertNotDisposed();
+            return EnumerateItemsImpl(ValidatePath(path), searchOption, searchPredicate);
+        }
+
+        /// <summary>
+        /// Implementation for <see cref="EnumeratePaths"/>, <paramref name="path"/> is guaranteed to be absolute and validated through <see cref="ValidatePath"/>.
+        /// Returns an enumerable collection of <see cref="FileSystemItem"/> that match a search pattern in a specified path, and optionally searches subdirectories.
+        /// </summary>
+        /// <param name="path">The path to the directory to search.</param>
+        /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory or should include all subdirectories.</param>
+        /// <param name="searchPredicate">The search string to match against file-system entries in path. This parameter can contain a combination of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
+        /// <returns>An enumerable collection of <see cref="FileSystemItem"/> in the directory specified by path and that match the specified search pattern, option and target.</returns>
+        protected abstract IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate);
+
+
         // ----------------------------------------------
         // Watch API
         // ----------------------------------------------

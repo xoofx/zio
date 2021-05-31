@@ -849,6 +849,97 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc />
+        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        {
+            var foldersToProcess = new List<UPath>();
+            foldersToProcess.Add(path);
+
+            var entries = new List<FileSystemItem>();
+            while (foldersToProcess.Count > 0)
+            {
+                var directoryPath = foldersToProcess[0];
+                foldersToProcess.RemoveAt(0);
+                int dirIndex = 0;
+                entries.Clear();
+
+                // This is important that here we don't lock the FileSystemShared
+                // or the visited folder while returning a yield otherwise the finally
+                // may never be executed if the caller of this method decide to not
+                // Dispose the IEnumerable (because the generated IEnumerable
+                // doesn't have a finalizer calling Dispose)
+                // This is why the yield is performed outside this block
+                EnterFileSystemShared();
+                try
+                {
+                    var result = EnterFindNode(directoryPath, FindNodeFlags.NodeShared);
+                    try
+                    {
+                        if (directoryPath == path)
+                        {
+                            // The first folder must be a directory, if it is not, throw an error
+                            ValidateDirectory(result.Node, directoryPath);
+                        }
+                        else
+                        {
+                            // Might happen during the time a DirectoryNode is enqueued into foldersToProcess
+                            // and the time we are going to actually visit it, it might have been
+                            // removed in the meantime, so we make sure here that we have a folder
+                            // and we don't throw an error if it is not
+                            if (!(result.Node is DirectoryNode))
+                            {
+                                continue;
+                            }
+                        }
+
+                        var directory = (DirectoryNode)result.Node;
+                        foreach (var nodePair in directory.Children)
+                        {
+                            var node = nodePair.Value;
+                            var canFollowFolder = searchOption == SearchOption.AllDirectories && nodePair.Value is DirectoryNode;
+                            var fullPath = directoryPath / nodePair.Key;
+
+                            if (canFollowFolder)
+                            {
+                                foldersToProcess.Insert(dirIndex++, fullPath);
+                            }
+
+                            var item = new FileSystemItem
+                            {
+                                FileSystem = this,
+                                AbsolutePath = fullPath,
+                                Path = fullPath,
+                                Attributes = node.Attributes,
+                                CreationTime = node.CreationTime,
+                                LastWriteTime = node.LastWriteTime,
+                                LastAccessTime = node.LastAccessTime,
+                                Length = node is FileNode fileNode ? fileNode.Content.Length : 0,
+                            };
+
+                            if (searchPredicate == null || searchPredicate(ref item))
+                            {
+                                entries.Add(item);
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        ExitFindNode(result);
+                    }
+                }
+                finally
+                {
+                    ExitFileSystemShared();
+                }
+
+                // We return all the elements of visited directory in one shot, outside the previous lock block
+                foreach (var entry in entries)
+                {
+                    yield return entry;
+                }
+            }
+        }
+
         // ----------------------------------------------
         // Watch API
         // ----------------------------------------------
@@ -1594,12 +1685,14 @@ namespace Zio.FileSystems
             public DirectoryNode(MemoryFileSystem fileSystem) : base(fileSystem, null, null, null)
             {
                 _children = new Dictionary<string, FileSystemNode>();
+                Attributes = FileAttributes.Directory;
             }
 
             public DirectoryNode(MemoryFileSystem fileSystem, DirectoryNode parent, string name) : base(fileSystem, parent, name, null)
             {
                 Debug.Assert(parent != null);
                 _children = new Dictionary<string, FileSystemNode>();
+                Attributes = FileAttributes.Directory;
             }
 
             public Dictionary<string, FileSystemNode> Children

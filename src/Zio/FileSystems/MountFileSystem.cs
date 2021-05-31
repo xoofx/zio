@@ -700,6 +700,147 @@ namespace Zio.FileSystems
             }
         }
 
+        /// <inheritdoc/>
+        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        {
+            // Internal method used to retrieve the list of search locations
+            List<SearchLocation> GetSearchLocations(UPath basePath)
+            {
+                var locations = new List<SearchLocation>();
+                var matchedMount = false;
+
+                foreach (var kvp in _mounts)
+                {
+                    // Check if path partially matches a mount name
+                    var remainingPath = GetRemaining(basePath, kvp.Key);
+                    if (!remainingPath.IsNull && remainingPath != UPath.Root)
+                    {
+                        locations.Add(new SearchLocation(this, basePath, remainingPath));
+                        continue;
+                    }
+
+                    if (!matchedMount)
+                    {
+                        // Check if path fully matches a mount name
+                        remainingPath = GetRemaining(kvp.Key, basePath);
+                        if (!remainingPath.IsNull)
+                        {
+                            matchedMount = true; // don't check other mounts, we don't want to merge them together
+
+                            if (kvp.Value.DirectoryExists(remainingPath))
+                            {
+                                locations.Add(new SearchLocation(kvp.Value, kvp.Key, remainingPath));
+                            }
+                        }
+                    }
+                }
+
+                if (!matchedMount && Fallback != null && Fallback.DirectoryExists(basePath))
+                {
+                    locations.Add(new SearchLocation(Fallback, UPath.Null, basePath));
+                }
+
+                return locations;
+            }
+
+            var directoryToVisit = new List<UPath> {path};
+
+            var entries = new HashSet<UPath>();
+            var sortedDirectories = new SortedSet<UPath>();
+
+            var first = true;
+
+            while (directoryToVisit.Count > 0)
+            {
+                var pathToVisit = directoryToVisit[0];
+                directoryToVisit.RemoveAt(0);
+                var dirIndex = 0;
+                entries.Clear();
+                sortedDirectories.Clear();
+
+                var locations = GetSearchLocations(pathToVisit);
+
+                // Only need to search within one filesystem, no need to sort or do other work
+                if (locations.Count == 1 && locations[0].FileSystem != this && (!first || searchOption == SearchOption.AllDirectories))
+                {
+                    var last = locations[0];
+                    foreach (var item in last.FileSystem.EnumerateItems(last.Path, searchOption, searchPredicate))
+                    {
+                        var localItem = item;
+                        localItem.Path = CombinePrefix(last.Prefix, item.Path);
+                        if (entries.Add(localItem.Path))
+                        {
+                            yield return localItem;
+                        }
+                    }
+                }
+                else
+                {
+                    for (var i = locations.Count - 1; i >= 0; i--)
+                    {
+                        var location = locations[i];
+                        var fileSystem = location.FileSystem;
+                        var searchPath = location.Path;
+
+                        if (fileSystem == this)
+                        {
+                            // List a single part of a mount name, queue it to be visited if needed
+                            var mountPart = new UPath(searchPath.GetFirstDirectory(out _)).ToRelative();
+                            var mountPath = location.Prefix / mountPart;
+
+                            var item = new FileSystemItem(this, mountPath, true);
+                            if (searchPredicate == null || searchPredicate(ref item))
+                            {
+                                if (entries.Add(item.Path))
+                                {
+                                    yield return item;
+                                }
+                            }
+
+                            if (searchOption == SearchOption.AllDirectories)
+                            {
+                                sortedDirectories.Add(mountPath);
+                            }
+                        }
+                        else
+                        {
+                            // List files in the mounted filesystems, merged and sorted into one list
+                            foreach (var item in fileSystem.EnumerateItems(searchPath, SearchOption.TopDirectoryOnly, searchPredicate))
+                            {
+                                var publicName = CombinePrefix(location.Prefix, item.Path);
+                                if (entries.Add(publicName))
+                                {
+                                    var localItem = item;
+                                    localItem.Path = publicName;
+                                    yield return localItem;
+
+                                    if (searchOption == SearchOption.AllDirectories && item.IsDirectory)
+                                    {
+                                        sortedDirectories.Add(publicName);
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+                }
+
+                if (first)
+                {
+                    if (locations.Count == 0 && path != UPath.Root)
+                        throw NewDirectoryNotFoundException(path);
+
+                    first = false;
+                }
+
+                // Enqueue directories and respect order
+                foreach (var nextDir in sortedDirectories)
+                {
+                    directoryToVisit.Insert(dirIndex++, nextDir);
+                }
+            }
+        }
+
         /// <inheritdoc />
         protected override bool CanWatchImpl(UPath path)
         {

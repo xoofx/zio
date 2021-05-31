@@ -109,6 +109,17 @@ namespace Zio
             return FileSystem.EnumerateFileSystemEntries(Path, searchPattern, searchOption, searchTarget);
         }
 
+        /// <summary>
+        /// Returns an enumerable collection of <see cref="FileSystemItem"/> that match a search pattern in a specified path, and optionally searches subdirectories.
+        /// </summary>
+        /// <param name="searchPredicate">The search string to match against file-system entries in path. This parameter can contain a combination of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
+        /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory or should include all subdirectories.</param>
+        /// <returns>An enumerable collection of <see cref="FileSystemItem"/> in the directory specified by path and that match the specified search pattern, option and target.</returns>
+        public IEnumerable<FileSystemItem> EnumerateItems(SearchOption searchOption = SearchOption.TopDirectoryOnly, SearchPredicate? searchPredicate = null)
+        {
+            return FileSystem.EnumerateItems(Path, searchOption, searchPredicate);
+        }
+        
         /// <summary>Moves a <see cref="T:System.IO.DirectoryInfo" /> instance and its contents to a new path.</summary>
         /// <param name="destDirName">The name and path to which to move this directory. The destination cannot be another disk volume or a directory with the identical name. It can be an existing directory to which you want to add this directory as a subdirectory. </param>
         /// <exception cref="T:System.ArgumentNullException">
