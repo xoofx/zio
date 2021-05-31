@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.0 (31 May 2021)
+- Breaking change: Add new `IFileSystem.EnumerateItems` to optimize scanning by fetching important attributes along the scan (e.g length, file or directory...etc.).
+- Breaking change: For performance reasons, `MountFileSystem`/`AggregateFileSystem` are no longer thread safe when modifying their mounts/filesystems.
+- Breaking change: `MountFileSystem`/`AggregateFileSystem` when enumerating files are no longer discarding files with different case sensitive names. Previously `a.txt` and `A.txt` would be considered as a same file.
+
 ## 0.11.0 (24 Dec 2020)
 - Add overload methods to `FileSystemExtensions` to not copy attributes from source filesystem. 
 
