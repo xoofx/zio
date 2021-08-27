@@ -619,7 +619,7 @@ namespace Zio.FileSystems
                     CreationTime = fileInfo.CreationTimeUtc.ToLocalTime(),
                     LastAccessTime = fileInfo.LastAccessTimeUtc.ToLocalTime(),
                     LastWriteTime = fileInfo.LastWriteTimeUtc.ToLocalTime(),
-                    Length = fileInfo.Length
+                    Length = (fileInfo.Attributes & FileAttributes.Directory) > 0 ? 0 : fileInfo.Length
                 };
                 if (searchPredicate == null || searchPredicate(ref item))
                 {
