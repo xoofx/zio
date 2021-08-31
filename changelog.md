@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.13.0 (31 Aug 2021)
+- Fix PhysicalFileSystem on .NET Framework 4
+
 ## 0.12.0 (31 May 2021)
 - Breaking change: Add new `IFileSystem.EnumerateItems` to optimize scanning by fetching important attributes along the scan (e.g length, file or directory...etc.).
 - Breaking change: For performance reasons, `MountFileSystem`/`AggregateFileSystem` are no longer thread safe when modifying their mounts/filesystems.
