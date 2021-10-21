@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
@@ -27,109 +28,132 @@ namespace Zio.Tests.FileSystems
             _fs = fs ?? throw new ArgumentNullException(nameof(fs));
         }
 
-        protected override void CreateDirectoryImpl(UPath path)
+        protected override ValueTask CreateDirectoryImpl(UPath path)
         {
             new DirectoryEntry(_fs, path).Create();
+            return new();
         }
 
-        protected override bool DirectoryExistsImpl(UPath path)
+        protected override ValueTask<bool> DirectoryExistsImpl(UPath path)
         {
             return new DirectoryEntry(_fs, path).Exists;
         }
 
-        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
-            new DirectoryEntry(_fs, srcPath).MoveTo(destPath);
+            return new DirectoryEntry(_fs, srcPath).MoveTo(destPath);
         }
 
-        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
+        protected override ValueTask DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
-            new DirectoryEntry(_fs, path).Delete(isRecursive);
+            return new DirectoryEntry(_fs, path).Delete(isRecursive);
         }
 
-        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
+        protected override async ValueTask CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
-            new FileEntry(_fs, srcPath).CopyTo(destPath, overwrite);
+            await new FileEntry(_fs, srcPath).CopyTo(destPath, overwrite);
         }
 
-        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
+        protected override async ValueTask ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
-            new FileEntry(_fs, srcPath).ReplaceTo(destPath, destBackupPath, ignoreMetadataErrors);
+            await new FileEntry(_fs, srcPath).ReplaceTo(destPath, destBackupPath, ignoreMetadataErrors);
         }
 
-        protected override long GetFileLengthImpl(UPath path)
+        protected override ValueTask<long> GetFileLengthImpl(UPath path)
         {
             return new FileEntry(_fs, path).Length;
         }
 
-        protected override bool FileExistsImpl(UPath path)
+        protected override ValueTask<bool> FileExistsImpl(UPath path)
         {
             return new FileEntry(_fs, path).Exists;
         }
 
-        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveFileImpl(UPath srcPath, UPath destPath)
         {
-            new FileEntry(_fs, srcPath).MoveTo(destPath);
+            return new FileEntry(_fs, srcPath).MoveTo(destPath);
         }
 
-        protected override void DeleteFileImpl(UPath path)
+        protected override ValueTask DeleteFileImpl(UPath path)
         {
-            new FileEntry(_fs, path).Delete();
+            return new FileEntry(_fs, path).Delete();
         }
 
-        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share)
+        protected override ValueTask<Stream> OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share)
         {
             return new FileEntry(_fs, path).Open(mode, access, share);
         }
 
-        protected override FileAttributes GetAttributesImpl(UPath path)
+        protected override async ValueTask<FileAttributes> GetAttributesImpl(UPath path)
         {
-            return _fs.GetFileSystemEntry(path).Attributes;
+            return await (await _fs.GetFileSystemEntry(path)).GetAttributes();
         }
 
-        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
+        protected override async ValueTask SetAttributesImpl(UPath path, FileAttributes attributes)
         {
-            _fs.GetFileSystemEntry(path).Attributes = attributes;
+            await (await _fs.GetFileSystemEntry(path)).SetAttributes(attributes);
         }
 
-        protected override DateTime GetCreationTimeImpl(UPath path)
+        protected override async ValueTask<DateTime> GetCreationTimeImpl(UPath path)
         {
-            return _fs.TryGetFileSystemEntry(path)?.CreationTime ?? DefaultFileTime;
+            var entry = await _fs.TryGetFileSystemEntry(path);
+            if (entry == null)
+            {
+                return DefaultFileTime;
+            }
+
+            return await _fs.GetCreationTime(path);
         }
 
-        protected override void SetCreationTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetCreationTimeImpl(UPath path, DateTime time)
         {
-            _fs.GetFileSystemEntry(path).CreationTime = time;
+            return _fs.SetCreationTime(path, time);
         }
 
-        protected override DateTime GetLastAccessTimeImpl(UPath path)
+        protected override async ValueTask<DateTime> GetLastAccessTimeImpl(UPath path)
         {
-            return _fs.TryGetFileSystemEntry(path)?.LastAccessTime ?? DefaultFileTime;
+            var entry = await _fs.TryGetFileSystemEntry(path);
+            if (entry == null)
+            {
+                return DefaultFileTime;
+            }
+
+
+            return await _fs.GetLastAccessTime(path);
         }
 
-        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastAccessTimeImpl(UPath path, DateTime time)
         {
-            _fs.GetFileSystemEntry(path).LastAccessTime = time;
+            return _fs.SetLastAccessTime(path, time);
         }
 
-        protected override DateTime GetLastWriteTimeImpl(UPath path)
+        protected override async ValueTask<DateTime> GetLastWriteTimeImpl(UPath path)
         {
-            return _fs.TryGetFileSystemEntry(path)?.LastWriteTime ?? DefaultFileTime;
+            var entry = await _fs.TryGetFileSystemEntry(path);
+            if (entry == null)
+            {
+                return DefaultFileTime;
+            }
+
+
+            return await _fs.GetLastWriteTime(path);
         }
 
-        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastWriteTimeImpl(UPath path, DateTime time)
         {
-            _fs.GetFileSystemEntry(path).LastWriteTime = time;
+            return _fs.SetLastWriteTime(path, time);
         }
 
-        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override async ValueTask<IEnumerable<UPath>> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
-            return _fs.GetDirectoryEntry(path).EnumerateEntries(searchPattern, searchOption, searchTarget).Select(e => e.Path);
+            var directoryEntry = await _fs.GetDirectoryEntry(path);
+            var entries = await directoryEntry.EnumerateEntries(searchPattern, searchOption, searchTarget);
+            return entries.Select(e => e.Path).ToArray();
         }
         
-        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate searchPredicate)
+        protected override async ValueTask<IEnumerable<FileSystemItem>> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate searchPredicate)
         {
-            return _fs.GetDirectoryEntry(path).EnumerateItems(searchOption);
+            return await (await _fs.GetDirectoryEntry(path)).EnumerateItems(searchOption);
         }
 
         protected override IFileSystemWatcher WatchImpl(UPath path)

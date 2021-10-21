@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -145,7 +146,7 @@ namespace Zio.FileSystems
         {
             ValidateMountName(name);
 
-            IFileSystem mountFileSystem;
+            IFileSystem? mountFileSystem;
 
             if (!_mounts.TryGetValue(name, out mountFileSystem))
             {
@@ -218,13 +219,13 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void CreateDirectoryImpl(UPath path)
+        protected override ValueTask CreateDirectoryImpl(UPath path)
         {
             var originalSrcPath = path;
             var fs = TryGetMountOrNext(ref path);
             if (fs != null && path != UPath.Root)
             {
-                fs.CreateDirectory(path);
+                return fs.CreateDirectory(path);
             }
             else
             {
@@ -233,7 +234,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override bool DirectoryExistsImpl(UPath path)
+        protected override async ValueTask<bool> DirectoryExistsImpl(UPath path)
         {
             if (path == UPath.Root)
             {
@@ -242,7 +243,7 @@ namespace Zio.FileSystems
             var fs = TryGetMountOrNext(ref path);
             if (fs != null)
             {
-                return path == UPath.Root || fs.DirectoryExists(path);
+                return path == UPath.Root || await fs.DirectoryExists(path);
             }
 
             // Check if the path is part of a mount name
@@ -259,7 +260,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             var originalSrcPath = srcPath;
             var originalDestPath = destPath;
@@ -279,7 +280,7 @@ namespace Zio.FileSystems
 
             if (srcfs != null && srcfs == destfs)
             {
-                srcfs.MoveDirectory(srcPath, destPath);
+                return srcfs.MoveDirectory(srcPath, destPath);
             }
             else
             {
@@ -289,7 +290,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
+        protected override ValueTask DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             var originalSrcPath = path;
             var mountfs = TryGetMountOrNext(ref path);
@@ -301,7 +302,7 @@ namespace Zio.FileSystems
 
             if (mountfs != null)
             {
-                mountfs.DeleteDirectory(path, isRecursive);
+                return mountfs.DeleteDirectory(path, isRecursive);
             }
             else
             {
@@ -310,7 +311,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
+        protected override async ValueTask CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             var originalSrcPath = srcPath;
             var originalDestPath = destPath;
@@ -322,12 +323,12 @@ namespace Zio.FileSystems
             {
                 if (srcfs == destfs)
                 {
-                    srcfs.CopyFile(srcPath, destPath, overwrite);
+                    await srcfs.CopyFile(srcPath, destPath, overwrite);
                 }
                 else
                 {
                     // Otherwise, perform a copy between filesystem
-                    srcfs.CopyFileCross(srcPath, destfs, destPath, overwrite);
+                    await srcfs.CopyFileCross(srcPath, destfs, destPath, overwrite);
                 }
             }
             else
@@ -342,18 +343,18 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
+        protected override async ValueTask ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             var originalSrcPath = srcPath;
             var originalDestPath = destPath;
             var originalDestBackupPath = destBackupPath;
 
-            if (!FileExistsImpl(srcPath))
+            if (!await FileExistsImpl(srcPath))
             {
                 throw NewFileNotFoundException(srcPath);
             }
 
-            if (!FileExistsImpl(destPath))
+            if (!await FileExistsImpl(destPath))
             {
                 throw NewFileNotFoundException(destPath);
             }
@@ -364,7 +365,7 @@ namespace Zio.FileSystems
 
             if (srcfs != null && srcfs == destfs && (destBackupPath.IsNull || srcfs == backupfs))
             {
-                srcfs.ReplaceFile(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
+                await srcfs.ReplaceFile(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
             }
             else
             {
@@ -374,7 +375,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override long GetFileLengthImpl(UPath path)
+        protected override ValueTask<long> GetFileLengthImpl(UPath path)
         {
             var originalSrcPath = path;
             var mountfs = TryGetMountOrNext(ref path);
@@ -387,29 +388,34 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override bool FileExistsImpl(UPath path)
+        protected override ValueTask<bool> FileExistsImpl(UPath path)
         {
             var mountfs = TryGetMountOrNext(ref path);
-            return mountfs?.FileExists(path) ?? false;
+            if (mountfs != null)
+            {
+                return mountfs.FileExists(path);
+            }
+
+            return new (false);
         }
 
         /// <inheritdoc />
-        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
+        protected override async ValueTask MoveFileImpl(UPath srcPath, UPath destPath)
         {
             var originalSrcPath = srcPath;
             var originalDestPath = destPath;
-            if (!FileExistsImpl(srcPath))
+            if (!await FileExistsImpl(srcPath))
             {
                 throw NewFileNotFoundException(srcPath);
             }
 
             var destDirectory = destPath.GetDirectory();
-            if (!DirectoryExistsImpl(destDirectory))
+            if (!await DirectoryExistsImpl(destDirectory))
             {
                 throw NewDirectoryNotFoundException(destDirectory);
             }
 
-            if (FileExistsImpl(destPath))
+            if (await FileExistsImpl(destPath))
             {
                 throw new IOException($"The destination path `{destPath}` already exists");
             }
@@ -419,11 +425,11 @@ namespace Zio.FileSystems
 
             if (srcfs != null && srcfs == destfs)
             {
-                srcfs.MoveFile(srcPath, destPath);
+                await srcfs.MoveFile(srcPath, destPath);
             }
             else if (srcfs != null && destfs != null)
             {
-                srcfs.MoveFileCross(srcPath, destfs, destPath);
+                await srcfs.MoveFileCross(srcPath, destfs, destPath);
             }
             else
             {
@@ -436,14 +442,20 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void DeleteFileImpl(UPath path)
+        protected override ValueTask DeleteFileImpl(UPath path)
         {
             var mountfs = TryGetMountOrNext(ref path);
-            mountfs?.DeleteFile(path);
+
+            if (mountfs != null)
+            {
+                return mountfs.DeleteFile(path);
+            }
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        protected override ValueTask<Stream> OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             var originalSrcPath = path;
             var mountfs = TryGetMountOrNext(ref path);
@@ -462,7 +474,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override FileAttributes GetAttributesImpl(UPath path)
+        protected override ValueTask<FileAttributes> GetAttributesImpl(UPath path)
         {
             var originalSrcPath = path;
             var mountfs = TryGetMountOrNext(ref path);
@@ -474,13 +486,13 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
+        protected override ValueTask SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             var originalSrcPath = path;
             var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                mountfs.SetAttributes(path, attributes);
+                return mountfs.SetAttributes(path, attributes);
             }
             else
             {
@@ -489,19 +501,26 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override DateTime GetCreationTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetCreationTimeImpl(UPath path)
         {
-            return TryGetMountOrNext(ref path)?.GetCreationTime(path) ?? DefaultFileTime;
+            var mountfs = TryGetMountOrNext(ref path);
+
+            if (mountfs != null)
+            {
+                return mountfs.GetCreationTime(path);
+            }
+             
+            return new (DefaultFileTime);
         }
 
         /// <inheritdoc />
-        protected override void SetCreationTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetCreationTimeImpl(UPath path, DateTime time)
         {
             var originalSrcPath = path;
             var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                mountfs.SetCreationTime(path, time);
+                return mountfs.SetCreationTime(path, time);
             }
             else
             {
@@ -510,19 +529,26 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastAccessTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetLastAccessTimeImpl(UPath path)
         {
-            return TryGetMountOrNext(ref path)?.GetLastAccessTime(path) ?? DefaultFileTime;
+            var mountfs = TryGetMountOrNext(ref path);
+
+            if (mountfs != null)
+            {
+                return mountfs.GetLastAccessTime(path);
+            }
+
+            return new(DefaultFileTime);
         }
 
         /// <inheritdoc />
-        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             var originalSrcPath = path;
             var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                mountfs.SetLastAccessTime(path, time);
+                return mountfs.SetLastAccessTime(path, time);
             }
             else
             {
@@ -531,19 +557,26 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastWriteTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetLastWriteTimeImpl(UPath path)
         {
-            return TryGetMountOrNext(ref path)?.GetLastWriteTime(path) ?? DefaultFileTime;
+            var mountfs = TryGetMountOrNext(ref path);
+
+            if (mountfs != null)
+            {
+                return mountfs.GetLastWriteTime(path);
+            }
+
+            return new(DefaultFileTime);
         }
 
         /// <inheritdoc />
-        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             var originalSrcPath = path;
             var mountfs = TryGetMountOrNext(ref path);
             if (mountfs != null)
             {
-                mountfs.SetLastWriteTime(path, time);
+                return mountfs.SetLastWriteTime(path, time);
             }
             else
             {
@@ -552,13 +585,13 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override async ValueTask<IEnumerable<UPath>> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             // Use the search pattern to normalize the path/search pattern
             var search = SearchPattern.Parse(ref path, ref searchPattern);
 
             // Internal method used to retrieve the list of search locations
-            List<SearchLocation> GetSearchLocations(UPath basePath)
+            async ValueTask<List<SearchLocation>> GetSearchLocations(UPath basePath)
             {
                 var locations = new List<SearchLocation>();
                 var matchedMount = false;
@@ -581,7 +614,7 @@ namespace Zio.FileSystems
                         {
                             matchedMount = true; // don't check other mounts, we don't want to merge them together
 
-                            if (kvp.Value.DirectoryExists(remainingPath))
+                            if (await kvp.Value.DirectoryExists(remainingPath))
                             {
                                 locations.Add(new SearchLocation(kvp.Value, kvp.Key, remainingPath));
                             }
@@ -589,7 +622,7 @@ namespace Zio.FileSystems
                     }
                 }
 
-                if (!matchedMount && Fallback != null && Fallback.DirectoryExists(basePath))
+                if (!matchedMount && Fallback != null && await Fallback.DirectoryExists(basePath))
                 {
                     locations.Add(new SearchLocation(Fallback, UPath.Null, basePath));
                 }
@@ -605,6 +638,8 @@ namespace Zio.FileSystems
 
             var first = true;
 
+            var results = new List<UPath>();
+
             while (directoryToVisit.Count > 0)
             {
                 var pathToVisit = directoryToVisit[0];
@@ -613,15 +648,15 @@ namespace Zio.FileSystems
                 entries.Clear();
                 sortedDirectories.Clear();
 
-                var locations = GetSearchLocations(pathToVisit);
-                
+                var locations = await GetSearchLocations(pathToVisit);
+
                 // Only need to search within one filesystem, no need to sort or do other work
                 if (locations.Count == 1 && locations[0].FileSystem != this && (!first || searchOption == SearchOption.AllDirectories))
                 {
                     var last = locations[0];
-                    foreach (var item in last.FileSystem.EnumeratePaths(last.Path, searchPattern, searchOption, searchTarget))
+                    foreach (var item in await last.FileSystem.EnumeratePaths(last.Path, searchPattern, searchOption, searchTarget))
                     {
-                        yield return CombinePrefix(last.Prefix, item);
+                        results.Add(CombinePrefix(last.Prefix, item));
                     }
                 }
                 else
@@ -652,7 +687,7 @@ namespace Zio.FileSystems
                         else
                         {
                             // List files in the mounted filesystems, merged and sorted into one list
-                            foreach (var item in fileSystem.EnumeratePaths(searchPath, "*", SearchOption.TopDirectoryOnly, SearchTarget.Both))
+                            foreach (var item in await fileSystem.EnumeratePaths(searchPath, "*", SearchOption.TopDirectoryOnly, SearchTarget.Both))
                             {
                                 var publicName = CombinePrefix(location.Prefix, item);
                                 if (entries.Contains(publicName))
@@ -660,8 +695,8 @@ namespace Zio.FileSystems
                                     continue;
                                 }
 
-                                var isFile = fileSystem.FileExists(item);
-                                var isDirectory = fileSystem.DirectoryExists(item);
+                                var isFile = await fileSystem.FileExists(item);
+                                var isDirectory = await fileSystem.DirectoryExists(item);
                                 var isMatching = search.Match(publicName);
 
                                 if (isMatching && ((isFile && searchTarget != SearchTarget.Directory) || (isDirectory && searchTarget != SearchTarget.File)))
@@ -695,16 +730,19 @@ namespace Zio.FileSystems
                 // Return entries
                 foreach (var entry in entries)
                 {
-                    yield return entry;
+                    results.Add(entry);
                 }
             }
+
+            return results;
+
         }
 
         /// <inheritdoc/>
-        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        protected override async ValueTask<IEnumerable<FileSystemItem>> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
         {
             // Internal method used to retrieve the list of search locations
-            List<SearchLocation> GetSearchLocations(UPath basePath)
+            async ValueTask<List<SearchLocation>> GetSearchLocations(UPath basePath)
             {
                 var locations = new List<SearchLocation>();
                 var matchedMount = false;
@@ -727,7 +765,7 @@ namespace Zio.FileSystems
                         {
                             matchedMount = true; // don't check other mounts, we don't want to merge them together
 
-                            if (kvp.Value.DirectoryExists(remainingPath))
+                            if (await kvp.Value.DirectoryExists(remainingPath))
                             {
                                 locations.Add(new SearchLocation(kvp.Value, kvp.Key, remainingPath));
                             }
@@ -735,7 +773,7 @@ namespace Zio.FileSystems
                     }
                 }
 
-                if (!matchedMount && Fallback != null && Fallback.DirectoryExists(basePath))
+                if (!matchedMount && Fallback != null && await Fallback.DirectoryExists(basePath))
                 {
                     locations.Add(new SearchLocation(Fallback, UPath.Null, basePath));
                 }
@@ -744,6 +782,7 @@ namespace Zio.FileSystems
             }
 
             var directoryToVisit = new List<UPath> {path};
+            var results = new List<FileSystemItem>();
 
             var entries = new HashSet<UPath>();
             var sortedDirectories = new SortedSet<UPath>();
@@ -758,19 +797,19 @@ namespace Zio.FileSystems
                 entries.Clear();
                 sortedDirectories.Clear();
 
-                var locations = GetSearchLocations(pathToVisit);
+                var locations = await GetSearchLocations(pathToVisit);
 
                 // Only need to search within one filesystem, no need to sort or do other work
                 if (locations.Count == 1 && locations[0].FileSystem != this && (!first || searchOption == SearchOption.AllDirectories))
                 {
                     var last = locations[0];
-                    foreach (var item in last.FileSystem.EnumerateItems(last.Path, searchOption, searchPredicate))
+                    foreach (var item in await last.FileSystem.EnumerateItems(last.Path, searchOption, searchPredicate))
                     {
                         var localItem = item;
                         localItem.Path = CombinePrefix(last.Prefix, item.Path);
                         if (entries.Add(localItem.Path))
                         {
-                            yield return localItem;
+                            results.Add(localItem);
                         }
                     }
                 }
@@ -793,7 +832,7 @@ namespace Zio.FileSystems
                             {
                                 if (entries.Add(item.Path))
                                 {
-                                    yield return item;
+                                    results.Add(item);
                                 }
                             }
 
@@ -805,14 +844,14 @@ namespace Zio.FileSystems
                         else
                         {
                             // List files in the mounted filesystems, merged and sorted into one list
-                            foreach (var item in fileSystem.EnumerateItems(searchPath, SearchOption.TopDirectoryOnly, searchPredicate))
+                            foreach (var item in await fileSystem.EnumerateItems(searchPath, SearchOption.TopDirectoryOnly, searchPredicate))
                             {
                                 var publicName = CombinePrefix(location.Prefix, item.Path);
                                 if (entries.Add(publicName))
                                 {
                                     var localItem = item;
                                     localItem.Path = publicName;
-                                    yield return localItem;
+                                    results.Add(localItem);
 
                                     if (searchOption == SearchOption.AllDirectories && item.IsDirectory)
                                     {
@@ -839,6 +878,8 @@ namespace Zio.FileSystems
                     directoryToVisit.Insert(dirIndex++, nextDir);
                 }
             }
+
+            return results;
         }
 
         /// <inheritdoc />

@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Zio
 {
@@ -116,7 +117,7 @@ namespace Zio
         ///     drive.
         /// </exception>
         /// <exception cref="T:System.IO.IOException">The file is already open. </exception>
-        public readonly Stream Open(FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        public readonly ValueTask<Stream> Open(FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             if (FileSystem == null) throw NewThrowNotInitialized();
             return FileSystem.OpenFile(AbsolutePath, mode, access, share);
@@ -126,7 +127,7 @@ namespace Zio
         /// Checks if the file exists.
         /// </summary>
         /// <returns></returns>
-        public readonly bool Exists() => FileSystem != null && (IsDirectory ? FileSystem.DirectoryExists(AbsolutePath) : FileSystem.FileExists(AbsolutePath));
+        public readonly async ValueTask<bool> Exists() => FileSystem != null && (IsDirectory ? await FileSystem.DirectoryExists(AbsolutePath) : await FileSystem.FileExists(AbsolutePath));
 
         /// <summary>
         ///     Opens a file, reads all lines of the file with the specified encoding, and then closes the file.
@@ -136,7 +137,7 @@ namespace Zio
         ///     This method attempts to automatically detect the encoding of a file based on the presence of byte order marks.
         ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.
         /// </remarks>
-        public readonly string ReadAllText()
+        public readonly Task<string> ReadAllText()
         {
             if (FileSystem == null) throw NewThrowNotInitialized();
             return FileSystem.ReadAllText(AbsolutePath);

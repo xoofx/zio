@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -20,14 +21,27 @@ namespace Zio.FileSystems
         /// <param name="fileSystem">The file system to create a view from.</param>
         /// <param name="subPath">The sub path view to create filesystem.</param>
         /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
-        /// <exception cref="DirectoryNotFoundException">If the directory subPath does not exist in the delegate FileSystem</exception>
-        public SubFileSystem(IFileSystem fileSystem, UPath subPath, bool owned = true) : base(fileSystem, owned)
+        internal SubFileSystem(IFileSystem fileSystem, UPath subPath, bool owned = true) : base(fileSystem, owned)
         {
             SubPath = subPath.AssertAbsolute(nameof(subPath));
-            if (!fileSystem.DirectoryExists(SubPath))
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="SubFileSystem"/> class.
+        /// </summary>
+        /// <param name="fileSystem">The file system to create a view from.</param>
+        /// <param name="subPath">The sub path view to create filesystem.</param>
+        /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
+        public static async ValueTask<SubFileSystem> Create(IFileSystem fileSystem, UPath subPath, bool owned = true)
+        {
+            var fs = new SubFileSystem(fileSystem, subPath, owned);
+
+            if (!await fileSystem.DirectoryExists(fs.SubPath))
             {
-                throw NewDirectoryNotFoundException(SubPath);
+                throw NewDirectoryNotFoundException(fs.SubPath);
             }
+
+            return fs;
         }
 
         /// <summary>

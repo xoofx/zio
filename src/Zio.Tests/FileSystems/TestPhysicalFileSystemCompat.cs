@@ -16,7 +16,7 @@ namespace Zio.Tests.FileSystems
 
         public TestPhysicalFileSystemCompat()
         {
-            _fsHelper = new PhysicalDirectoryHelper(SystemPath);
+            _fsHelper = PhysicalDirectoryHelper.Create(SystemPath).GetAwaiter().GetResult();
             fs = _fsHelper.PhysicalFileSystem;
         }
 

@@ -6,6 +6,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 using Zio.FileSystems;
 
@@ -19,28 +20,28 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void TestRead()
+        public async Task TestRead()
         {
-            var memfs = GetCommonMemoryFileSystem();
+            var memfs = await GetCommonMemoryFileSystem();
             var fsEntries = new FileSystemEntryRedirect(memfs);
-            AssertCommonRead(fsEntries);            
+            await AssertCommonRead(fsEntries);            
         }
 
         [Fact]
-        public void TestGetParentDirectory()
+        public async Task TestGetParentDirectory()
         {
             var fs = new MemoryFileSystem();
             var fileEntry = new FileEntry(fs, "/test/tata/titi.txt");
             // Shoud not throw an error
             var directory = fileEntry.Directory;
-            Assert.False(directory.Exists);
+            Assert.False(await directory.Exists);
             Assert.Equal(UPath.Root / "test/tata", directory.Path);
         }
 
         [Fact]
-        public void TestFileEntry()
+        public async Task TestFileEntry()
         {
-            var memfs = GetCommonMemoryFileSystem();
+            var memfs = await GetCommonMemoryFileSystem();
 
             var file = new FileEntry(memfs, "/a/a/a1.txt");
             var file2 = new FileEntry(memfs, "/a/b.txt");
@@ -53,8 +54,8 @@ namespace Zio.Tests.FileSystems
             Assert.Equal("b", file2.NameWithoutExtension);
             Assert.Equal(".txt", file2.ExtensionWithDot);
 
-            Assert.True(file.Length > 0);
-            Assert.False(file.IsReadOnly);
+            Assert.True(await file.Length > 0);
+            Assert.False(await file.IsReadOnly());
 
             var dir = file.Directory;
             Assert.NotNull(dir);
@@ -63,70 +64,70 @@ namespace Zio.Tests.FileSystems
             Assert.Null(new DirectoryEntry(memfs, "/").Parent);
 
             var yoyo = new FileEntry(memfs, "/a/yoyo.txt");
-            using (var file1 = yoyo.Create())
+            using (var file1 = await yoyo.Create())
             {
                 file1.WriteByte(1);
                 file1.WriteByte(2);
                 file1.WriteByte(3);
             }
 
-            Assert.Equal(new byte[] {1, 2, 3}, memfs.ReadAllBytes("/a/yoyo.txt"));
+            Assert.Equal(new byte[] {1, 2, 3}, await memfs.ReadAllBytes("/a/yoyo.txt"));
 
-            Assert.Throws<FileNotFoundException>(() => memfs.GetFileSystemEntry("/wow.txt"));
+            await Assert.ThrowsAsync <FileNotFoundException>(async () => await memfs.GetFileSystemEntry("/wow.txt"));
 
-            var file3 = memfs.GetFileEntry("/a/b.txt");
-            Assert.True(file3.Exists);
+            var file3 = await memfs.GetFileEntry("/a/b.txt");
+            Assert.True(await file3.Exists);
 
-            Assert.Null(memfs.TryGetFileSystemEntry("/invalid_file"));
-            Assert.IsType<FileEntry>(memfs.TryGetFileSystemEntry("/a/b.txt"));
-            Assert.IsType<DirectoryEntry>(memfs.TryGetFileSystemEntry("/a"));
+            Assert.Null(await memfs.TryGetFileSystemEntry("/invalid_file"));
+            Assert.IsType<FileEntry>(await memfs.TryGetFileSystemEntry("/a/b.txt"));
+            Assert.IsType<DirectoryEntry>(await memfs.TryGetFileSystemEntry("/a"));
 
-            Assert.Throws<FileNotFoundException>(() => memfs.GetFileEntry("/invalid"));
-            Assert.Throws<DirectoryNotFoundException>(() => memfs.GetDirectoryEntry("/invalid"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await memfs.GetFileEntry("/invalid"));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await memfs.GetDirectoryEntry("/invalid"));
 
 
             var mydir = new DirectoryEntry(memfs, "/yoyo");
 
-            Assert.Throws<ArgumentException>(() => mydir.CreateSubdirectory("/sub"));
+            await Assert.ThrowsAsync<ArgumentException>(async () => await mydir.CreateSubdirectory("/sub"));
 
-            var subFolder = mydir.CreateSubdirectory("sub");
-            Assert.True(subFolder.Exists);
+            var subFolder = await mydir.CreateSubdirectory("sub");
+            Assert.True(await subFolder.Exists);
 
-            Assert.Empty(mydir.EnumerateFiles());
+            Assert.Empty(await mydir.EnumerateFiles());
 
-            var subDirs = mydir.EnumerateDirectories().ToList();
+            var subDirs = (await mydir.EnumerateDirectories()).ToList();
             Assert.Single(subDirs);
             Assert.Equal("/yoyo/sub", subDirs[0].FullName);
 
-            mydir.Delete();
+            await mydir.Delete();
 
-            Assert.False(mydir.Exists);
-            Assert.False(subFolder.Exists);
+            Assert.False(await mydir.Exists);
+            Assert.False(await subFolder.Exists);
 
             // Test ReadAllText/WriteAllText/AppendAllText/ReadAllBytes/WriteAllBytes
-            Assert.True(file.ReadAllText().Length > 0);
-            Assert.True(file.ReadAllText(Encoding.UTF8).Length > 0);
-            file.WriteAllText("abc");
-            Assert.Equal("abc", file.ReadAllText());
-            file.WriteAllText("abc", Encoding.UTF8);
-            Assert.Equal("abc", file.ReadAllText(Encoding.UTF8));
+            Assert.True((await file.ReadAllText()).Length > 0);
+            Assert.True((await file.ReadAllText(Encoding.UTF8)).Length > 0);
+            await file.WriteAllText("abc");
+            Assert.Equal("abc", await file.ReadAllText());
+            await file.WriteAllText("abc", Encoding.UTF8);
+            Assert.Equal("abc", await file.ReadAllText(Encoding.UTF8));
 
-            file.AppendAllText("def");
-            Assert.Equal("abcdef", file.ReadAllText());
-            file.AppendAllText("ghi", Encoding.UTF8);
-            Assert.Equal("abcdefghi", file.ReadAllText());
+            await file.AppendAllText("def");
+            Assert.Equal("abcdef", await file.ReadAllText());
+            await file.AppendAllText("ghi", Encoding.UTF8);
+            Assert.Equal("abcdefghi", await file.ReadAllText());
 
-            var lines = file.ReadAllLines();
+            var lines = await file.ReadAllLines();
             Assert.Single(lines);
             Assert.Equal("abcdefghi", lines[0]);
 
-            lines = file.ReadAllLines(Encoding.UTF8);
+            lines = await file.ReadAllLines(Encoding.UTF8);
             Assert.Single(lines);
             Assert.Equal("abcdefghi", lines[0]);
 
-            Assert.Equal(new byte[] { 1, 2, 3 }, yoyo.ReadAllBytes());
-            yoyo.WriteAllBytes(new byte[] {1, 2, 3, 4});
-            Assert.Equal(new byte[] { 1, 2, 3, 4}, yoyo.ReadAllBytes());
+            Assert.Equal(new byte[] { 1, 2, 3 }, await yoyo.ReadAllBytes());
+            await yoyo.WriteAllBytes(new byte[] {1, 2, 3, 4});
+            Assert.Equal(new byte[] { 1, 2, 3, 4}, await yoyo.ReadAllBytes());
         }
     }
 }

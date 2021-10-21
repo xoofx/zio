@@ -6,7 +6,7 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <VersionPrefix>0.13.0</VersionPrefix>
     <Authors>Alexandre Mutel</Authors>
-    <TargetFrameworks>net40;net45;netstandard2.0;netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net45;netstandard2.0;netstandard2.1;net6.0</TargetFrameworks>
     <AssemblyName>Zio</AssemblyName>
     <PackageId>Zio</PackageId>
     <PackageTags>filesystem;vfs;VirtualFileSystem;virtual;abstract;directory;files;io;mock</PackageTags>
@@ -29,8 +29,13 @@
   
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45'">
     <Reference Include="System.IO.Compression" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
   </ItemGroup>
-  
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.3'">
     <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE</DefineConstants>
   </PropertyGroup>
@@ -42,7 +47,11 @@
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.1'">
     <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE;HAS_NULLABLEANNOTATIONS</DefineConstants>
   </PropertyGroup>
-  
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net6.0'">
+    <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE;HAS_NULLABLEANNOTATIONS;NET60</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45'">
     <DefineConstants>$(AdditionalConstants);NET45;HAS_ZIPARCHIVE</DefineConstants>
   </PropertyGroup>

@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Zio.FileSystems
 {
@@ -66,27 +68,27 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CreateDirectoryImpl(UPath path)
+        protected override ValueTask CreateDirectoryImpl(UPath path)
         {
-            FallbackSafe.CreateDirectory(ConvertPathToDelegate(path));
+            return FallbackSafe.CreateDirectory(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override bool DirectoryExistsImpl(UPath path)
+        protected override ValueTask<bool> DirectoryExistsImpl(UPath path)
         {
             return FallbackSafe.DirectoryExists(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
-            FallbackSafe.MoveDirectory(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath));
+            return FallbackSafe.MoveDirectory(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath));
         }
 
         /// <inheritdoc />
-        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
+        protected override ValueTask DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
-            FallbackSafe.DeleteDirectory(ConvertPathToDelegate(path), isRecursive);
+            return FallbackSafe.DeleteDirectory(ConvertPathToDelegate(path), isRecursive);
         }
 
         // ----------------------------------------------
@@ -94,44 +96,44 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
+        protected override ValueTask CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
-            FallbackSafe.CopyFile(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath), overwrite);
+            return FallbackSafe.CopyFile(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath), overwrite);
         }
 
         /// <inheritdoc />
-        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath,
+        protected override ValueTask ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath,
             bool ignoreMetadataErrors)
         {
-            FallbackSafe.ReplaceFile(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath), destBackupPath.IsNull ? destBackupPath : ConvertPathToDelegate(destBackupPath), ignoreMetadataErrors);
+            return FallbackSafe.ReplaceFile(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath), destBackupPath.IsNull ? destBackupPath : ConvertPathToDelegate(destBackupPath), ignoreMetadataErrors);
         }
 
         /// <inheritdoc />
-        protected override long GetFileLengthImpl(UPath path)
+        protected override ValueTask<long> GetFileLengthImpl(UPath path)
         {
             return FallbackSafe.GetFileLength(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override bool FileExistsImpl(UPath path)
+        protected override ValueTask<bool> FileExistsImpl(UPath path)
         {
             return FallbackSafe.FileExists(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveFileImpl(UPath srcPath, UPath destPath)
         {
-            FallbackSafe.MoveFile(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath));
+            return FallbackSafe.MoveFile(ConvertPathToDelegate(srcPath), ConvertPathToDelegate(destPath));
         }
 
         /// <inheritdoc />
-        protected override void DeleteFileImpl(UPath path)
+        protected override ValueTask DeleteFileImpl(UPath path)
         {
-            FallbackSafe.DeleteFile(ConvertPathToDelegate(path));
+            return FallbackSafe.DeleteFile(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        protected override ValueTask<Stream> OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             return FallbackSafe.OpenFile(ConvertPathToDelegate(path), mode, access, share);
         }
@@ -141,51 +143,51 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override FileAttributes GetAttributesImpl(UPath path)
+        protected override ValueTask<FileAttributes> GetAttributesImpl(UPath path)
         {
             return FallbackSafe.GetAttributes(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
+        protected override ValueTask SetAttributesImpl(UPath path, FileAttributes attributes)
         {
-            FallbackSafe.SetAttributes(ConvertPathToDelegate(path), attributes);
+            return FallbackSafe.SetAttributes(ConvertPathToDelegate(path), attributes);
         }
 
         /// <inheritdoc />
-        protected override DateTime GetCreationTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetCreationTimeImpl(UPath path)
         {
             return FallbackSafe.GetCreationTime(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override void SetCreationTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetCreationTimeImpl(UPath path, DateTime time)
         {
-            FallbackSafe.SetCreationTime(ConvertPathToDelegate(path), time);
+            return FallbackSafe.SetCreationTime(ConvertPathToDelegate(path), time);
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastAccessTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetLastAccessTimeImpl(UPath path)
         {
             return FallbackSafe.GetLastAccessTime(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastAccessTimeImpl(UPath path, DateTime time)
         {
-            FallbackSafe.SetLastAccessTime(ConvertPathToDelegate(path), time);
+            return FallbackSafe.SetLastAccessTime(ConvertPathToDelegate(path), time);
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastWriteTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetLastWriteTimeImpl(UPath path)
         {
             return FallbackSafe.GetLastWriteTime(ConvertPathToDelegate(path));
         }
 
         /// <inheritdoc />
-        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastWriteTimeImpl(UPath path, DateTime time)
         {
-            FallbackSafe.SetLastWriteTime(ConvertPathToDelegate(path), time);
+            return FallbackSafe.SetLastWriteTime(ConvertPathToDelegate(path), time);
         }
 
         // ----------------------------------------------
@@ -193,23 +195,22 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override async ValueTask<IEnumerable<UPath>> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
-            foreach (var subPath in FallbackSafe.EnumeratePaths(ConvertPathToDelegate(path), searchPattern, searchOption, searchTarget))
-            {
-                yield return ConvertPathFromDelegate(subPath);
-            }
+            var paths = await FallbackSafe.EnumeratePaths(ConvertPathToDelegate(path), searchPattern, searchOption, searchTarget);
+            return paths.Select(ConvertPathFromDelegate).ToArray();
         }
 
         /// <inheritdoc />
-        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        protected override async ValueTask<IEnumerable<FileSystemItem>> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
         {
-            foreach (var subItem in FallbackSafe.EnumerateItems(ConvertPathToDelegate(path), searchOption, searchPredicate))
+            var items = await FallbackSafe.EnumerateItems(ConvertPathToDelegate(path), searchOption, searchPredicate);
+            return items.Select(subItem =>
             {
                 var localItem = subItem;
                 localItem.Path = ConvertPathFromDelegate(localItem.Path);
-                yield return localItem;
-            }
+                return localItem;
+            }).ToArray();
         }
 
         // ----------------------------------------------

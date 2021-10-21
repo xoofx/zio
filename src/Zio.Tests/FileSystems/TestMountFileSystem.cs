@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Xunit;
 using Zio.FileSystems;
 
@@ -16,23 +17,23 @@ namespace Zio.Tests.FileSystems
     public class TestMountFileSystem : TestFileSystemBase
     {
         [Fact]
-        public void TestCommonReadWithOnlyBackup()
+        public async Task TestCommonReadWithOnlyBackup()
         {
-            var fs = GetCommonMountFileSystemWithOnlyBackup();
-            AssertCommonRead(fs);
+            var fs = await GetCommonMountFileSystemWithOnlyBackup();
+            await AssertCommonRead(fs);
         }
 
         [Fact]
-        public void TestCommonReadWithMounts()
+        public async Task TestCommonReadWithMounts()
         {
-            var fs = GetCommonMountFileSystemWithMounts();
-            AssertCommonRead(fs);
+            var fs = await GetCommonMountFileSystemWithMounts();
+            await AssertCommonRead(fs);
         }
         
         [Fact]
-        public void TestWatcherOnRoot()
+        public async Task TestWatcherOnRoot()
         {
-            var fs = GetCommonMountFileSystemWithMounts();
+            var fs = await GetCommonMountFileSystemWithMounts();
             var watcher = fs.Watch("/");
 
             var gotChange = false;
@@ -47,15 +48,15 @@ namespace Zio.Tests.FileSystems
             watcher.IncludeSubdirectories = true;
             watcher.EnableRaisingEvents = true;
 
-            fs.WriteAllText("/b/watched.txt", "test");
+            await fs.WriteAllText("/b/watched.txt", "test");
             System.Threading.Thread.Sleep(100);
             Assert.True(gotChange);
         }
 
         [Fact]
-        public void TestWatcherOnMount()
+        public async Task TestWatcherOnMount()
         {
-            var fs = GetCommonMountFileSystemWithMounts();
+            var fs = await GetCommonMountFileSystemWithMounts();
             var watcher = fs.Watch("/b");
 
             var gotChange = false;
@@ -70,15 +71,15 @@ namespace Zio.Tests.FileSystems
             watcher.IncludeSubdirectories = true;
             watcher.EnableRaisingEvents = true;
 
-            fs.WriteAllText("/b/watched.txt", "test");
+            await fs.WriteAllText("/b/watched.txt", "test");
             System.Threading.Thread.Sleep(100);
             Assert.True(gotChange);
         }
 
         [Fact]
-        public void TestWatcherWithBackupOnRoot()
+        public async Task TestWatcherWithBackupOnRoot()
         {
-            var fs = GetCommonMountFileSystemWithOnlyBackup();
+            var fs = await GetCommonMountFileSystemWithOnlyBackup();
             var watcher = fs.Watch("/");
 
             var gotChange = false;
@@ -93,13 +94,13 @@ namespace Zio.Tests.FileSystems
             watcher.IncludeSubdirectories = true;
             watcher.EnableRaisingEvents = true;
 
-            fs.WriteAllText("/b/watched.txt", "test");
+            await fs.WriteAllText("/b/watched.txt", "test");
             System.Threading.Thread.Sleep(100);
             Assert.True(gotChange);
         }
 
         [Fact]
-        public void TestMount()
+        public async Task TestMount()
         {
             var fs = new MountFileSystem();
             var memfs = new MemoryFileSystem();
@@ -140,17 +141,17 @@ namespace Zio.Tests.FileSystems
 
             Assert.Empty(fs.GetMounts());
 
-            var innerFs = GetCommonMemoryFileSystem();
+            var innerFs = await GetCommonMemoryFileSystem();
             fs.Mount("/x/y", innerFs);
             fs.Mount("/x/y/b", innerFs);
-            Assert.True(fs.FileExists("/x/y/A.txt"));
-            Assert.True(fs.FileExists("/x/y/b/A.txt"));
+            Assert.True(await fs.FileExists("/x/y/A.txt"));
+            Assert.True(await fs.FileExists("/x/y/b/A.txt"));
         }
 
         [Fact]
-        public void TestWatcherRemovedWhenDisposed()
+        public async Task TestWatcherRemovedWhenDisposed()
         {
-            var fs = GetCommonMountFileSystemWithMounts();
+            var fs = await GetCommonMountFileSystemWithMounts();
 
             var watcher = fs.Watch("/");
             watcher.IncludeSubdirectories = true;
@@ -169,12 +170,12 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void EnumerateDeepMount()
+        public async Task EnumerateDeepMount()
         {
-            var fs = GetCommonMemoryFileSystem();
+            var fs = await GetCommonMemoryFileSystem();
             var mountFs = new MountFileSystem();
             mountFs.Mount("/x/y/z", fs);
-            Assert.True(mountFs.FileExists("/x/y/z/A.txt"));
+            Assert.True(await mountFs.FileExists("/x/y/z/A.txt"));
 
             var expected = new List<UPath>
             {
@@ -186,17 +187,17 @@ namespace Zio.Tests.FileSystems
             };
 
             // only concerned with the first few because it should list the mount parts first
-            var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories).Take(5).ToList();
+            var actual = (await mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories)).Take(5).ToList();
             Assert.Equal(expected, actual);
         }
 
         [Fact]
-        public void EnumerateDeepMountPartial()
+        public async Task EnumerateDeepMountPartial()
         {
-            var fs = GetCommonMemoryFileSystem();
+            var fs = await GetCommonMemoryFileSystem();
             var mountFs = new MountFileSystem();
             mountFs.Mount("/x/y/z", fs);
-            Assert.True(mountFs.FileExists("/x/y/z/A.txt"));
+            Assert.True(await mountFs.FileExists("/x/y/z/A.txt"));
 
             var expected = new List<UPath>
             {
@@ -207,24 +208,24 @@ namespace Zio.Tests.FileSystems
             };
 
             // only concerned with the first few because it should list the mount parts first
-            var actual = mountFs.EnumeratePaths("/x", "*", SearchOption.AllDirectories).Take(4).ToList();
+            var actual = (await mountFs.EnumeratePaths("/x", "*", SearchOption.AllDirectories)).Take(4).ToList();
             Assert.Equal(expected, actual);
         }
 
         [Fact]
-        public void EnumerateMountsOverride()
+        public async Task EnumerateMountsOverride()
         {
             var baseFs = new MemoryFileSystem();
-            baseFs.CreateDirectory("/foo/bar");
-            baseFs.WriteAllText("/base.txt", "test");
-            baseFs.WriteAllText("/foo/base.txt", "test");
-            baseFs.WriteAllText("/foo/bar/base.txt", "test");
+            await baseFs.CreateDirectory("/foo/bar");
+            await baseFs.WriteAllText("/base.txt", "test");
+            await baseFs.WriteAllText("/foo/base.txt", "test");
+            await baseFs.WriteAllText("/foo/bar/base.txt", "test");
 
             var mountedFs = new MemoryFileSystem();
-            mountedFs.WriteAllText("/mounted.txt", "test");
+            await mountedFs.WriteAllText("/mounted.txt", "test");
 
             var deepMountedFs = new MemoryFileSystem();
-            deepMountedFs.WriteAllText("/deep_mounted.txt", "test");
+            await deepMountedFs.WriteAllText("/deep_mounted.txt", "test");
 
             var mountFs = new MountFileSystem(baseFs);
             mountFs.Mount("/foo", mountedFs);
@@ -239,196 +240,196 @@ namespace Zio.Tests.FileSystems
                 "/foo/bar/deep_mounted.txt"
             };
 
-            var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories).ToList();
+            var actual = (await mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories)).ToList();
             Assert.Equal(expected, actual);
         }
 
         [Fact]
-        public void EnumerateEmptyOnRoot()
+        public async Task EnumerateEmptyOnRoot()
         {
             var mountFs = new MountFileSystem();
             var expected = Array.Empty<UPath>();
-            var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList();
+            var actual = (await mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both)).ToList();
             Assert.Equal(expected, actual);
         }
 
         [Fact]
-        public void EnumerateDoesntExist()
+        public async Task EnumerateDoesntExist()
         {
             var mountFs = new MountFileSystem();
             mountFs.Mount("/x", new MemoryFileSystem());
-            Assert.Throws<DirectoryNotFoundException>(() => mountFs.EnumeratePaths("/y", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList());
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => (await mountFs.EnumeratePaths("/y", "*", SearchOption.AllDirectories, SearchTarget.Both)).ToList());
         }
 
         [Fact]
-        public void EnumerateBackupDoesntExist()
+        public async Task EnumerateBackupDoesntExist()
         {
             var mountFs = new MountFileSystem(new MemoryFileSystem());            
-            Assert.Throws<DirectoryNotFoundException>(() => mountFs.EnumeratePaths("/y", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList());
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => (await mountFs.EnumeratePaths("/y", "*", SearchOption.AllDirectories, SearchTarget.Both)).ToList());
         }
 
         [Fact]
-        public void DirectoryExistsPartialMountName()
+        public async Task DirectoryExistsPartialMountName()
         {
             var fs = new MemoryFileSystem();
             var mountFs = new MountFileSystem();
             mountFs.Mount("/x/y/z", fs);
 
-            Assert.True(mountFs.DirectoryExists("/x"));
-            Assert.True(mountFs.DirectoryExists("/x/y"));
-            Assert.True(mountFs.DirectoryExists("/x/y/z"));
-            Assert.False(mountFs.DirectoryExists("/z"));
+            Assert.True(await mountFs.DirectoryExists("/x"));
+            Assert.True(await mountFs.DirectoryExists("/x/y"));
+            Assert.True(await mountFs.DirectoryExists("/x/y/z"));
+            Assert.False(await mountFs.DirectoryExists("/z"));
         }
 
         [Fact]
-        public void DirectoryEntryPartialMountName()
+        public async Task DirectoryEntryPartialMountName()
         {
             var fs = new MemoryFileSystem();
-            fs.CreateDirectory("/w");
+            await fs.CreateDirectory("/w");
 
             var mountFs = new MountFileSystem();
             mountFs.Mount("/x/y/z", fs);
 
-            Assert.NotNull(mountFs.GetDirectoryEntry("/x"));
-            Assert.NotNull(mountFs.GetDirectoryEntry("/x/y"));
-            Assert.NotNull(mountFs.GetDirectoryEntry("/x/y/z"));
-            Assert.NotNull(mountFs.GetDirectoryEntry("/x/y/z/w"));
+            Assert.NotNull(await mountFs.GetDirectoryEntry("/x"));
+            Assert.NotNull(await mountFs.GetDirectoryEntry("/x/y"));
+            Assert.NotNull(await mountFs.GetDirectoryEntry("/x/y/z"));
+            Assert.NotNull(await mountFs.GetDirectoryEntry("/x/y/z/w"));
         }
 
         [Fact]
-        public void CreateDirectoryFail()
+        public async Task CreateDirectoryFail()
         {
             var mountfs = new MountFileSystem();
-            Assert.Throws<UnauthorizedAccessException>(() => mountfs.CreateDirectory("/test"));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await mountfs.CreateDirectory("/test"));
         }
 
         [Fact]
-        public void MoveDirectoryFail()
+        public async Task MoveDirectoryFail()
         {
             var mountfs = new MountFileSystem();
             mountfs.Mount("/dir1", new MemoryFileSystem());
             mountfs.Mount("/dir2", new MemoryFileSystem());
 
-            Assert.Throws<UnauthorizedAccessException>(() => mountfs.MoveDirectory("/dir1", "/dir2/yyy"));
-            Assert.Throws<UnauthorizedAccessException>(() => mountfs.MoveDirectory("/dir1/xxx", "/dir2"));
-            Assert.Throws<NotSupportedException>(() => mountfs.MoveDirectory("/dir1/xxx", "/dir2/yyy"));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await mountfs.MoveDirectory("/dir1", "/dir2/yyy"));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await mountfs.MoveDirectory("/dir1/xxx", "/dir2"));
+            await Assert.ThrowsAsync<NotSupportedException>(async () => await mountfs.MoveDirectory("/dir1/xxx", "/dir2/yyy"));
         }
 
         [Fact]
-        public void DeleteDirectoryFail()
+        public async Task DeleteDirectoryFail()
         {
             var mountfs = new MountFileSystem();
             mountfs.Mount("/dir1", new MemoryFileSystem());
 
-            Assert.Throws<UnauthorizedAccessException>(() => mountfs.DeleteDirectory("/dir1", true));
-            Assert.Throws<UnauthorizedAccessException>(() => mountfs.DeleteDirectory("/dir1", false));
-            Assert.Throws<DirectoryNotFoundException>(() => mountfs.DeleteDirectory("/dir2", false));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await mountfs.DeleteDirectory("/dir1", true));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await mountfs.DeleteDirectory("/dir1", false));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await mountfs.DeleteDirectory("/dir2", false));
         }
 
         [Fact]
-        public void CopyFileFail()
+        public async Task CopyFileFail()
         {
             var mountfs = new MountFileSystem();
             mountfs.Mount("/dir1", new MemoryFileSystem());
-            Assert.Throws<FileNotFoundException>(() => mountfs.CopyFile("/test", "/test2", true));
-            Assert.Throws<DirectoryNotFoundException>(() => mountfs.CopyFile("/dir1/test.txt", "/test2", true));
+            await Assert.ThrowsAsync <FileNotFoundException>(async () => await mountfs.CopyFile("/test", "/test2", true));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await mountfs.CopyFile("/dir1/test.txt", "/test2", true));
         }
 
         [Fact]
-        public void ReplaceFileFail()
+        public async Task ReplaceFileFail()
         {
             var mountfs = new MountFileSystem();
             var memfs1 = new MemoryFileSystem();
-            memfs1.WriteAllText("/file.txt", "content1");
+            await memfs1.WriteAllText("/file.txt", "content1");
 
             var memfs2 = new MemoryFileSystem();
-            memfs2.WriteAllText("/file2.txt", "content1");
+            await memfs2.WriteAllText("/file2.txt", "content1");
 
             mountfs.Mount("/dir1", memfs1);
             mountfs.Mount("/dir2", memfs2);
-            Assert.Throws<FileNotFoundException>(() => mountfs.ReplaceFile("/dir1/file.txt", "/dir1/to.txt", "/dir1/to.bak", true));
-            Assert.Throws<FileNotFoundException>(() => mountfs.ReplaceFile("/dir1/to.txt", "/dir1/file.txt", "/dir1/to.bak", true));
-            Assert.Throws<NotSupportedException>(() => mountfs.ReplaceFile("/dir1/file.txt", "/dir2/file2.txt", null, true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.ReplaceFile("/dir1/file.txt", "/dir1/to.txt", "/dir1/to.bak", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.ReplaceFile("/dir1/to.txt", "/dir1/file.txt", "/dir1/to.bak", true));
+            await Assert.ThrowsAsync<NotSupportedException>(async () => await mountfs.ReplaceFile("/dir1/file.txt", "/dir2/file2.txt", null, true));
         }
 
         [Fact]
-        public void GetFileLengthFail()
+        public async Task GetFileLengthFail()
         {
             var mountfs = new MountFileSystem();
-            Assert.Throws<FileNotFoundException>(() => mountfs.GetFileLength("/toto.txt"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.GetFileLength("/toto.txt"));
         }
 
         [Fact]
-        public void MoveFileFail()
+        public async Task MoveFileFail()
         {
             var mountfs = new MountFileSystem();
             var memfs1 = new MemoryFileSystem();
-            memfs1.WriteAllText("/file.txt", "content1");
+            await memfs1.WriteAllText("/file.txt", "content1");
 
             var memfs2 = new MemoryFileSystem();
-            memfs2.WriteAllText("/file2.txt", "content1");
+            await memfs2.WriteAllText("/file2.txt", "content1");
 
             mountfs.Mount("/dir1", memfs1);
             mountfs.Mount("/dir2", memfs2);
-            Assert.Throws<DirectoryNotFoundException>(() => mountfs.MoveFile("/dir1/file.txt", "/xxx/yyy.txt"));
-            Assert.Throws<FileNotFoundException>(() => mountfs.MoveFile("/dir1/xxx", "/dir1/file1.txt"));
-            Assert.Throws<FileNotFoundException>(() => mountfs.MoveFile("/xxx", "/dir1/file1.txt"));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await mountfs.MoveFile("/dir1/file.txt", "/xxx/yyy.txt"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.MoveFile("/dir1/xxx", "/dir1/file1.txt"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.MoveFile("/xxx", "/dir1/file1.txt"));
         }
 
 
         [Fact]
-        public void OpenFileFail()
+        public async Task OpenFileFail()
         {
             var mountfs = new MountFileSystem();
-            Assert.Throws<FileNotFoundException>(() => mountfs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read));
-            Assert.Throws<UnauthorizedAccessException>(() => mountfs.OpenFile("/toto.txt", FileMode.Create, FileAccess.Read));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await mountfs.OpenFile("/toto.txt", FileMode.Create, FileAccess.Read));
         }
 
         [Fact]
-        public void AttributesFail()
+        public async Task AttributesFail()
         {
             var mountfs = new MountFileSystem();
-            Assert.Throws<FileNotFoundException>(() => mountfs.GetAttributes("/toto.txt"));
-            Assert.Throws<FileNotFoundException>(() => mountfs.SetAttributes("/toto.txt", FileAttributes.Normal));
+            await Assert.ThrowsAsync<FileNotFoundException>(async() => await mountfs.GetAttributes("/toto.txt"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.SetAttributes("/toto.txt", FileAttributes.Normal));
         }
 
         [Fact]
-        public void TimesFail()
+        public async Task TimesFail()
         {
             var mountfs = new MountFileSystem();
-            Assert.Throws<FileNotFoundException>(() => mountfs.SetCreationTime("/toto.txt", DateTime.Now));
-            Assert.Throws<FileNotFoundException>(() => mountfs.SetLastAccessTime("/toto.txt", DateTime.Now));
-            Assert.Throws<FileNotFoundException>(() => mountfs.SetLastWriteTime("/toto.txt", DateTime.Now));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.SetCreationTime("/toto.txt", DateTime.Now));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.SetLastAccessTime("/toto.txt", DateTime.Now));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await mountfs.SetLastWriteTime("/toto.txt", DateTime.Now));
         }
 
         [Fact]
-        public void EnumerateFail()
+        public async Task EnumerateFail()
         {
             var mountfs = new MountFileSystem();
-            Assert.Throws<DirectoryNotFoundException>(() => mountfs.EnumeratePaths("/dir").ToList());
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => (await mountfs.EnumeratePaths("/dir")).ToList());
         }
 
         [Fact]
-        public void CopyAndMoveFileCross()
+        public async Task CopyAndMoveFileCross()
         {
             var mountfs = new MountFileSystem();
             var memfs1 = new MemoryFileSystem();
-            memfs1.WriteAllText("/file1.txt", "content1");
+            await memfs1.WriteAllText("/file1.txt", "content1");
             var memfs2 = new MemoryFileSystem();
 
             mountfs.Mount("/dir1", memfs1);
             mountfs.Mount("/dir2", memfs2);
 
-            mountfs.CopyFile("/dir1/file1.txt", "/dir2/file2.txt", true);
+            await mountfs.CopyFile("/dir1/file1.txt", "/dir2/file2.txt", true);
 
-            Assert.True(memfs2.FileExists("/file2.txt"));
-            Assert.Equal("content1", memfs2.ReadAllText("/file2.txt"));
+            Assert.True(await memfs2.FileExists("/file2.txt"));
+            Assert.Equal("content1", await memfs2.ReadAllText("/file2.txt"));
 
-            mountfs.MoveFile("/dir1/file1.txt", "/dir2/file1.txt");
+            await mountfs.MoveFile("/dir1/file1.txt", "/dir2/file1.txt");
 
-            Assert.False(memfs1.FileExists("/file1.txt"));
-            Assert.True(memfs2.FileExists("/file1.txt"));
-            Assert.Equal("content1", memfs2.ReadAllText("/file1.txt"));
+            Assert.False(await memfs1.FileExists("/file1.txt"));
+            Assert.True(await memfs2.FileExists("/file1.txt"));
+            Assert.Equal("content1", await memfs2.ReadAllText("/file1.txt"));
         }
     }
 }

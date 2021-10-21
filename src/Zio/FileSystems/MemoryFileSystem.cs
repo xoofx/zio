@@ -9,6 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -92,7 +93,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CreateDirectoryImpl(UPath path)
+        protected override ValueTask CreateDirectoryImpl(UPath path)
         {
             EnterFileSystemShared();
             try
@@ -105,14 +106,16 @@ namespace Zio.FileSystems
             {
                 ExitFileSystemShared();
             }
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override bool DirectoryExistsImpl(UPath path)
+        protected override ValueTask<bool> DirectoryExistsImpl(UPath path)
         {
             if (path == UPath.Root)
             {
-                return true;
+                return new (true);
             }
 
             EnterFileSystemShared();
@@ -123,7 +126,7 @@ namespace Zio.FileSystems
                 var result = EnterFindNode(path, FindNodeFlags.NodeCheck);
                 try
                 {
-                    return result.Node is DirectoryNode;
+                    return new (result.Node is DirectoryNode);
                 }
                 finally
                 {
@@ -137,13 +140,13 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
-            MoveFileOrDirectory(srcPath, destPath, true);
+            return MoveFileOrDirectory(srcPath, destPath, true);
         }
 
         /// <inheritdoc />
-        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
+        protected override ValueTask DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             EnterFileSystemShared();
             try
@@ -205,6 +208,8 @@ namespace Zio.FileSystems
             {
                 ExitFileSystemShared();
             }
+
+            return new();
         }
 
         // ----------------------------------------------
@@ -212,7 +217,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
+        protected override ValueTask CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             EnterFileSystemShared();
             try
@@ -294,10 +299,12 @@ namespace Zio.FileSystems
             {
                 ExitFileSystemShared();
             }
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
+        protected override ValueTask ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             // Get the directories of src/dest/backup
             var parentSrcPath = srcPath.GetDirectory();
@@ -410,15 +417,17 @@ namespace Zio.FileSystems
                     ExitFileSystemExclusive();
                 }
             }
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override long GetFileLengthImpl(UPath path)
+        protected override ValueTask<long> GetFileLengthImpl(UPath path)
         {
             EnterFileSystemShared();
             try
             {
-                return ((FileNode)FindNodeSafe(path, true)).Content.Length;
+                return new (((FileNode)FindNodeSafe(path, true)).Content.Length);
             }
             finally
             {
@@ -427,7 +436,7 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override bool FileExistsImpl(UPath path)
+        protected override ValueTask<bool> FileExistsImpl(UPath path)
         {
             EnterFileSystemShared();
             try
@@ -436,7 +445,7 @@ namespace Zio.FileSystems
                 // but allows us to check if it is a directory or a file
                 var result = EnterFindNode(path, FindNodeFlags.NodeCheck);
                 ExitFindNode(result);
-                return result.Node is FileNode;
+                return new (result.Node is FileNode);
             }
             finally
             {
@@ -445,13 +454,13 @@ namespace Zio.FileSystems
         }
 
         /// <inheritdoc />
-        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveFileImpl(UPath srcPath, UPath destPath)
         {
-            MoveFileOrDirectory(srcPath, destPath, false);
+            return MoveFileOrDirectory(srcPath, destPath, false);
         }
 
         /// <inheritdoc />
-        protected override void DeleteFileImpl(UPath path)
+        protected override ValueTask DeleteFileImpl(UPath path)
         {
             EnterFileSystemShared();
             try
@@ -463,7 +472,7 @@ namespace Zio.FileSystems
                     if (srcNode is null)
                     {
                         // If the file to be deleted does not exist, no exception is thrown.
-                        return;
+                        return new();
                     }
                     if (srcNode is DirectoryNode || srcNode.IsReadOnly)
                     {
@@ -484,10 +493,12 @@ namespace Zio.FileSystems
             {
                 ExitFileSystemShared();
             }
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share)
+        protected override ValueTask<Stream> OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share)
         {
             if (mode == FileMode.Append && (access & FileAccess.Read) != 0)
             {
@@ -653,7 +664,7 @@ namespace Zio.FileSystems
                 {
                     stream.SetLength(0);
                 }
-                return stream;
+                return new (stream);
             }
             finally
             {
@@ -681,7 +692,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override FileAttributes GetAttributesImpl(UPath path)
+        protected override ValueTask<FileAttributes> GetAttributesImpl(UPath path)
         {
             var node = FindNodeSafe(path, false);
             var attributes = node.Attributes;
@@ -694,11 +705,11 @@ namespace Zio.FileSystems
                 // If this is a file and there is no attributes, return Normal
                 attributes = FileAttributes.Normal;
             }
-            return attributes;
+            return new (attributes);
         }
 
         /// <inheritdoc />
-        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
+        protected override ValueTask SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             // We don't store the attributes Normal or directory
             // As they are returned by GetAttributes and we don't want
@@ -710,48 +721,56 @@ namespace Zio.FileSystems
             node.Attributes = attributes;
 
             TryGetDispatcher()?.RaiseChange(path);
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override DateTime GetCreationTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetCreationTimeImpl(UPath path)
         {
-            return TryFindNodeSafe(path)?.CreationTime ?? DefaultFileTime;
+            return new (TryFindNodeSafe(path)?.CreationTime ?? DefaultFileTime);
         }
 
         /// <inheritdoc />
-        protected override void SetCreationTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetCreationTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).CreationTime = time;
 
             TryGetDispatcher()?.RaiseChange(path);
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastAccessTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetLastAccessTimeImpl(UPath path)
         {
-            return TryFindNodeSafe(path)?.LastAccessTime ?? DefaultFileTime;
+            return new (TryFindNodeSafe(path)?.LastAccessTime ?? DefaultFileTime);
         }
 
         /// <inheritdoc />
-        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).LastAccessTime = time;
 
             TryGetDispatcher()?.RaiseChange(path);
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastWriteTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetLastWriteTimeImpl(UPath path)
         {
-            return TryFindNodeSafe(path)?.LastWriteTime ?? DefaultFileTime;
+            return new (TryFindNodeSafe(path)?.LastWriteTime ?? DefaultFileTime);
         }
 
         /// <inheritdoc />
-        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             FindNodeSafe(path, false).LastWriteTime = time;
 
             TryGetDispatcher()?.RaiseChange(path);
+
+            return new();
         }
 
         // ----------------------------------------------
@@ -759,13 +778,14 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override ValueTask<IEnumerable<UPath>> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             var search = SearchPattern.Parse(ref path, ref searchPattern);
 
             var foldersToProcess = new List<UPath>();
             foldersToProcess.Add(path);
 
+            var allEntries = new List<UPath>();
             var entries = new SortedSet<UPath>(UPath.DefaultComparerIgnoreCase);
             while (foldersToProcess.Count > 0)
             {
@@ -844,17 +864,20 @@ namespace Zio.FileSystems
                 // We return all the elements of visited directory in one shot, outside the previous lock block
                 foreach (var entry in entries)
                 {
-                    yield return entry;
-                }
+                    allEntries.Add(entry);
+                }                
             }
+
+            return new (allEntries);
         }
 
         /// <inheritdoc />
-        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        protected override ValueTask<IEnumerable<FileSystemItem>> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
         {
             var foldersToProcess = new List<UPath>();
             foldersToProcess.Add(path);
 
+            var allEntries = new List<FileSystemItem>();
             var entries = new List<FileSystemItem>();
             while (foldersToProcess.Count > 0)
             {
@@ -935,9 +958,11 @@ namespace Zio.FileSystems
                 // We return all the elements of visited directory in one shot, outside the previous lock block
                 foreach (var entry in entries)
                 {
-                    yield return entry;
+                    allEntries.Add(entry);
                 }
             }
+
+            return new(allEntries);
         }
 
         // ----------------------------------------------
@@ -991,7 +1016,7 @@ namespace Zio.FileSystems
         // Internals
         // ----------------------------------------------
 
-        private void MoveFileOrDirectory(UPath srcPath, UPath destPath, bool expectDirectory)
+        private ValueTask MoveFileOrDirectory(UPath srcPath, UPath destPath, bool expectDirectory)
         {
             var parentSrcPath = srcPath.GetDirectory();
             var parentDestPath = destPath.GetDirectory();
@@ -1105,6 +1130,8 @@ namespace Zio.FileSystems
                     ExitFileSystemExclusive();
                 }
             }
+
+            return new();
         }
 
         
@@ -2042,6 +2069,8 @@ namespace Zio.FileSystems
         /// </summary>
         private class FileSystemNodeReadWriteLock
         {
+            private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1);
+
             // _sharedCount  < 0 => This is an exclusive lock (_sharedCount == -1)
             // _sharedCount == 0 => No lock
             // _sharedCount  > 0 => This is a shared lock
@@ -2067,12 +2096,13 @@ namespace Zio.FileSystems
 
             public void EnterShared(FileShare share, UPath context)
             {
-                Monitor.Enter(this);
+                _semaphore.Wait();
+
                 try
                 {
                     while (_sharedCount < 0)
                     {
-                        Monitor.Wait(this);
+                        _semaphore.Wait();
                     }
 
                     if (_shared.HasValue)
@@ -2090,17 +2120,16 @@ namespace Zio.FileSystems
                     }
 
                     _sharedCount++;
-                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    Monitor.Exit(this);
+                    _semaphore.Release();
                 }
             }
 
             public void ExitShared()
             {
-                Monitor.Enter(this);
+                _semaphore.Wait();
                 try
                 {
                     Debug.Assert(_sharedCount > 0);
@@ -2109,35 +2138,33 @@ namespace Zio.FileSystems
                     {
                         _shared = null;
                     }
-                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    Monitor.Exit(this);
+                    _semaphore.Release();
                 }
             }
 
             public void EnterExclusive()
             {
-                Monitor.Enter(this);
+                _semaphore.Wait();
                 try
                 {
                     while (_sharedCount != 0)
                     {
-                        Monitor.Wait(this);
+                        _semaphore.Wait();
                     }
                     _sharedCount  = -1;
-                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    Monitor.Exit(this);
+                    _semaphore.Release();
                 }
             }
 
             public bool TryEnterShared(FileShare share)
             {
-                Monitor.Enter(this);
+                _semaphore.Wait();
                 try
                 {
                     if (_sharedCount < 0)
@@ -2158,18 +2185,17 @@ namespace Zio.FileSystems
                         _shared = share;
                     }
                     _sharedCount++;
-                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    Monitor.Exit(this);
+                    _semaphore.Release();
                 }
                 return true;
             }
 
             public bool TryEnterExclusive()
             {
-                Monitor.Enter(this);
+                _semaphore.Wait();
                 try
                 {
                     if (_sharedCount != 0)
@@ -2177,26 +2203,24 @@ namespace Zio.FileSystems
                         return false;
                     }
                     _sharedCount = -1;
-                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    Monitor.Exit(this);
+                    _semaphore.Release();
                 }
                 return true;
             }
             public void ExitExclusive()
             {
-                Monitor.Enter(this);
+                _semaphore.Wait();
                 try
                 {
                     Debug.Assert(_sharedCount < 0);
                     _sharedCount = 0;
-                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    Monitor.Exit(this);
+                    _semaphore.Release();
                 }
             }
 

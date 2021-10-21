@@ -5,6 +5,7 @@
 using System;
 using System.Collections;
 using System.Reflection;
+using System.Threading.Tasks;
 using Xunit;
 using Zio.FileSystems;
 
@@ -13,16 +14,17 @@ namespace Zio.Tests.FileSystems
     public class TestAggregateFileSystem : TestFileSystemBase
     {
         [Fact]
-        public void TestCommonReadOnly()
+        public async Task TestCommonReadOnly()
         {
-            var fs = GetCommonAggregateFileSystem();
-            AssertCommonReadOnly(fs);
+            var (fs, _, _, _) = await GetCommonAggregateFileSystem();
+            await AssertCommonReadOnly(fs);
         }
 
         [Fact]
-        public void TestWatcher()
+        public async Task TestWatcher()
         {
-            var fs = GetCommonAggregateFileSystem(out var fs1, out var fs2, out _);
+            var (fs, fs1, fs2, _) = await GetCommonAggregateFileSystem();
+
             var watcher = fs.Watch("/");
 
             var gotChange1 = false;
@@ -43,8 +45,8 @@ namespace Zio.Tests.FileSystems
             watcher.IncludeSubdirectories = true;
             watcher.EnableRaisingEvents = true;
 
-            fs1.WriteAllText("/b/watched.txt", "test");
-            fs2.WriteAllText("/C/watched.txt", "test");
+            await fs1.WriteAllText("/b/watched.txt", "test");
+            await fs2.WriteAllText("/C/watched.txt", "test");
 
             System.Threading.Thread.Sleep(100);
 
@@ -53,9 +55,9 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void TestWatcherRemovedWhenDisposed()
+        public async Task TestWatcherRemovedWhenDisposed()
         {
-            var fs = GetCommonAggregateFileSystem();
+            var (fs, _, _, _) = await GetCommonAggregateFileSystem();
 
             var watcher = fs.Watch("/");
             watcher.IncludeSubdirectories = true;
@@ -106,22 +108,22 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void TestFindFileSystemEntries()
+        public async Task TestFindFileSystemEntries()
         {
             var fs = new AggregateFileSystem();
 
             var memfs1 = new MemoryFileSystem();
-            memfs1.WriteAllText("/a.txt", "content1");
-            memfs1.WriteAllText("/b", "notused");
+            await memfs1.WriteAllText("/a.txt", "content1");
+            await memfs1.WriteAllText("/b", "notused");
             fs.AddFileSystem(memfs1);
 
             var memfs2 = new MemoryFileSystem();
-            memfs2.WriteAllText("/a.txt", "content2");
-            memfs2.CreateDirectory("/b");
+            await memfs2.WriteAllText("/a.txt", "content2");
+            await memfs2.CreateDirectory("/b");
             fs.AddFileSystem(memfs2);
 
             {
-                var entries = fs.FindFileSystemEntries("/a.txt");
+                var entries = await fs.FindFileSystemEntries("/a.txt");
                 Assert.Equal(2, entries.Count);
 
                 Assert.IsType<FileEntry>(entries[0]);
@@ -133,7 +135,7 @@ namespace Zio.Tests.FileSystems
             }
 
             {
-                var entries = fs.FindFileSystemEntries("/b");
+                var entries = await fs.FindFileSystemEntries("/b");
                 Assert.Single(entries);
 
                 Assert.IsType<DirectoryEntry>(entries[0]);
@@ -142,7 +144,7 @@ namespace Zio.Tests.FileSystems
             }
 
             {
-                var entry = fs.FindFirstFileSystemEntry("/a.txt");
+                var entry = await fs.FindFirstFileSystemEntry("/a.txt");
                 Assert.NotNull(entry);
 
                 Assert.IsType<FileEntry>(entry);

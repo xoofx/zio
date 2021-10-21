@@ -5,6 +5,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Zio
 {
@@ -47,7 +48,10 @@ namespace Zio
         ///     The user does not have write permission, but attempted to set this
         ///     property to false.
         /// </exception>
-        public bool IsReadOnly => (FileSystem.GetAttributes(Path) & FileAttributes.ReadOnly) != 0;
+        public async ValueTask<bool> IsReadOnly()
+        {
+            return (await FileSystem.GetAttributes(Path) & FileAttributes.ReadOnly) != 0;
+        }
 
         /// <summary>Gets the size, in bytes, of the current file.</summary>
         /// <returns>The size of the current file in bytes.</returns>
@@ -58,7 +62,7 @@ namespace Zio
         ///     The file does not exist.-or- The Length property is called for a
         ///     directory.
         /// </exception>
-        public long Length => FileSystem.GetFileLength(Path);
+        public ValueTask<long> Length => FileSystem.GetFileLength(Path);
 
         /// <summary>Copies an existing file to a new file, allowing the overwriting of an existing file.</summary>
         /// <returns>
@@ -94,9 +98,9 @@ namespace Zio
         /// <exception cref="T:System.NotSupportedException">
         ///     <paramref name="destFileName" /> contains a colon (:) in the middle of the string.
         /// </exception>
-        public FileEntry CopyTo(UPath destFileName, bool overwrite)
+        public async ValueTask<FileEntry> CopyTo(UPath destFileName, bool overwrite)
         {
-            FileSystem.CopyFile(Path, destFileName, overwrite);
+            await FileSystem.CopyFile(Path, destFileName, overwrite);
             return new FileEntry(FileSystem, destFileName);
         }
 
@@ -131,16 +135,16 @@ namespace Zio
         /// <exception cref="T:System.NotSupportedException">
         ///     <paramref name="destFile" /> contains a colon (:) in the middle of the string.
         /// </exception>
-        public FileEntry CopyTo(FileEntry destFile, bool overwrite)
+        public async ValueTask<FileEntry> CopyTo(FileEntry destFile, bool overwrite)
         {
             if (destFile is null) throw new ArgumentNullException(nameof(destFile));
-            FileSystem.CopyFileCross(Path, destFile.FileSystem, destFile.Path, overwrite);
+            await FileSystem.CopyFileCross(Path, destFile.FileSystem, destFile.Path, overwrite);
             return destFile;
         }
 
         /// <summary>Creates a file.</summary>
         /// <returns>A new file.</returns>
-        public Stream Create()
+        public ValueTask<Stream> Create()
         {
             return FileSystem.CreateFile(Path);
         }
@@ -174,9 +178,9 @@ namespace Zio
         /// <exception cref="T:System.NotSupportedException">
         ///     <paramref name="destFileName" /> contains a colon (:) in the middle of the string.
         /// </exception>
-        public void MoveTo(UPath destFileName)
+        public ValueTask MoveTo(UPath destFileName)
         {
-            FileSystem.MoveFile(Path, destFileName);
+            return FileSystem.MoveFile(Path, destFileName);
         }
 
         /// <summary>Opens a file in the specified mode with read, write, or read/write access and the specified sharing option.</summary>
@@ -203,7 +207,7 @@ namespace Zio
         ///     drive.
         /// </exception>
         /// <exception cref="T:System.IO.IOException">The file is already open. </exception>
-        public Stream Open(FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        public ValueTask<Stream> Open(FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             return FileSystem.OpenFile(Path, mode, access, share);
         }
@@ -214,9 +218,9 @@ namespace Zio
         /// <param name="destPath">The path of the file being replaced.</param>
         /// <param name="destBackupPath">The path of the backup file (maybe null, in that case, it doesn't create any backup)</param>
         /// <param name="ignoreMetadataErrors"><c>true</c> to ignore merge errors (such as attributes and access control lists (ACLs)) from the replaced file to the replacement file; otherwise, <c>false</c>.</param>
-        public void ReplaceTo(UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
+        public ValueTask ReplaceTo(UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
-            FileSystem.ReplaceFile(Path, destPath, destBackupPath, ignoreMetadataErrors);
+            return FileSystem.ReplaceFile(Path, destPath, destBackupPath, ignoreMetadataErrors);
         }
 
         /// <summary>
@@ -227,7 +231,7 @@ namespace Zio
         ///     This method attempts to automatically detect the encoding of a file based on the presence of byte order marks.
         ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.
         /// </remarks>
-        public string ReadAllText()
+        public Task<string> ReadAllText()
         {
             return FileSystem.ReadAllText(Path);
         }
@@ -237,7 +241,7 @@ namespace Zio
         /// </summary>
         /// <param name="encoding">The encoding to use to decode the text from <see cref="Path" />.</param>
         /// <returns>A string containing all lines of the file.</returns>
-        public string ReadAllText(Encoding encoding)
+        public Task<string> ReadAllText(Encoding encoding)
         {
             return FileSystem.ReadAllText(Path, encoding);
         }
@@ -254,9 +258,9 @@ namespace Zio
         ///     If it is necessary to include a UTF-8 identifier, such as a byte order mark, at the beginning of a file,
         ///     use the <see cref="WriteAllText(string, Encoding)" /> method overload with UTF8 encoding.
         /// </remarks>
-        public void WriteAllText(string content)
+        public Task WriteAllText(string content)
         {
-            FileSystem.WriteAllText(Path, content);
+            return FileSystem.WriteAllText(Path, content);
         }
 
         /// <summary>
@@ -271,9 +275,9 @@ namespace Zio
         ///     specified encoding, and then closes the file.
         ///     The file handle is guaranteed to be closed by this method, even if exceptions are raised.
         /// </remarks>
-        public void WriteAllText(string content, Encoding encoding)
+        public Task WriteAllText(string content, Encoding encoding)
         {
-            FileSystem.WriteAllText(Path, content, encoding);
+            return FileSystem.WriteAllText(Path, content, encoding);
         }
 
         /// <summary>
@@ -288,9 +292,9 @@ namespace Zio
         ///     The method creates the file if it doesn’t exist, but it doesn't create new directories. Therefore, the value of the
         ///     path parameter must contain existing directories.
         /// </remarks>
-        public void AppendAllText(string content)
+        public Task AppendAllText(string content)
         {
-            FileSystem.AppendAllText(Path, content);
+            return FileSystem.AppendAllText(Path, content);
         }
 
         /// <summary>
@@ -305,16 +309,16 @@ namespace Zio
         ///     The method creates the file if it doesn’t exist, but it doesn't create new directories. Therefore, the value of the
         ///     path parameter must contain existing directories.
         /// </remarks>
-        public void AppendAllText(string content, Encoding encoding)
+        public Task AppendAllText(string content, Encoding encoding)
         {
-            FileSystem.AppendAllText(Path, content, encoding);
+            return FileSystem.AppendAllText(Path, content, encoding);
         }
 
         /// <summary>
         ///     Opens a file, reads all lines of the file with the specified encoding, and then closes the file.
         /// </summary>
         /// <returns>An array of strings containing all lines of the file.</returns>
-        public string[] ReadAllLines()
+        public Task<string[]> ReadAllLines()
         {
             return FileSystem.ReadAllLines(Path);
         }
@@ -328,7 +332,7 @@ namespace Zio
         ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.
         /// </remarks>
         /// <returns>An array of strings containing all lines of the file.</returns>
-        public string[] ReadAllLines(Encoding encoding)
+        public Task<string[]> ReadAllLines(Encoding encoding)
         {
             return FileSystem.ReadAllLines(Path, encoding);
         }
@@ -337,7 +341,7 @@ namespace Zio
         ///     Opens a binary file, reads the contents of the file into a byte array, and then closes the file.
         /// </summary>
         /// <returns>A byte array containing the contents of the file.</returns>
-        public byte[] ReadAllBytes()
+        public Task<byte[]> ReadAllBytes()
         {
             return FileSystem.ReadAllBytes(Path);
         }
@@ -352,18 +356,18 @@ namespace Zio
         ///     Given a byte array and a file path, this method opens the specified file, writes the
         ///     contents of the byte array to the file, and then closes the file.
         /// </remarks>
-        public void WriteAllBytes(byte[] content)
+        public Task WriteAllBytes(byte[] content)
         {
-            FileSystem.WriteAllBytes(Path, content);
+            return FileSystem.WriteAllBytes(Path, content);
         }
 
         /// <inheritdoc />
-        public override bool Exists => FileSystem.FileExists(Path);
+        public override ValueTask<bool> Exists => FileSystem.FileExists(Path);
 
         /// <inheritdoc />
-        public override void Delete()
+        public override ValueTask Delete()
         {
-            FileSystem.DeleteFile(Path);
+            return FileSystem.DeleteFile(Path);
         }
     }
 }

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Zio
 {
@@ -24,9 +25,9 @@ namespace Zio
 
         /// <summary>Creates a directory.</summary>
         /// <exception cref="T:System.IO.IOException">The directory cannot be created. </exception>
-        public void Create()
+        public ValueTask Create()
         {
-            FileSystem.CreateDirectory(Path);
+            return FileSystem.CreateDirectory(Path);
         }
 
         /// <summary>Creates a subdirectory or subdirectories on the specified path. The specified path can be relative to this instance of the <see cref="T:System.IO.DirectoryInfo" /> class.</summary>
@@ -42,7 +43,7 @@ namespace Zio
         /// <exception cref="T:System.Security.SecurityException">The caller does not have code access permission to create the directory.-or-The caller does not have code access permission to read the directory described by the returned <see cref="T:System.IO.DirectoryInfo" /> object.  This can occur when the <paramref name="path" /> parameter describes an existing directory.</exception>
         /// <exception cref="T:System.NotSupportedException">
         /// <paramref name="path" /> contains a colon character (:) that is not part of a drive label ("C:\").</exception>
-        public DirectoryEntry CreateSubdirectory(UPath path)
+        public async ValueTask<DirectoryEntry> CreateSubdirectory(UPath path)
         {
             if (!path.IsRelative)
             {
@@ -51,7 +52,7 @@ namespace Zio
 
             // Check that path is not null and relative
             var subPath = new DirectoryEntry(FileSystem, Path / path);
-            subPath.Create();
+            await subPath.Create();
             return subPath;
         }
 
@@ -61,9 +62,9 @@ namespace Zio
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The directory described by this <see cref="T:System.IO.DirectoryInfo" /> object does not exist or could not be found.</exception>
         /// <exception cref="T:System.IO.IOException">The directory is read-only.-or- The directory contains one or more files or subdirectories and <paramref name="recursive" /> is false.-or-The directory is the application's current working directory. -or-There is an open handle on the directory or on one of its files, and the operating system is Windows XP or earlier. This open handle can result from enumerating directories and files. For more information, see How to: Enumerate Directories and Files.</exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public void Delete(bool recursive)
+        public ValueTask Delete(bool recursive)
         {
-            FileSystem.DeleteDirectory(Path, recursive);
+            return FileSystem.DeleteDirectory(Path, recursive);
         }
 
         /// <summary>Returns an enumerable collection of directory information that matches a specified search pattern and search subdirectory option. </summary>
@@ -75,7 +76,7 @@ namespace Zio
         /// <returns>An enumerable collection of directories.</returns>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The path encapsulated in the <see cref="T:System.IO.DirectoryInfo" /> object is invalid (for example, it is on an unmapped drive). </exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public IEnumerable<DirectoryEntry> EnumerateDirectories(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        public ValueTask<IEnumerable<DirectoryEntry>> EnumerateDirectories(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
         {
             return FileSystem.EnumerateDirectoryEntries(Path, searchPattern, searchOption);
         }
@@ -89,7 +90,7 @@ namespace Zio
         /// <returns>An enumerable collection of files.</returns>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The path encapsulated in the <see cref="T:System.IO.DirectoryInfo" /> object is invalid (for example, it is on an unmapped drive). </exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public IEnumerable<FileEntry> EnumerateFiles(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        public ValueTask<IEnumerable<FileEntry>> EnumerateFiles(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly)
         {
             return FileSystem.EnumerateFileEntries(Path, searchPattern, searchOption);
         }
@@ -104,7 +105,7 @@ namespace Zio
         /// The default value is TopDirectoryOnly.</param>
         /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>.</param>
         /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
-        public IEnumerable<FileSystemEntry> EnumerateEntries(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly, SearchTarget searchTarget = SearchTarget.Both)
+        public ValueTask<IEnumerable<FileSystemEntry>> EnumerateEntries(string searchPattern = "*", SearchOption searchOption = SearchOption.TopDirectoryOnly, SearchTarget searchTarget = SearchTarget.Both)
         {
             return FileSystem.EnumerateFileSystemEntries(Path, searchPattern, searchOption, searchTarget);
         }
@@ -115,7 +116,7 @@ namespace Zio
         /// <param name="searchPredicate">The search string to match against file-system entries in path. This parameter can contain a combination of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
         /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory or should include all subdirectories.</param>
         /// <returns>An enumerable collection of <see cref="FileSystemItem"/> in the directory specified by path and that match the specified search pattern, option and target.</returns>
-        public IEnumerable<FileSystemItem> EnumerateItems(SearchOption searchOption = SearchOption.TopDirectoryOnly, SearchPredicate? searchPredicate = null)
+        public ValueTask<IEnumerable<FileSystemItem>> EnumerateItems(SearchOption searchOption = SearchOption.TopDirectoryOnly, SearchPredicate? searchPredicate = null)
         {
             return FileSystem.EnumerateItems(Path, searchOption, searchPredicate);
         }
@@ -129,18 +130,18 @@ namespace Zio
         /// <exception cref="T:System.IO.IOException">An attempt was made to move a directory to a different volume. -or-<paramref name="destDirName" /> already exists.-or-You are not authorized to access this path.-or- The directory being moved and the destination directory have the same name.</exception>
         /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
         /// <exception cref="T:System.IO.DirectoryNotFoundException">The destination directory cannot be found.</exception>
-        public void MoveTo(UPath destDirName)
+        public ValueTask MoveTo(UPath destDirName)
         {
-            FileSystem.MoveDirectory(Path, destDirName);
+            return FileSystem.MoveDirectory(Path, destDirName);
         }
 
         /// <inheritdoc />
-        public override bool Exists => FileSystem.DirectoryExists(Path);
+        public override ValueTask<bool> Exists => FileSystem.DirectoryExists(Path);
 
         /// <inheritdoc />
-        public override void Delete()
+        public override ValueTask Delete()
         {
-            Delete(true);
+            return Delete(true);
         }
     }
 }

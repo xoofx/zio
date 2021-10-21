@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -188,10 +189,10 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">To check for an entry</param>
         /// <returns>A file system entry or null if it was not found.</returns>
-        public FileSystemEntry? FindFirstFileSystemEntry(UPath path)
+        public async ValueTask<FileSystemEntry?> FindFirstFileSystemEntry(UPath path)
         {
             path.AssertAbsolute();
-            var entry  = TryGetPath(path);
+            var entry = await TryGetPath(path);
             if (!entry.HasValue) return null;
 
             var pathItem = entry.Value;
@@ -204,11 +205,11 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">To check for an entry</param>
         /// <returns>A list of file entries for the specified path</returns>
-        public List<FileSystemEntry> FindFileSystemEntries(UPath path)
+        public async ValueTask<List<FileSystemEntry>> FindFileSystemEntries(UPath path)
         {
             path.AssertAbsolute();
             var paths = new List<FileSystemPath>();
-            FindPaths(path, SearchTarget.Both, paths);
+            await FindPaths(path, SearchTarget.Both, paths);
             var result = new List<FileSystemEntry>(paths.Count);
             if (paths.Count == 0)
             {
@@ -239,9 +240,9 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override bool DirectoryExistsImpl(UPath path)
+        protected override async ValueTask<bool> DirectoryExistsImpl(UPath path)
         {
-            var directory = TryGetDirectory(path);
+            var directory = await TryGetDirectory(path);
             return directory.HasValue;
         }
 
@@ -250,21 +251,21 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override long GetFileLengthImpl(UPath path)
+        protected override async ValueTask<long> GetFileLengthImpl(UPath path)
         {
-            var entry = GetFile(path);
-            return entry.FileSystem.GetFileLength(path);
+            var entry = await GetFile(path);
+            return await entry.FileSystem.GetFileLength(path);
         }
 
         /// <inheritdoc />
-        protected override bool FileExistsImpl(UPath path)
+        protected override async ValueTask<bool> FileExistsImpl(UPath path)
         {
-            var entry = TryGetFile(path);
+            var entry = await TryGetFile(path);
             return entry.HasValue;
         }
 
         /// <inheritdoc />
-        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        protected override async ValueTask<Stream> OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             if (mode != FileMode.Open)
             {
@@ -276,8 +277,8 @@ namespace Zio.FileSystems
                 throw new IOException(FileSystemIsReadOnly);
             }
 
-            var entry = GetFile(path);
-            return entry.FileSystem.OpenFile(path, mode, access, share);
+            var entry = await GetFile(path);
+            return await entry.FileSystem.OpenFile(path, mode, access, share);
         }
 
         // ----------------------------------------------
@@ -285,31 +286,31 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override FileAttributes GetAttributesImpl(UPath path)
+        protected override async ValueTask<FileAttributes> GetAttributesImpl(UPath path)
         {
-            var entry = GetPath(path);
-            return entry.FileSystem.GetAttributes(path) | FileAttributes.ReadOnly;
+            var entry = await GetPath(path);
+            return await entry.FileSystem.GetAttributes(path) | FileAttributes.ReadOnly;
         }
 
         /// <inheritdoc />
-        protected override DateTime GetCreationTimeImpl(UPath path)
+        protected override async ValueTask<DateTime> GetCreationTimeImpl(UPath path)
         {
-            var entry = TryGetPath(path);
-            return entry.HasValue ? entry.Value.FileSystem.GetCreationTime(path) : DefaultFileTime;
+            var entry = await TryGetPath(path);
+            return entry.HasValue ? await entry.Value.FileSystem.GetCreationTime(path) : DefaultFileTime;
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastAccessTimeImpl(UPath path)
+        protected override async ValueTask<DateTime> GetLastAccessTimeImpl(UPath path)
         {
-            var entry = TryGetPath(path);
-            return entry.HasValue ? entry.Value.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
+            var entry = await TryGetPath(path);
+            return entry.HasValue ? await entry.Value.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastWriteTimeImpl(UPath path)
+        protected override async ValueTask<DateTime> GetLastWriteTimeImpl(UPath path)
         {
-            var entry = TryGetPath(path);
-            return entry.HasValue ? entry.Value.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
+            var entry = await TryGetPath(path);
+            return entry.HasValue ? await entry.Value.FileSystem.GetLastWriteTime(path) : DefaultFileTime;
         }
 
         // ----------------------------------------------
@@ -317,7 +318,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override async ValueTask<IEnumerable<UPath>> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             SearchPattern.Parse( ref path, ref searchPattern );
 
@@ -336,36 +337,33 @@ namespace Zio.FileSystems
             {
                 var fileSystem = fileSystems[i];
 
-                if (!fileSystem.DirectoryExists( path ))
+                if (!await fileSystem.DirectoryExists( path ))
                     continue;
 
-                foreach (var item in fileSystem.EnumeratePaths( path, searchPattern, searchOption, searchTarget ) )
+                foreach (var item in await fileSystem.EnumeratePaths( path, searchPattern, searchOption, searchTarget ) )
                 {
                     if (entries.Contains( item )) continue;
                     entries.Add(item);
                 }
             }
 
-            // Return entries
-            foreach (var entry in entries)
-            {
-                yield return entry;
-            }
+            return entries;
         }
 
 
         /// <inheritdoc />
-        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        protected override async ValueTask<IEnumerable<FileSystemItem>> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
         {
+            var results = new List<FileSystemItem>();
             var entries = new HashSet<UPath>();
             for (var i = _fileSystems.Count - 1; i >= 0; i--)
             {
                 var fileSystem = _fileSystems[i];
-                foreach (var item in fileSystem.EnumerateItems(path, searchOption, searchPredicate))
+                foreach (var item in await fileSystem.EnumerateItems(path, searchOption, searchPredicate))
                 {
                     if (entries.Add(item.Path))
                     {
-                        yield return item;
+                        results.Add(item);
                     }
                 }
             }
@@ -373,14 +371,16 @@ namespace Zio.FileSystems
             var fallback = Fallback;
             if (fallback != null)
             {
-                foreach (var item in fallback.EnumerateItems(path, searchOption, searchPredicate))
+                foreach (var item in await fallback.EnumerateItems(path, searchOption, searchPredicate))
                 {
                     if (entries.Add(item.Path))
                     {
-                        yield return item;
+                        results.Add(item);
                     }
                 }
             }
+
+            return results;
         }
 
         /// <inheritdoc />
@@ -411,14 +411,14 @@ namespace Zio.FileSystems
         {
             var watcher = new Watcher(this, path);
 
-            if (Fallback != null && Fallback.CanWatch(path) && Fallback.DirectoryExists(path))
+            if (Fallback != null && Fallback.CanWatch(path))
             {
                 watcher.Add(Fallback.Watch(path));
             }
 
             foreach (var fs in _fileSystems)
             {
-                if (fs.CanWatch(path) && fs.DirectoryExists(path))
+                if (fs.CanWatch(path))
                 {
                     watcher.Add(fs.Watch(path));
                 }
@@ -455,9 +455,9 @@ namespace Zio.FileSystems
         // from the list of registered filesystem.
         // ----------------------------------------------
 
-        private FileSystemPath GetFile(UPath path)
+        private async ValueTask<FileSystemPath> GetFile(UPath path)
         {
-            var entry = TryGetFile(path);
+            var entry = await TryGetFile(path);
             if (!entry.HasValue)
             {
                 throw NewFileNotFoundException(path);
@@ -465,7 +465,7 @@ namespace Zio.FileSystems
             return entry.Value;
         }
 
-        private FileSystemPath? TryGetFile(UPath path)
+        private async ValueTask<FileSystemPath?> TryGetFile(UPath path)
         {
             for (var i = _fileSystems.Count - 1; i >= -1; i--)
             {
@@ -473,12 +473,12 @@ namespace Zio.FileSystems
                 // Go through aggregates
                 if (fileSystem is AggregateFileSystem aggregate)
                 {
-                    return aggregate.TryGetFile(path);
+                    return await aggregate.TryGetFile(path);
                 }
 
                 if (fileSystem != null)
                 {
-                    if (fileSystem.FileExists(path))
+                    if (await fileSystem.FileExists(path))
                     {
                         return new FileSystemPath(fileSystem, path, true);
                     }
@@ -491,7 +491,7 @@ namespace Zio.FileSystems
             return null;
         }
 
-        private FileSystemPath? TryGetDirectory(UPath path)
+        private async ValueTask<FileSystemPath?> TryGetDirectory(UPath path)
         {
             for (var i = _fileSystems.Count - 1; i >= -1; i--)
             {
@@ -499,12 +499,12 @@ namespace Zio.FileSystems
                 // Go through aggregates
                 if (fileSystem is AggregateFileSystem aggregate)
                 {
-                    return aggregate.TryGetDirectory(path);
+                    return await aggregate.TryGetDirectory(path);
                 }
 
                 if (fileSystem != null)
                 {
-                    if (fileSystem.DirectoryExists(path))
+                    if (await fileSystem.DirectoryExists(path))
                     {
                         return new FileSystemPath(fileSystem, path, false);
                     }
@@ -518,9 +518,9 @@ namespace Zio.FileSystems
             return null;
         }
 
-        private FileSystemPath GetPath(UPath path)
+        private async ValueTask<FileSystemPath> GetPath(UPath path)
         {
-            var entry = TryGetPath(path);
+            var entry = await TryGetPath(path);
             if (!entry.HasValue)
             {
                 throw NewFileNotFoundException(path);
@@ -531,15 +531,15 @@ namespace Zio.FileSystems
         /// <summary>
         /// Get a single path. Optimized version of <see cref="FindPaths"/>.
         /// </summary>
-        private FileSystemPath? TryGetPath(UPath path, SearchTarget searchTarget = SearchTarget.Both)
+        private async ValueTask<FileSystemPath?> TryGetPath(UPath path, SearchTarget searchTarget = SearchTarget.Both)
         {
             if (searchTarget == SearchTarget.File)
             {
-                return TryGetFile(path);
+                return await TryGetFile(path);
             }
             else if (searchTarget == SearchTarget.Directory)
             {
-                return TryGetDirectory(path);
+                return await TryGetDirectory(path);
             }
             else
             {
@@ -555,15 +555,15 @@ namespace Zio.FileSystems
                     // Go through aggregates
                     if (fileSystem is AggregateFileSystem aggregate)
                     {
-                        return aggregate.TryGetPath(path, searchTarget);
+                        return await aggregate.TryGetPath(path, searchTarget);
                     }
 
-                    if (fileSystem.DirectoryExists(path))
+                    if (await fileSystem.DirectoryExists(path))
                     {
                         return new FileSystemPath(fileSystem, path, false);
                     }
 
-                    if (fileSystem.FileExists(path))
+                    if (await fileSystem.FileExists(path))
                     {
                         return new FileSystemPath(fileSystem, path, true);
                     }
@@ -573,7 +573,7 @@ namespace Zio.FileSystems
             return null;
         }
 
-        private void FindPaths(UPath path, SearchTarget searchTarget, List<FileSystemPath> paths)
+        private async ValueTask FindPaths(UPath path, SearchTarget searchTarget, List<FileSystemPath> paths)
         {
             bool queryDirectory = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.Directory;
             bool queryFile = searchTarget == SearchTarget.Both || searchTarget == SearchTarget.File;
@@ -591,12 +591,12 @@ namespace Zio.FileSystems
                 // Go through aggregates
                 if (fileSystem is AggregateFileSystem aggregate)
                 {
-                    aggregate.FindPaths(path, searchTarget, paths);
+                    await aggregate.FindPaths(path, searchTarget, paths);
                 }
                 else
                 {
                     bool isFile = false;
-                    if ((queryDirectory && fileSystem.DirectoryExists(path)) || (queryFile && (isFile = fileSystem.FileExists(path))))
+                    if ((queryDirectory && await fileSystem.DirectoryExists(path)) || (queryFile && (isFile = await fileSystem.FileExists(path))))
                     {
                         paths.Add(new FileSystemPath(fileSystem, path, isFile));
                     }

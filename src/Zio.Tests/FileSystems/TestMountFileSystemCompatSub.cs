@@ -14,7 +14,7 @@ namespace Zio.Tests.FileSystems
             mountfs.Mount("/customMount", new MemoryFileSystem());
 
             // Use a SubFileSystem to fake the mount to a root folder
-            fs = new SubFileSystem(mountfs, "/customMount");
+            fs = SubFileSystem.Create(mountfs, "/customMount").GetAwaiter().GetResult();
         }
     }
 }

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using static Zio.FileSystemExceptionHelper;
 
 namespace Zio.FileSystems
@@ -62,14 +63,15 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public void CreateDirectory(UPath path)
+        public ValueTask CreateDirectory(UPath path)
         {
             AssertNotDisposed();
             if (path == UPath.Root)
             {
                 throw new UnauthorizedAccessException("Cannot create root directory `/`");
             }
-            CreateDirectoryImpl(ValidatePath(path));
+            
+            return CreateDirectoryImpl(ValidatePath(path));
         }
 
         /// <summary>
@@ -78,17 +80,17 @@ namespace Zio.FileSystems
         /// Creates all directories and subdirectories in the specified path unless they already exist.
         /// </summary>
         /// <param name="path">The directory to create.</param>
-        protected abstract void CreateDirectoryImpl(UPath path);
+        protected abstract ValueTask CreateDirectoryImpl(UPath path);
 
         /// <inheritdoc />
-        public bool DirectoryExists(UPath path)
+        public ValueTask<bool> DirectoryExists(UPath path)
         {
             AssertNotDisposed();
 
             // With FileExists, case where a null path is allowed
             if (path.IsNull)
             {
-                return false;
+                return new (false);
             }
 
             return DirectoryExistsImpl(ValidatePath(path));
@@ -100,10 +102,10 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to test.</param>
         /// <returns><c>true</c> if the given path refers to an existing directory on disk, <c>false</c> otherwise.</returns>
-        protected abstract bool DirectoryExistsImpl(UPath path);
+        protected abstract ValueTask<bool> DirectoryExistsImpl(UPath path);
 
         /// <inheritdoc />
-        public void MoveDirectory(UPath srcPath, UPath destPath)
+        public ValueTask MoveDirectory(UPath srcPath, UPath destPath)
         {
             AssertNotDisposed();
             if (srcPath == UPath.Root)
@@ -120,7 +122,7 @@ namespace Zio.FileSystems
                 throw new IOException($"The source and destination path are the same `{srcPath}`");
             }
 
-            MoveDirectoryImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
+            return MoveDirectoryImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
 
         /// <summary>
@@ -130,10 +132,10 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="srcPath">The path of the directory to move.</param>
         /// <param name="destPath">The path to the new location for <paramref name="srcPath"/></param>
-        protected abstract void MoveDirectoryImpl(UPath srcPath, UPath destPath);
+        protected abstract ValueTask MoveDirectoryImpl(UPath srcPath, UPath destPath);
 
         /// <inheritdoc />
-        public void DeleteDirectory(UPath path, bool isRecursive)
+        public ValueTask DeleteDirectory(UPath path, bool isRecursive)
         {
             AssertNotDisposed();
             if (path == UPath.Root)
@@ -141,7 +143,7 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException("Cannot delete root directory `/`");
             }
 
-            DeleteDirectoryImpl(ValidatePath(path), isRecursive);
+            return DeleteDirectoryImpl(ValidatePath(path), isRecursive);
         }
 
         /// <summary>
@@ -150,7 +152,7 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path of the directory to remove.</param>
         /// <param name="isRecursive"><c>true</c> to remove directories, subdirectories, and files in path; otherwise, <c>false</c>.</param>
-        protected abstract void DeleteDirectoryImpl(UPath path, bool isRecursive);
+        protected abstract ValueTask DeleteDirectoryImpl(UPath path, bool isRecursive);
 
         internal string DebuggerDisplayInternal()
         {
@@ -170,10 +172,10 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public void CopyFile(UPath srcPath, UPath destPath, bool overwrite)
+        public ValueTask CopyFile(UPath srcPath, UPath destPath, bool overwrite)
         {
             AssertNotDisposed();
-            CopyFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), overwrite);
+            return CopyFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)), overwrite);
         }
 
         /// <summary>
@@ -184,22 +186,22 @@ namespace Zio.FileSystems
         /// <param name="srcPath">The path of the file to copy.</param>
         /// <param name="destPath">The path of the destination file. This cannot be a directory.</param>
         /// <param name="overwrite"><c>true</c> if the destination file can be overwritten; otherwise, <c>false</c>.</param>
-        protected abstract void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite);
+        protected abstract ValueTask CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite);
 
         /// <inheritdoc />
-        public void ReplaceFile(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
+        public async ValueTask ReplaceFile(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             AssertNotDisposed();
             srcPath = ValidatePath(srcPath, nameof(srcPath));
             destPath = ValidatePath(destPath, nameof(destPath));
             destBackupPath = ValidatePath(destBackupPath, nameof(destBackupPath), true);
 
-            if (!FileExistsImpl(srcPath))
+            if (!await FileExistsImpl(srcPath))
             {
                 throw NewFileNotFoundException(srcPath);
             }
 
-            if (!FileExistsImpl(destPath))
+            if (!await FileExistsImpl(destPath))
             {
                 throw NewFileNotFoundException(srcPath);
             }
@@ -209,7 +211,7 @@ namespace Zio.FileSystems
                 throw new IOException($"The source and backup cannot have the same path `{srcPath}`");
             }
 
-            ReplaceFileImpl(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
+            await ReplaceFileImpl(srcPath, destPath, destBackupPath, ignoreMetadataErrors);
         }
 
         /// <summary>
@@ -221,10 +223,10 @@ namespace Zio.FileSystems
         /// <param name="destPath">The path of the file being replaced.</param>
         /// <param name="destBackupPath">The path of the backup file (maybe null, in that case, it doesn't create any backup)</param>
         /// <param name="ignoreMetadataErrors"><c>true</c> to ignore merge errors (such as attributes and access control lists (ACLs)) from the replaced file to the replacement file; otherwise, <c>false</c>.</param>
-        protected abstract void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors);
+        protected abstract ValueTask ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors);
 
         /// <inheritdoc />
-        public long GetFileLength(UPath path)
+        public ValueTask<long> GetFileLength(UPath path)
         {
             AssertNotDisposed();
             return GetFileLengthImpl(ValidatePath(path));
@@ -236,17 +238,17 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path of a file.</param>
         /// <returns>The size, in bytes, of the file</returns>
-        protected abstract long GetFileLengthImpl(UPath path);
+        protected abstract ValueTask<long> GetFileLengthImpl(UPath path);
 
         /// <inheritdoc />
-        public bool FileExists(UPath path)
+        public ValueTask<bool> FileExists(UPath path)
         {
             AssertNotDisposed();
 
             // Only case where a null path is allowed
             if (path.IsNull)
             {
-                return false;
+                return new (false);
             }
 
             return FileExistsImpl(ValidatePath(path));
@@ -261,13 +263,13 @@ namespace Zio.FileSystems
         /// otherwise, <c>false</c>. This method also returns false if path is null, an invalid path, or a zero-length string.
         /// If the caller does not have sufficient permissions to read the specified file,
         /// no exception is thrown and the method returns false regardless of the existence of path.</returns>
-        protected abstract bool FileExistsImpl(UPath path);
+        protected abstract ValueTask<bool> FileExistsImpl(UPath path);
 
         /// <inheritdoc />
-        public void MoveFile(UPath srcPath, UPath destPath)
+        public ValueTask MoveFile(UPath srcPath, UPath destPath)
         {
             AssertNotDisposed();
-            MoveFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
+            return MoveFileImpl(ValidatePath(srcPath, nameof(srcPath)), ValidatePath(destPath, nameof(destPath)));
         }
 
         /// <summary>
@@ -277,13 +279,13 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="srcPath">The path of the file to move.</param>
         /// <param name="destPath">The new path and name for the file.</param>
-        protected abstract void MoveFileImpl(UPath srcPath, UPath destPath);
+        protected abstract ValueTask MoveFileImpl(UPath srcPath, UPath destPath);
 
         /// <inheritdoc />
-        public void DeleteFile(UPath path)
+        public ValueTask DeleteFile(UPath path)
         {
             AssertNotDisposed();
-            DeleteFileImpl(ValidatePath(path));
+            return DeleteFileImpl(ValidatePath(path));
         }
 
         /// <summary>
@@ -291,10 +293,10 @@ namespace Zio.FileSystems
         /// Deletes the specified file.
         /// </summary>
         /// <param name="path">The path of the file to be deleted.</param>
-        protected abstract void DeleteFileImpl(UPath path);
+        protected abstract ValueTask DeleteFileImpl(UPath path);
 
         /// <inheritdoc />
-        public Stream OpenFile(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        public ValueTask<Stream> OpenFile(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             AssertNotDisposed();
             return OpenFileImpl(ValidatePath(path), mode, access, share);
@@ -309,14 +311,14 @@ namespace Zio.FileSystems
         /// <param name="access">A <see cref="FileAccess"/> value that specifies the operations that can be performed on the file.</param>
         /// <param name="share">A <see cref="FileShare"/> value specifying the type of access other threads have to the file.</param>
         /// <returns>A file <see cref="Stream"/> on the specified path, having the specified mode with read, write, or read/write access and the specified sharing option.</returns>
-        protected abstract Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share);
+        protected abstract ValueTask<Stream> OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share);
 
         // ----------------------------------------------
         // Metadata API
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public FileAttributes GetAttributes(UPath path)
+        public ValueTask<FileAttributes> GetAttributes(UPath path)
         {
             AssertNotDisposed();
             return GetAttributesImpl(ValidatePath(path));
@@ -328,13 +330,13 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to the file or directory.</param>
         /// <returns>The <see cref="FileAttributes"/> of the file or directory on the path.</returns>
-        protected abstract FileAttributes GetAttributesImpl(UPath path);
+        protected abstract ValueTask<FileAttributes> GetAttributesImpl(UPath path);
 
         /// <inheritdoc />
-        public void SetAttributes(UPath path, FileAttributes attributes)
+        public ValueTask SetAttributes(UPath path, FileAttributes attributes)
         {
             AssertNotDisposed();
-            SetAttributesImpl(ValidatePath(path), attributes);
+            return SetAttributesImpl(ValidatePath(path), attributes);
         }
 
         /// <summary>
@@ -343,10 +345,10 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to the file or directory.</param>
         /// <param name="attributes">A bitwise combination of the enumeration values.</param>
-        protected abstract void SetAttributesImpl(UPath path, FileAttributes attributes);
+        protected abstract ValueTask SetAttributesImpl(UPath path, FileAttributes attributes);
 
         /// <inheritdoc />
-        public DateTime GetCreationTime(UPath path)
+        public ValueTask<DateTime> GetCreationTime(UPath path)
         {
             AssertNotDisposed();
             return GetCreationTimeImpl(ValidatePath(path));
@@ -358,13 +360,13 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to a file or directory for which to obtain creation date and time information.</param>
         /// <returns>A <see cref="DateTime"/> structure set to the creation date and time for the specified file or directory. This value is expressed in local time.</returns>
-        protected abstract DateTime GetCreationTimeImpl(UPath path);
+        protected abstract ValueTask<DateTime> GetCreationTimeImpl(UPath path);
 
         /// <inheritdoc />
-        public void SetCreationTime(UPath path, DateTime time)
+        public ValueTask SetCreationTime(UPath path, DateTime time)
         {
             AssertNotDisposed();
-            SetCreationTimeImpl(ValidatePath(path), time);
+            return SetCreationTimeImpl(ValidatePath(path), time);
         }
 
         /// <summary>
@@ -373,10 +375,10 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to a file or directory for which to set the creation date and time.</param>
         /// <param name="time">A <see cref="DateTime"/> containing the value to set for the creation date and time of path. This value is expressed in local time.</param>
-        protected abstract void SetCreationTimeImpl(UPath path, DateTime time);
+        protected abstract ValueTask SetCreationTimeImpl(UPath path, DateTime time);
 
         /// <inheritdoc />
-        public DateTime GetLastAccessTime(UPath path)
+        public ValueTask<DateTime> GetLastAccessTime(UPath path)
         {
             AssertNotDisposed();
             return GetLastAccessTimeImpl(ValidatePath(path));
@@ -388,13 +390,13 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to a file or directory for which to obtain creation date and time information.</param>
         /// <returns>A <see cref="DateTime"/> structure set to the last access date and time for the specified file or directory. This value is expressed in local time.</returns>
-        protected abstract DateTime GetLastAccessTimeImpl(UPath path);
+        protected abstract ValueTask<DateTime> GetLastAccessTimeImpl(UPath path);
 
         /// <inheritdoc />
-        public void SetLastAccessTime(UPath path, DateTime time)
+        public ValueTask SetLastAccessTime(UPath path, DateTime time)
         {
             AssertNotDisposed();
-            SetLastAccessTimeImpl(ValidatePath(path), time);
+            return SetLastAccessTimeImpl(ValidatePath(path), time);
         }
 
         /// <summary>
@@ -403,10 +405,10 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to a file or directory for which to set the last access date and time.</param>
         /// <param name="time">A <see cref="DateTime"/> containing the value to set for the last access date and time of path. This value is expressed in local time.</param>
-        protected abstract void SetLastAccessTimeImpl(UPath path, DateTime time);
+        protected abstract ValueTask SetLastAccessTimeImpl(UPath path, DateTime time);
 
         /// <inheritdoc />
-        public DateTime GetLastWriteTime(UPath path)
+        public ValueTask<DateTime> GetLastWriteTime(UPath path)
         {
             AssertNotDisposed();
             return GetLastWriteTimeImpl(ValidatePath(path));
@@ -418,13 +420,13 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to a file or directory for which to obtain creation date and time information.</param>
         /// <returns>A <see cref="DateTime"/> structure set to the last write date and time for the specified file or directory. This value is expressed in local time.</returns>
-        protected abstract DateTime GetLastWriteTimeImpl(UPath path);
+        protected abstract ValueTask<DateTime> GetLastWriteTimeImpl(UPath path);
 
         /// <inheritdoc />
-        public void SetLastWriteTime(UPath path, DateTime time)
+        public ValueTask SetLastWriteTime(UPath path, DateTime time)
         {
             AssertNotDisposed();
-            SetLastWriteTimeImpl(ValidatePath(path), time);
+            return SetLastWriteTimeImpl(ValidatePath(path), time);
         }
 
         /// <summary>
@@ -433,14 +435,14 @@ namespace Zio.FileSystems
         /// </summary>
         /// <param name="path">The path to a file or directory for which to set the last write date and time.</param>
         /// <param name="time">A <see cref="DateTime"/> containing the value to set for the last write date and time of path. This value is expressed in local time.</param>
-        protected abstract void SetLastWriteTimeImpl(UPath path, DateTime time);
+        protected abstract ValueTask SetLastWriteTimeImpl(UPath path, DateTime time);
 
         // ----------------------------------------------
         // Search API
         // ----------------------------------------------
 
         /// <inheritdoc />
-        public IEnumerable<UPath> EnumeratePaths(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        public ValueTask<IEnumerable<UPath>> EnumeratePaths(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
             AssertNotDisposed();
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
@@ -456,11 +458,11 @@ namespace Zio.FileSystems
         /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory or should include all subdirectories.</param>
         /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>.</param>
         /// <returns>An enumerable collection of file-system paths in the directory specified by path and that match the specified search pattern, option and target.</returns>
-        protected abstract IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
+        protected abstract ValueTask<IEnumerable<UPath>> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget);
 
 
         /// <inheritdoc />
-        public IEnumerable<FileSystemItem> EnumerateItems(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate = null)
+        public ValueTask<IEnumerable<FileSystemItem>> EnumerateItems(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate = null)
         {
             AssertNotDisposed();
             return EnumerateItemsImpl(ValidatePath(path), searchOption, searchPredicate);
@@ -474,7 +476,7 @@ namespace Zio.FileSystems
         /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory or should include all subdirectories.</param>
         /// <param name="searchPredicate">The search string to match against file-system entries in path. This parameter can contain a combination of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
         /// <returns>An enumerable collection of <see cref="FileSystemItem"/> in the directory specified by path and that match the specified search pattern, option and target.</returns>
-        protected abstract IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate);
+        protected abstract ValueTask<IEnumerable<FileSystemItem>> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate);
 
 
         // ----------------------------------------------

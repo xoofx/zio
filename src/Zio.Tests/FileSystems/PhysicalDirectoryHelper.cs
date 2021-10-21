@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
@@ -12,16 +13,24 @@ namespace Zio.Tests.FileSystems
     {
         private readonly DirectoryInfo _compatDirectory;
 
-        public PhysicalDirectoryHelper(string rootPath)
+        private PhysicalDirectoryHelper(string rootPath)
         {
             _compatDirectory = new DirectoryInfo(Path.Combine(rootPath, "Physical-" + Guid.NewGuid()));
             _compatDirectory.Create();
-
-            var pfs = new PhysicalFileSystem();
-            PhysicalFileSystem = new SubFileSystem(pfs, pfs.ConvertPathFromInternal(_compatDirectory.FullName));
         }
 
-        public IFileSystem PhysicalFileSystem { get; }
+        public static async ValueTask<PhysicalDirectoryHelper> Create(string rootPath)
+        {
+            var helper = new PhysicalDirectoryHelper(rootPath);
+
+            var pfs = new PhysicalFileSystem();
+
+            helper.PhysicalFileSystem = await SubFileSystem.Create(pfs, pfs.ConvertPathFromInternal(helper._compatDirectory.FullName));
+
+            return helper;
+        }
+
+        public IFileSystem PhysicalFileSystem { get; private set; }
 
         public void Dispose()
         {

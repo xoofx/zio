@@ -3,6 +3,7 @@
 // See the license.txt file in the project root for more information.
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Zio
 {
@@ -56,47 +57,20 @@ namespace Zio
         public string? ExtensionWithDot => Path.GetExtensionWithDot();
 
         /// <summary>
-        /// Gets or sets the attributes for the current file or directory
+        /// Gets the attributes for the current file or directory
         /// </summary>
-        public FileAttributes Attributes
-        {
-            get => FileSystem.GetAttributes(Path);
-
-            set => FileSystem.SetAttributes(Path, value);
-        }
+        public ValueTask<FileAttributes> GetAttributes() => FileSystem.GetAttributes(Path);
+        
+        /// <summary>
+        /// Sets the attributes for the current file or directory
+        /// </summary>
+        public ValueTask SetAttributes(FileAttributes value) => FileSystem.SetAttributes(Path, value);        
 
         /// <summary>
         /// Gets a value indicating whether this file or directory exists.
         /// </summary>
         /// <value><c>true</c> if this file or directory exists; otherwise, <c>false</c>.</value>
-        public abstract bool Exists { get; }
-
-        /// <summary>
-        /// Gets or sets the creation time of the current file or directory.
-        /// </summary>
-        public DateTime CreationTime
-        {
-            get => FileSystem.GetCreationTime(Path);
-            set => FileSystem.SetCreationTime(Path, value);
-        }
-
-        /// <summary>
-        /// Gets or sets the last access time of the current file or directory.
-        /// </summary>
-        public DateTime LastAccessTime
-        {
-            get => FileSystem.GetLastAccessTime(Path);
-            set => FileSystem.SetLastAccessTime(Path, value);
-        }
-
-        /// <summary>
-        /// Gets or sets the last write time of the current file or directory.
-        /// </summary>
-        public DateTime LastWriteTime
-        {
-            get => FileSystem.GetLastWriteTime(Path);
-            set => FileSystem.SetLastWriteTime(Path, value);
-        }
+        public abstract ValueTask<bool> Exists { get; }
 
         /// <summary>Gets an instance of the parent directory.</summary>
         /// <returns>A <see cref="DirectoryEntry" /> object representing the parent directory of this file.</returns>
@@ -109,7 +83,7 @@ namespace Zio
         /// <summary>
         /// Deletes a file or directory.
         /// </summary>
-        public abstract void Delete();
+        public abstract ValueTask Delete();
 
         /// <summary>
         /// Returns the <see cref="FullName"/> of this instance.
@@ -121,7 +95,7 @@ namespace Zio
         }
 
         /// <inheritdoc />
-        public bool Equals(FileSystemEntry other)
+        public bool Equals(FileSystemEntry? other)
         {
             if (other is null) return false;
             if (ReferenceEquals(this, other)) return true;

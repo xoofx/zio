@@ -3,6 +3,7 @@
 // See the license.txt file in the project root for more information.
 
 using System;
+using System.Threading.Tasks;
 using Xunit;
 using Zio.FileSystems;
 
@@ -11,42 +12,42 @@ namespace Zio.Tests.FileSystems
     public class TestMemoryFileSystem : TestFileSystemBase
     {
         [Fact]
-        public void TestCommonRead()
+        public async ValueTask TestCommonRead()
         {
-            var fs = GetCommonMemoryFileSystem();
-            AssertCommonRead(fs);
+            var fs = await GetCommonMemoryFileSystem();
+            await AssertCommonRead(fs);
         }
 
         [Fact]
-        public void TestCopyFileSystem()
+        public async ValueTask TestCopyFileSystem()
         {
-            var fs = GetCommonMemoryFileSystem();
+            var fs = await GetCommonMemoryFileSystem();
 
             var dest = new MemoryFileSystem();
-            fs.CopyTo(dest, UPath.Root, true);
+            await fs.CopyTo(dest, UPath.Root, true);
 
-            AssertFileSystemEqual(fs, dest);
+            await AssertFileSystemEqual(fs, dest);
         }
 
         [Fact]
-        public void TestCopyFileSystemSubFolder()
+        public async ValueTask TestCopyFileSystemSubFolder()
         {
-            var fs = GetCommonMemoryFileSystem();
+            var fs = await GetCommonMemoryFileSystem();
 
             var dest = new MemoryFileSystem();
             var subFolder = UPath.Root / "subfolder";
-            fs.CopyTo(dest, subFolder, true);
+            await fs.CopyTo(dest, subFolder, true);
 
-            var destSubFileSystem = dest.GetOrCreateSubFileSystem(subFolder);
-            
-            AssertFileSystemEqual(fs, destSubFileSystem);
+            var destSubFileSystem = await dest.GetOrCreateSubFileSystem(subFolder);
+
+            await AssertFileSystemEqual(fs, destSubFileSystem);
         }
         
 
         [Fact]
-        public void TestWatcher()
+        public async ValueTask TestWatcher()
         {
-            var fs = GetCommonMemoryFileSystem();
+            var fs = await GetCommonMemoryFileSystem();
             var watcher = fs.Watch("/a");
 
             var gotChange = false;
@@ -61,18 +62,18 @@ namespace Zio.Tests.FileSystems
             watcher.IncludeSubdirectories = true;
             watcher.EnableRaisingEvents = true;
 
-            fs.WriteAllText("/a/watched.txt", "test");
+            await fs.WriteAllText("/a/watched.txt", "test");
             System.Threading.Thread.Sleep(100);
             Assert.True(gotChange);
         }
 
         [Fact]
-        public void TestDispose()
+        public async ValueTask TestDispose()
         {
             var memfs = new MemoryFileSystem();
 
             memfs.Dispose();
-            Assert.Throws<ObjectDisposedException>(() => memfs.DirectoryExists("/"));
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await memfs.DirectoryExists("/"));
         }
     }
 }

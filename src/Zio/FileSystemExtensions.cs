@@ -5,7 +5,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Zio.FileSystems;
 using static Zio.FileSystemExceptionHelper;
 
@@ -22,12 +24,13 @@ namespace Zio
         /// <param name="fs">The filesystem to derive a new sub-filesystem from it</param>
         /// <param name="subFolder">The folder of the sub-filesystem</param>
         /// <returns>A sub-filesystem</returns>
-        public static SubFileSystem GetOrCreateSubFileSystem(this IFileSystem fs, UPath subFolder)
+        public static async ValueTask<SubFileSystem> GetOrCreateSubFileSystem(this IFileSystem fs, UPath subFolder)
         {
-            if (!fs.DirectoryExists(subFolder))
+            if (!await fs.DirectoryExists(subFolder))
             {
-                fs.CreateDirectory(subFolder);
+                await fs.CreateDirectory(subFolder);
             }
+
             return new SubFileSystem(fs, subFolder);
         }
 
@@ -41,9 +44,9 @@ namespace Zio
         /// <remarks>
         /// By default, this method copy attributes from source files. Use the overload method to disable this.
         /// </remarks>
-        public static void CopyTo(this IFileSystem fs, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
+        public static Task CopyTo(this IFileSystem fs, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
         {
-            CopyTo(fs, destFileSystem, dstFolder, overwrite, true);
+            return CopyTo(fs, destFileSystem, dstFolder, overwrite, true);
         }
 
         /// <summary>
@@ -54,11 +57,11 @@ namespace Zio
         /// <param name="dstFolder">The destination folder in the destination filesystem.</param>
         /// <param name="overwrite"><c>true</c> to overwrite files.</param>
         /// <param name="copyAttributes">`true` to copy the attributes of the source file system if filesystem source and destination are different, false otherwise.</param>
-        public static void CopyTo(this IFileSystem fs, IFileSystem destFileSystem, UPath dstFolder, bool overwrite, bool copyAttributes)
+        public static Task CopyTo(this IFileSystem fs, IFileSystem destFileSystem, UPath dstFolder, bool overwrite, bool copyAttributes)
         {
             if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
-            CopyDirectory(fs, UPath.Root, destFileSystem, dstFolder, overwrite, copyAttributes);
+            return CopyDirectory(fs, UPath.Root, destFileSystem, dstFolder, overwrite, copyAttributes);
         }
 
         /// <summary>
@@ -72,9 +75,9 @@ namespace Zio
         /// <remarks>
         /// By default, this method copy attributes from source files. Use the overload method to disable this.
         /// </remarks>
-        public static void CopyDirectory(this IFileSystem fs, UPath srcFolder, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
+        public static Task CopyDirectory(this IFileSystem fs, UPath srcFolder, IFileSystem destFileSystem, UPath dstFolder, bool overwrite)
         {
-            CopyDirectory(fs, srcFolder, destFileSystem, dstFolder, overwrite, true);
+            return CopyDirectory(fs, srcFolder, destFileSystem, dstFolder, overwrite, true);
         }
 
         /// <summary>
@@ -86,15 +89,15 @@ namespace Zio
         /// <param name="dstFolder">The destination folder in the destination filesystem.</param>
         /// <param name="overwrite"><c>true</c> to overwrite files.</param>
         /// <param name="copyAttributes">`true` to copy the attributes of the source file system if filesystem source and destination are different, false otherwise.</param>
-        public static void CopyDirectory(this IFileSystem fs, UPath srcFolder, IFileSystem destFileSystem, UPath dstFolder, bool overwrite, bool copyAttributes)
+        public static async Task CopyDirectory(this IFileSystem fs, UPath srcFolder, IFileSystem destFileSystem, UPath dstFolder, bool overwrite, bool copyAttributes)
         {
             if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
-            if (!fs.DirectoryExists(srcFolder)) throw new DirectoryNotFoundException($"{srcFolder} folder not found from source file system.");
+            if (!await fs.DirectoryExists(srcFolder)) throw new DirectoryNotFoundException($"{srcFolder} folder not found from source file system.");
 
             if (dstFolder != UPath.Root)
             {
-                destFileSystem.CreateDirectory(dstFolder);
+                await destFileSystem.CreateDirectory(dstFolder);
             }
 
             var srcFolderFullName = srcFolder.FullName;
@@ -102,21 +105,21 @@ namespace Zio
             int deltaSubString = srcFolder == UPath.Root ? 0 : 1;
 
             // Copy the files for the folder
-            foreach (var file in fs.EnumerateFiles(srcFolder))
+            foreach (var file in await fs.EnumerateFiles(srcFolder))
             {
                 var relativeFile = file.FullName.Substring(srcFolderFullName.Length + deltaSubString);
                 var destFile = UPath.Combine(dstFolder, relativeFile);
 
-                fs.CopyFileCross(file, destFileSystem, destFile, overwrite, copyAttributes);
+                await fs.CopyFileCross(file, destFileSystem, destFile, overwrite, copyAttributes);
             }
 
             // Then copy the folder structure recursively
-            foreach (var srcSubFolder in fs.EnumerateDirectories(srcFolder))
+            foreach (var srcSubFolder in await fs.EnumerateDirectories(srcFolder))
             {
                 var relativeDestFolder = srcSubFolder.FullName.Substring(srcFolderFullName.Length + deltaSubString);
 
                 var destSubFolder = UPath.Combine(dstFolder, relativeDestFolder);
-                CopyDirectory(fs, srcSubFolder, destFileSystem, destSubFolder, overwrite, copyAttributes);
+                await CopyDirectory(fs, srcSubFolder, destFileSystem, destSubFolder, overwrite, copyAttributes);
             }
         }
 
@@ -131,9 +134,9 @@ namespace Zio
         /// <remarks>
         /// By default, this method copy attributes from source files. Use the overload method to disable this.
         /// </remarks>
-        public static void CopyFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath, bool overwrite)
+        public static Task CopyFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath, bool overwrite)
         {
-            CopyFileCross(fs, srcPath, destFileSystem, destPath, overwrite, true);
+            return CopyFileCross(fs, srcPath, destFileSystem, destPath, overwrite, true);
         }
 
         /// <summary>
@@ -145,53 +148,53 @@ namespace Zio
         /// <param name="destPath">The destination path of the file in the destination filesystem</param>
         /// <param name="overwrite"><c>true</c> to overwrite an existing destination file</param>
         /// <param name="copyAttributes">`true` to copy the attributes of the source file system if filesystem source and destination are different, false otherwise.</param>
-        public static void CopyFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath, bool overwrite, bool copyAttributes)
+        public static async Task CopyFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath, bool overwrite, bool copyAttributes)
         {
             if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
             // If this is the same filesystem, use the file system directly to perform the action
             if (fs == destFileSystem)
             {
-                fs.CopyFile(srcPath, destPath, overwrite);
+                await fs.CopyFile(srcPath, destPath, overwrite);
                 return;
             }
 
             srcPath.AssertAbsolute(nameof(srcPath));
-            if (!fs.FileExists(srcPath))
+            if (!await fs.FileExists(srcPath))
             {
                 throw NewFileNotFoundException(srcPath);
             }
 
             destPath.AssertAbsolute(nameof(destPath));
             var destDirectory = destPath.GetDirectory();
-            if (!destFileSystem.DirectoryExists(destDirectory))
+            if (!await destFileSystem.DirectoryExists(destDirectory))
             {
                 throw NewDirectoryNotFoundException(destDirectory);
             }
 
-            if (destFileSystem.FileExists(destPath) && !overwrite)
+            if (await destFileSystem.FileExists(destPath) && !overwrite)
             {
                 throw new IOException($"The destination file path `{destPath}` already exist and overwrite is false");
             }
 
-            using (var sourceStream = fs.OpenFile(srcPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var sourceStream = await fs.OpenFile(srcPath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 var copied = false;
                 try
                 {
-                    using (var destStream = destFileSystem.OpenFile(destPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    using (var destStream = await destFileSystem.OpenFile(destPath, FileMode.Create, FileAccess.Write, FileShare.Read))
                     {
-                        sourceStream.CopyTo(destStream);
+                        await sourceStream.CopyToAsync(destStream);
                     }
 
                     if (copyAttributes)
                     {
                         // NOTE: For some reasons, we can sometimes get an Unauthorized access if we try to set the LastWriteTime after the SetAttributes
                         // So we setup it here.
-                        destFileSystem.SetLastWriteTime(destPath, fs.GetLastWriteTime(srcPath));
+                        await destFileSystem.SetLastWriteTime(destPath, await fs.GetLastWriteTime(srcPath));
 
                         // Preserve attributes and LastWriteTime as a regular File.Copy
-                        destFileSystem.SetAttributes(destPath, fs.GetAttributes(srcPath));
+                        await destFileSystem.SetAttributes(destPath, await fs.GetAttributes(srcPath));
                     }
 
                     copied = true;
@@ -202,7 +205,7 @@ namespace Zio
                     {
                         try
                         {
-                            destFileSystem.DeleteFile(destPath);
+                            await destFileSystem.DeleteFile(destPath);
                         }
                         catch
                         {
@@ -220,20 +223,20 @@ namespace Zio
         /// <param name="srcPath">The source path of the file to move from the source filesystem</param>
         /// <param name="destFileSystem">The destination filesystem</param>
         /// <param name="destPath">The destination path of the file in the destination filesystem</param>
-        public static void MoveFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath)
+        public static async Task MoveFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath)
         {
             if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
             // If this is the same filesystem, use the file system directly to perform the action
             if (fs == destFileSystem)
             {
-                fs.MoveFile(srcPath, destPath);
+                await fs.MoveFile(srcPath, destPath);
                 return;
             }
 
             // Check source
             srcPath.AssertAbsolute(nameof(srcPath));
-            if (!fs.FileExists(srcPath))
+            if (!await fs.FileExists(srcPath))
             {
                 throw NewFileNotFoundException(srcPath);
             }
@@ -241,36 +244,36 @@ namespace Zio
             // Check destination
             destPath.AssertAbsolute(nameof(destPath));
             var destDirectory = destPath.GetDirectory();
-            if (!destFileSystem.DirectoryExists(destDirectory))
+            if (!await destFileSystem.DirectoryExists(destDirectory))
             {
                 throw NewDirectoryNotFoundException(destPath);
             }
 
-            if (destFileSystem.DirectoryExists(destPath))
+            if (await destFileSystem.DirectoryExists(destPath))
             {
                 throw NewDestinationDirectoryExistException(destPath);
             }
 
-            if (destFileSystem.FileExists(destPath))
+            if (await destFileSystem.FileExists(destPath))
             {
                 throw NewDestinationFileExistException(destPath);
             }
 
-            using (var sourceStream = fs.OpenFile(srcPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var sourceStream = await fs.OpenFile(srcPath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 var copied = false;
                 try
                 {
-                    using (var destStream = destFileSystem.OpenFile(destPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    using (var destStream = await destFileSystem.OpenFile(destPath, FileMode.Create, FileAccess.Write, FileShare.Read))
                     {
-                        sourceStream.CopyTo(destStream);
+                        await sourceStream.CopyToAsync(destStream);
                     }
 
                     // Preserve all attributes and times
-                    destFileSystem.SetAttributes(destPath, fs.GetAttributes(srcPath));
-                    destFileSystem.SetCreationTime(destPath, fs.GetCreationTime(srcPath));
-                    destFileSystem.SetLastAccessTime(destPath, fs.GetLastAccessTime(srcPath));
-                    destFileSystem.SetLastWriteTime(destPath, fs.GetLastWriteTime(srcPath));
+                    await destFileSystem.SetAttributes(destPath, await fs.GetAttributes(srcPath));
+                    await destFileSystem.SetCreationTime(destPath, await fs.GetCreationTime(srcPath));
+                    await destFileSystem.SetLastAccessTime(destPath, await fs.GetLastAccessTime(srcPath));
+                    await destFileSystem.SetLastWriteTime(destPath, await fs.GetLastWriteTime(srcPath));
                     copied = true;
                 }
                 finally
@@ -279,7 +282,7 @@ namespace Zio
                     {
                         try
                         {
-                            destFileSystem.DeleteFile(destPath);
+                            await destFileSystem.DeleteFile(destPath);
                         }
                         catch
                         {
@@ -292,7 +295,7 @@ namespace Zio
             var deleted = false;
             try
             {
-                fs.DeleteFile(srcPath);
+                await fs.DeleteFile(srcPath);
                 deleted = true;
             }
             finally
@@ -301,7 +304,7 @@ namespace Zio
                 {
                     try
                     {
-                        destFileSystem.DeleteFile(destPath);
+                        await destFileSystem.DeleteFile(destPath);
                     }
                     catch
                     {
@@ -317,12 +320,12 @@ namespace Zio
         /// <param name="fs">The filesystem.</param>
         /// <param name="path">The path of the file to open for reading.</param>
         /// <returns>A byte array containing the contents of the file.</returns>
-        public static byte[] ReadAllBytes(this IFileSystem fs, UPath path)
+        public static async Task<byte[]> ReadAllBytes(this IFileSystem fs, UPath path)
         {
             var memstream = new MemoryStream();
-            using (var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var stream = await fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                stream.CopyTo(memstream);
+                await stream.CopyToAsync(memstream);
             }
             return memstream.ToArray();
         }
@@ -337,13 +340,13 @@ namespace Zio
         ///     This method attempts to automatically detect the encoding of a file based on the presence of byte order marks.
         ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.
         /// </remarks>
-        public static string ReadAllText(this IFileSystem fs, UPath path)
+        public static async Task<string> ReadAllText(this IFileSystem fs, UPath path)
         {
-            var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var stream = await fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             {
                 using (var reader = new StreamReader(stream))
                 {
-                    return reader.ReadToEnd();
+                    return await reader.ReadToEndAsync();
                 }
             }
         }
@@ -355,14 +358,14 @@ namespace Zio
         /// <param name="path">The path of the file to open for reading.</param>
         /// <param name="encoding">The encoding to use to decode the text from <paramref name="path" />.</param>
         /// <returns>A string containing all lines of the file.</returns>
-        public static string ReadAllText(this IFileSystem fs, UPath path, Encoding encoding)
+        public static async Task<string> ReadAllText(this IFileSystem fs, UPath path, Encoding encoding)
         {
             if (encoding is null) throw new ArgumentNullException(nameof(encoding));
-            var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var stream = await fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             {
                 using (var reader = new StreamReader(stream, encoding))
                 {
-                    return reader.ReadToEnd();
+                    return await reader.ReadToEndAsync();
                 }
             }
         }
@@ -379,12 +382,12 @@ namespace Zio
         ///     Given a byte array and a file path, this method opens the specified file, writes the
         ///     contents of the byte array to the file, and then closes the file.
         /// </remarks>
-        public static void WriteAllBytes(this IFileSystem fs, UPath path, byte[] content)
+        public static async Task WriteAllBytes(this IFileSystem fs, UPath path, byte[] content)
         {
             if (content is null) throw new ArgumentNullException(nameof(content));
-            using (var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read))
+            using (var stream = await fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
-                stream.Write(content, 0, content.Length);
+                await stream.WriteAsync(content, 0, content.Length);
             }
         }
 
@@ -394,15 +397,15 @@ namespace Zio
         /// <param name="fs">The filesystem.</param>
         /// <param name="path">The path of the file to open for reading.</param>
         /// <returns>An array of strings containing all lines of the file.</returns>
-        public static string[] ReadAllLines(this IFileSystem fs, UPath path)
+        public static async Task<string[]> ReadAllLines(this IFileSystem fs, UPath path)
         {
-            var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var stream = await fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             {
                 using (var reader = new StreamReader(stream))
                 {
                     var lines = new List<string>();
                     string line;
-                    while ((line = reader.ReadLine()) != null)
+                    while ((line = await reader.ReadLineAsync()) != null)
                     {
                         lines.Add(line);
                     }
@@ -422,16 +425,16 @@ namespace Zio
         ///     Encoding formats UTF-8 and UTF-32 (both big-endian and little-endian) can be detected.
         /// </remarks>
         /// <returns>An array of strings containing all lines of the file.</returns>
-        public static string[] ReadAllLines(this IFileSystem fs, UPath path, Encoding encoding)
+        public static async Task<string[]> ReadAllLines(this IFileSystem fs, UPath path, Encoding encoding)
         {
             if (encoding is null) throw new ArgumentNullException(nameof(encoding));
-            var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var stream = await fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             {
                 using (var reader = new StreamReader(stream, encoding))
                 {
                     var lines = new List<string>();
                     string line;
-                    while ((line = reader.ReadLine()) != null)
+                    while ((line = await reader.ReadLineAsync()) != null)
                     {
                         lines.Add(line);
                     }
@@ -454,15 +457,15 @@ namespace Zio
         ///     If it is necessary to include a UTF-8 identifier, such as a byte order mark, at the beginning of a file,
         ///     use the <see cref="WriteAllText(Zio.IFileSystem,Zio.UPath,string, Encoding)" /> method overload with UTF8 encoding.
         /// </remarks>
-        public static void WriteAllText(this IFileSystem fs, UPath path, string content)
+        public static async Task WriteAllText(this IFileSystem fs, UPath path, string content)
         {
             if (content is null) throw new ArgumentNullException(nameof(content));
-            var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+            var stream = await fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream))
                 {
-                    writer.Write(content);
-                    writer.Flush();
+                    await writer.WriteAsync(content);
+                    await writer.FlushAsync();
                 }
             }
         }
@@ -481,16 +484,16 @@ namespace Zio
         ///     specified encoding, and then closes the file.
         ///     The file handle is guaranteed to be closed by this method, even if exceptions are raised.
         /// </remarks>
-        public static void WriteAllText(this IFileSystem fs, UPath path, string content, Encoding encoding)
+        public static async Task WriteAllText(this IFileSystem fs, UPath path, string content, Encoding encoding)
         {
             if (content is null) throw new ArgumentNullException(nameof(content));
             if (encoding is null) throw new ArgumentNullException(nameof(encoding));
-            var stream = fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+            var stream = await fs.OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream, encoding))
                 {
-                    writer.Write(content);
-                    writer.Flush();
+                    await writer.WriteAsync(content);
+                    await writer.FlushAsync();
                 }
             }
         }
@@ -509,15 +512,15 @@ namespace Zio
         ///     The method creates the file if it doesn’t exist, but it doesn't create new directories. Therefore, the value of the
         ///     path parameter must contain existing directories.
         /// </remarks>
-        public static void AppendAllText(this IFileSystem fs, UPath path, string content)
+        public static async Task AppendAllText(this IFileSystem fs, UPath path, string content)
         {
             if (content is null) throw new ArgumentNullException(nameof(content));
-            var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+            var stream = await fs.OpenFile(path, FileMode.Append, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream))
                 {
-                    writer.Write(content);
-                    writer.Flush();
+                    await writer.WriteAsync(content);
+                    await writer.FlushAsync();
                 }
             }
         }
@@ -536,16 +539,16 @@ namespace Zio
         ///     The method creates the file if it doesn’t exist, but it doesn't create new directories. Therefore, the value of the
         ///     path parameter must contain existing directories.
         /// </remarks>
-        public static void AppendAllText(this IFileSystem fs, UPath path, string content, Encoding encoding)
+        public static async Task AppendAllText(this IFileSystem fs, UPath path, string content, Encoding encoding)
         {
             if (content is null) throw new ArgumentNullException(nameof(content));
             if (encoding is null) throw new ArgumentNullException(nameof(encoding));
-            var stream = fs.OpenFile(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+            var stream = await fs.OpenFile(path, FileMode.Append, FileAccess.Write, FileShare.Read);
             {
                 using (var writer = new StreamWriter(stream, encoding))
                 {
-                    writer.Write(content);
-                    writer.Flush();
+                    await writer.WriteAsync(content);
+                    await writer.FlushAsync();
                 }
             }
         }
@@ -556,7 +559,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The path and name of the file to create.</param>
         /// <returns>A stream that provides read/write access to the file specified in path.</returns>
-        public static Stream CreateFile(this IFileSystem fileSystem, UPath path)
+        public static ValueTask<Stream> CreateFile(this IFileSystem fileSystem, UPath path)
         {
             path.AssertAbsolute();
             return fileSystem.OpenFile(path, FileMode.Create, FileAccess.ReadWrite);
@@ -568,7 +571,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The path of the directory to look for directories.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the directories in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path)
+        public static ValueTask<IEnumerable<UPath>> EnumerateDirectories(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateDirectories(fileSystem, path, "*");
         }
@@ -581,7 +584,7 @@ namespace Zio
         /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
         /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the directories in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern)
+        public static ValueTask<IEnumerable<UPath>> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateDirectories(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
@@ -598,11 +601,10 @@ namespace Zio
         /// or should include all subdirectories.
         /// The default value is TopDirectoryOnly.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the directories in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
+        public static ValueTask<IEnumerable<UPath>> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
-            foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Directory))
-                yield return subPath;
+            return fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Directory);
         }
 
         /// <summary>
@@ -611,7 +613,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The path of the directory to look for files.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the files in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path)
+        public static ValueTask<IEnumerable<UPath>> EnumerateFiles(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateFiles(fileSystem, path, "*");
         }
@@ -624,7 +626,7 @@ namespace Zio
         /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
         /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the files in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern)
+        public static ValueTask<IEnumerable<UPath>> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateFiles(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
@@ -641,11 +643,10 @@ namespace Zio
         /// or should include all subdirectories.
         /// The default value is TopDirectoryOnly.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the files in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
+        public static ValueTask<IEnumerable<UPath>> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
-            foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.File))
-                yield return subPath;
+            return fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.File);
         }
 
         /// <summary>
@@ -654,7 +655,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The path of the directory to look for files or directories.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the files and directories in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path)
+        public static ValueTask<IEnumerable<UPath>> EnumeratePaths(this IFileSystem fileSystem, UPath path)
         {
             return EnumeratePaths(fileSystem, path, "*");
         }
@@ -667,7 +668,7 @@ namespace Zio
         /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
         /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the files and directories in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path, string searchPattern)
+        public static ValueTask<IEnumerable<UPath>> EnumeratePaths(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumeratePaths(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
@@ -684,7 +685,7 @@ namespace Zio
         /// or should include all subdirectories.
         /// The default value is TopDirectoryOnly.</param>
         /// <returns>An enumerable collection of the full names (including paths) for the files and directories in the directory specified by path.</returns>
-        public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
+        public static ValueTask<IEnumerable<UPath>> EnumeratePaths(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Both);
@@ -696,7 +697,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The path of the directory to look for files.</param>
         /// <returns>An enumerable collection of <see cref="FileEntry"/> from the specified path.</returns>
-        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path)
+        public static ValueTask<IEnumerable<FileEntry>> EnumerateFileEntries(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateFileEntries(fileSystem, path, "*");
         }
@@ -709,7 +710,7 @@ namespace Zio
         /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
         /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
         /// <returns>An enumerable collection of <see cref="FileEntry"/> from the specified path.</returns>
-        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
+        public static ValueTask<IEnumerable<FileEntry>> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateFileEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
@@ -726,13 +727,10 @@ namespace Zio
         /// or should include all subdirectories.
         /// The default value is TopDirectoryOnly.</param>
         /// <returns>An enumerable collection of <see cref="FileEntry"/> from the specified path.</returns>
-        public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
+        public static async ValueTask<IEnumerable<FileEntry>> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
-            foreach (var subPath in EnumerateFiles(fileSystem, path, searchPattern, searchOption))
-            {
-                yield return new FileEntry(fileSystem, subPath);
-            }
+            return (await EnumerateFiles(fileSystem, path, searchPattern, searchOption)).Select(subPath => new FileEntry(fileSystem, subPath)).ToArray();
         }
 
         /// <summary>
@@ -741,7 +739,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The path of the directory to look for directories.</param>
         /// <returns>An enumerable collection of <see cref="DirectoryEntry"/> from the specified path.</returns>
-        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path)
+        public static ValueTask<IEnumerable<DirectoryEntry>> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateDirectoryEntries(fileSystem, path, "*");
         }
@@ -754,7 +752,7 @@ namespace Zio
         /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
         /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
         /// <returns>An enumerable collection of <see cref="DirectoryEntry"/> from the specified path.</returns>
-        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
+        public static ValueTask<IEnumerable<DirectoryEntry>> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateDirectoryEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
@@ -771,13 +769,10 @@ namespace Zio
         /// or should include all subdirectories.
         /// The default value is TopDirectoryOnly.</param>
         /// <returns>An enumerable collection of <see cref="DirectoryEntry"/> from the specified path.</returns>
-        public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
+        public static async ValueTask<IEnumerable<DirectoryEntry>> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
-            foreach (var subPath in EnumerateDirectories(fileSystem, path, searchPattern, searchOption))
-            {
-                yield return new DirectoryEntry(fileSystem, subPath);
-            }
+            return (await EnumerateDirectories(fileSystem, path, searchPattern, searchOption)).Select(subPath => new DirectoryEntry(fileSystem, subPath)).ToArray();
         }
 
         /// <summary>
@@ -786,7 +781,7 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The path of the directory to look for files and directories.</param>
         /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
-        public static IEnumerable<FileSystemEntry> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path)
+        public static ValueTask<IEnumerable<FileSystemEntry>> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path)
         {
             return EnumerateFileSystemEntries(fileSystem, path, "*");
         }
@@ -799,7 +794,7 @@ namespace Zio
         /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
         /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
         /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
-        public static IEnumerable<FileSystemEntry> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
+        public static ValueTask<IEnumerable<FileSystemEntry>> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
             return EnumerateFileSystemEntries(fileSystem, path, searchPattern, SearchOption.TopDirectoryOnly);
@@ -817,13 +812,18 @@ namespace Zio
         /// The default value is TopDirectoryOnly.</param>
         /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>. Default is <see cref="SearchTarget.Both"/></param>
         /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
-        public static IEnumerable<FileSystemEntry> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget = SearchTarget.Both)
+        public static async ValueTask<IEnumerable<FileSystemEntry>> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget = SearchTarget.Both)
         {
             if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
-            foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, searchTarget))
+            
+            var entries = new List<FileSystemEntry>();
+            
+            foreach (var subPath in await fileSystem.EnumeratePaths(path, searchPattern, searchOption, searchTarget))
             {
-                yield return fileSystem.DirectoryExists(subPath) ? (FileSystemEntry) new DirectoryEntry(fileSystem, subPath) : new FileEntry(fileSystem, subPath);
+                entries.Add(await fileSystem.DirectoryExists(subPath) ? (FileSystemEntry)new DirectoryEntry(fileSystem, subPath) : (FileSystemEntry)new FileEntry(fileSystem, subPath));
             }
+
+            return entries;
         }
 
         /// <summary>
@@ -832,14 +832,14 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The file or directory path.</param>
         /// <returns>A new <see cref="FileSystemEntry"/> from the specified path.</returns>
-        public static FileSystemEntry GetFileSystemEntry(this IFileSystem fileSystem, UPath path)
+        public static async ValueTask<FileSystemEntry> GetFileSystemEntry(this IFileSystem fileSystem, UPath path)
         {
-            var fileExists = fileSystem.FileExists(path);
+            var fileExists = await fileSystem.FileExists(path);
             if (fileExists)
             {
                 return new FileEntry(fileSystem, path);
             }
-            var directoryExists = fileSystem.DirectoryExists(path);
+            var directoryExists = await fileSystem.DirectoryExists(path);
             if (directoryExists)
             {
                 return new DirectoryEntry(fileSystem, path);
@@ -854,14 +854,14 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="path">The file or directory path.</param>
         /// <returns>A new <see cref="FileSystemEntry"/> from the specified path.</returns>
-        public static FileSystemEntry? TryGetFileSystemEntry(this IFileSystem fileSystem, UPath path)
+        public static async ValueTask<FileSystemEntry?> TryGetFileSystemEntry(this IFileSystem fileSystem, UPath path)
         {
-            var fileExists = fileSystem.FileExists(path);
+            var fileExists = await fileSystem.FileExists(path);
             if (fileExists)
             {
                 return new FileEntry(fileSystem, path);
             }
-            var directoryExists = fileSystem.DirectoryExists(path);
+            var directoryExists = await fileSystem.DirectoryExists(path);
             if (directoryExists)
             {
                 return new DirectoryEntry(fileSystem, path);
@@ -876,9 +876,9 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="filePath">The file path.</param>
         /// <returns>A new <see cref="FileEntry"/> from the specified path.</returns>
-        public static FileEntry GetFileEntry(this IFileSystem fileSystem, UPath filePath)
+        public static async ValueTask<FileEntry> GetFileEntry(this IFileSystem fileSystem, UPath filePath)
         {
-            if (!fileSystem.FileExists(filePath))
+            if (!await fileSystem.FileExists(filePath))
             {
                 throw NewFileNotFoundException(filePath);
             }
@@ -891,9 +891,9 @@ namespace Zio
         /// <param name="fileSystem">The file system.</param>
         /// <param name="directoryPath">The directory path.</param>
         /// <returns>A new <see cref="DirectoryEntry"/> from the specified path.</returns>
-        public static DirectoryEntry GetDirectoryEntry(this IFileSystem fileSystem, UPath directoryPath)
+        public static async ValueTask<DirectoryEntry> GetDirectoryEntry(this IFileSystem fileSystem, UPath directoryPath)
         {
-            if (!fileSystem.DirectoryExists(directoryPath))
+            if (!await fileSystem.DirectoryExists(directoryPath))
             {
                 throw NewDirectoryNotFoundException(directoryPath);
             }

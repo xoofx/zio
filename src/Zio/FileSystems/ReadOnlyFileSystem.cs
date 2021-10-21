@@ -5,6 +5,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Zio.FileSystems
 {
@@ -34,19 +35,19 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CreateDirectoryImpl(UPath path)
+        protected override ValueTask CreateDirectoryImpl(UPath path)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
+        protected override ValueTask DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
@@ -56,31 +57,31 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
+        protected override ValueTask CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
+        protected override ValueTask ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveFileImpl(UPath srcPath, UPath destPath)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void DeleteFileImpl(UPath path)
+        protected override ValueTask DeleteFileImpl(UPath path)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
+        protected override ValueTask<Stream> OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
         {
             if (mode != FileMode.Open)
             {
@@ -100,32 +101,32 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override FileAttributes GetAttributesImpl(UPath path)
+        protected override async ValueTask<FileAttributes> GetAttributesImpl(UPath path)
         {
             // All paths are readonly
-            return base.GetAttributesImpl(path) | FileAttributes.ReadOnly;
+            return await base.GetAttributesImpl(path) | FileAttributes.ReadOnly;
         }
 
         /// <inheritdoc />
-        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
+        protected override ValueTask SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void SetCreationTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetCreationTimeImpl(UPath path, DateTime time)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             throw new IOException(FileSystemIsReadOnly);
         }
 
         /// <inheritdoc />
-        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             throw new IOException(FileSystemIsReadOnly);
         }

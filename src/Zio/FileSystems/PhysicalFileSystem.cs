@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using static Zio.FileSystemExceptionHelper;
 #if NETSTANDARD2_1
 using System.IO.Enumeration;
@@ -48,7 +49,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CreateDirectoryImpl(UPath path)
+        protected override ValueTask CreateDirectoryImpl(UPath path)
         {
             if (IsWithinSpecialDirectory(path))
             {
@@ -56,16 +57,18 @@ namespace Zio.FileSystems
             }
 
             Directory.CreateDirectory(ConvertPathToInternal(path));
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override bool DirectoryExistsImpl(UPath path)
+        protected override ValueTask<bool> DirectoryExistsImpl(UPath path)
         {
-            return IsWithinSpecialDirectory(path) ? SpecialDirectoryExists(path) : Directory.Exists(ConvertPathToInternal(path));
+            return new (IsWithinSpecialDirectory(path) ? SpecialDirectoryExists(path) : Directory.Exists(ConvertPathToInternal(path)));
         }
 
         /// <inheritdoc />
-        protected override void MoveDirectoryImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveDirectoryImpl(UPath srcPath, UPath destPath)
         {
             if (IsOnWindows)
             {
@@ -100,10 +103,12 @@ namespace Zio.FileSystems
             }
 
             Directory.Move(systemSrcPath, systemDestPath);
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
+        protected override ValueTask DeleteDirectoryImpl(UPath path, bool isRecursive)
         {
             if (IsWithinSpecialDirectory(path))
             {
@@ -115,6 +120,8 @@ namespace Zio.FileSystems
             }
 
             Directory.Delete(ConvertPathToInternal(path), isRecursive);
+
+            return new();
         }
 
         // ----------------------------------------------
@@ -122,7 +129,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
+        protected override ValueTask CopyFileImpl(UPath srcPath, UPath destPath, bool overwrite)
         {
             if (IsWithinSpecialDirectory(srcPath))
             {
@@ -134,10 +141,12 @@ namespace Zio.FileSystems
             }
 
             File.Copy(ConvertPathToInternal(srcPath), ConvertPathToInternal(destPath), overwrite);
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
+        protected override ValueTask ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
         {
             if (IsWithinSpecialDirectory(srcPath))
             {
@@ -160,26 +169,29 @@ namespace Zio.FileSystems
             DeleteFileImpl(srcPath);
 
             // TODO: Add atomic version using File.Replace coming with .NET Standard 2.0
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override long GetFileLengthImpl(UPath path)
+        protected override ValueTask<long> GetFileLengthImpl(UPath path)
         {
             if (IsWithinSpecialDirectory(path))
             {
                 throw new UnauthorizedAccessException($"The access to `{path}` is denied");
             }
-            return new FileInfo(ConvertPathToInternal(path)).Length;
+
+            return new (new FileInfo(ConvertPathToInternal(path)).Length);
         }
 
         /// <inheritdoc />
-        protected override bool FileExistsImpl(UPath path)
+        protected override ValueTask<bool> FileExistsImpl(UPath path)
         {
-            return !IsWithinSpecialDirectory(path) && File.Exists(ConvertPathToInternal(path));
+            return new (!IsWithinSpecialDirectory(path) && File.Exists(ConvertPathToInternal(path)));
         }
 
         /// <inheritdoc />
-        protected override void MoveFileImpl(UPath srcPath, UPath destPath)
+        protected override ValueTask MoveFileImpl(UPath srcPath, UPath destPath)
         {
             if (IsWithinSpecialDirectory(srcPath))
             {
@@ -190,31 +202,36 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"The access to `{destPath}` is denied");
             }
             File.Move(ConvertPathToInternal(srcPath), ConvertPathToInternal(destPath));
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override void DeleteFileImpl(UPath path)
+        protected override ValueTask DeleteFileImpl(UPath path)
         {
             if (IsWithinSpecialDirectory(path))
             {
                 throw new UnauthorizedAccessException($"The access to `{path}` is denied");
             }
             File.Delete(ConvertPathToInternal(path));
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access,
+        protected override ValueTask<Stream> OpenFileImpl(UPath path, FileMode mode, FileAccess access,
             FileShare share = FileShare.None)
         {
             if (IsWithinSpecialDirectory(path))
             {
                 throw new UnauthorizedAccessException($"The access to `{path}` is denied");
             }
-            return File.Open(ConvertPathToInternal(path), mode, access, share);
+
+            return new(new FileStream(ConvertPathToInternal(path), mode, access, share, 4096, useAsync: true));
         }
 
         /// <inheritdoc />
-        protected override FileAttributes GetAttributesImpl(UPath path)
+        protected override ValueTask<FileAttributes> GetAttributesImpl(UPath path)
         {
             // Handle special folders to return valid FileAttributes
             if (IsWithinSpecialDirectory(path))
@@ -227,12 +244,12 @@ namespace Zio.FileSystems
                 // The path / and /drive are readonly
                 if (path == PathDrivePrefixOnWindows || path == UPath.Root)
                 {
-                    return FileAttributes.Directory | FileAttributes.System | FileAttributes.ReadOnly;
+                    return new (FileAttributes.Directory | FileAttributes.System | FileAttributes.ReadOnly);
                 }
                 // Otherwise let the File.GetAttributes returns the proper attributes for root drive (e.g /drive/c)
             }
 
-            return File.GetAttributes(ConvertPathToInternal(path));
+            return new (File.GetAttributes(ConvertPathToInternal(path)));
         }
 
         // ----------------------------------------------
@@ -240,7 +257,7 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
+        protected override ValueTask SetAttributesImpl(UPath path, FileAttributes attributes)
         {
             // Handle special folders
             if (IsWithinSpecialDirectory(path))
@@ -253,10 +270,12 @@ namespace Zio.FileSystems
             }
 
             File.SetAttributes(ConvertPathToInternal(path), attributes);
+
+            return new();
         }
 
         /// <inheritdoc />
-        protected override DateTime GetCreationTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetCreationTimeImpl(UPath path)
         {
             // Handle special folders
 
@@ -283,15 +302,15 @@ namespace Zio.FileSystems
                             creationTime = newCreationTime;
                         }
                     }
-                    return creationTime;
+                    return new (creationTime);
                 }
             }
 
-            return File.GetCreationTime(ConvertPathToInternal(path));
+            return new (File.GetCreationTime(ConvertPathToInternal(path)));
         }
 
         /// <inheritdoc />
-        protected override void SetCreationTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetCreationTimeImpl(UPath path, DateTime time)
         {
             // Handle special folders
             if (IsWithinSpecialDirectory(path))
@@ -304,10 +323,11 @@ namespace Zio.FileSystems
             }
 
             File.SetCreationTime(ConvertPathToInternal(path), time);
+            return new();
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastAccessTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetLastAccessTimeImpl(UPath path)
         {
             // Handle special folders to return valid LastAccessTime
             if (IsWithinSpecialDirectory(path))
@@ -333,17 +353,17 @@ namespace Zio.FileSystems
                             lastAccessTime = time;
                         }
                     }
-                    return lastAccessTime;
+                    return new (lastAccessTime);
                 }
 
                 // otherwise let the regular function running
             }
 
-            return File.GetLastAccessTime(ConvertPathToInternal(path));
+            return new (File.GetLastAccessTime(ConvertPathToInternal(path)));
         }
 
         /// <inheritdoc />
-        protected override void SetLastAccessTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastAccessTimeImpl(UPath path, DateTime time)
         {
             // Handle special folders
             if (IsWithinSpecialDirectory(path))
@@ -355,10 +375,11 @@ namespace Zio.FileSystems
                 throw new UnauthorizedAccessException($"Cannot set last access time on system directory `{path}`");
             }
             File.SetLastAccessTime(ConvertPathToInternal(path), time);
+            return new();
         }
 
         /// <inheritdoc />
-        protected override DateTime GetLastWriteTimeImpl(UPath path)
+        protected override ValueTask<DateTime> GetLastWriteTimeImpl(UPath path)
         {
             // Handle special folders to return valid LastAccessTime
             if (IsWithinSpecialDirectory(path))
@@ -384,17 +405,17 @@ namespace Zio.FileSystems
                             lastWriteTime = time;
                         }
                     }
-                    return lastWriteTime;
+                    return new (lastWriteTime);
                 }
 
                 // otherwise let the regular function running
             }
 
-            return File.GetLastWriteTime(ConvertPathToInternal(path));
+            return new (File.GetLastWriteTime(ConvertPathToInternal(path)));
         }
 
         /// <inheritdoc />
-        protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
+        protected override ValueTask SetLastWriteTimeImpl(UPath path, DateTime time)
         {
             // Handle special folders
             if (IsWithinSpecialDirectory(path))
@@ -407,6 +428,8 @@ namespace Zio.FileSystems
             }
 
             File.SetLastWriteTime(ConvertPathToInternal(path), time);
+
+            return new();
         }
 
         // ----------------------------------------------
@@ -414,8 +437,10 @@ namespace Zio.FileSystems
         // ----------------------------------------------
 
         /// <inheritdoc />
-        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        protected override async ValueTask<IEnumerable<UPath>> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
         {
+            List<UPath> list;
+
             // Special case for Windows as we need to provide list for:
             // - the root folder / (which should just return the /drive folder)
             // - the drive folders /drive/c, drive/e...etc.
@@ -424,6 +449,8 @@ namespace Zio.FileSystems
             {
                 if (IsWithinSpecialDirectory(path))
                 {
+                    list = new List<UPath>();
+
                     if (!SpecialDirectoryExists(path))
                     {
                         throw NewDirectoryNotFoundException(path);
@@ -436,18 +463,18 @@ namespace Zio.FileSystems
                     {
                         if (searchForDirectory)
                         {
-                            yield return PathDrivePrefixOnWindows;
+                            list.Add(PathDrivePrefixOnWindows);
 
                             if (searchOption == SearchOption.AllDirectories)
                             {
-                                foreach (var subPath in EnumeratePathsImpl(PathDrivePrefixOnWindows, searchPattern, searchOption, searchTarget))
+                                foreach (var subPath in await EnumeratePathsImpl(PathDrivePrefixOnWindows, searchPattern, searchOption, searchTarget))
                                 {
-                                    yield return subPath;
+                                    list.Add(subPath);
                                 }
                             }
                         }
 
-                        yield break;
+                        return list;
                     }
 
                     // When listing for /drive, return the list of drives available
@@ -469,7 +496,7 @@ namespace Zio.FileSystems
 
                                 if (searchForDirectory)
                                 {
-                                    yield return pathDrive;
+                                    list.Add(pathDrive);
                                 }
                             }
                         }
@@ -478,14 +505,14 @@ namespace Zio.FileSystems
                         {
                             foreach (var pathDrive in pathDrives)
                             {
-                                foreach (var subPath in EnumeratePathsImpl(pathDrive, searchPattern, searchOption, searchTarget))
+                                foreach (var subPath in await EnumeratePathsImpl(pathDrive, searchPattern, searchOption, searchTarget))
                                 {
-                                    yield return subPath;
+                                    list.Add(subPath);
                                 }
                             }
                         }
 
-                        yield break;
+                        return list;
                     }
                 }
             }
@@ -506,8 +533,10 @@ namespace Zio.FileSystems
                     break;
                 
                 default:
-                    yield break;
+                    return new UPath[0];
             }
+
+            var filteredResults = new List<UPath>();
 
             foreach (var subPath in results)
             {
@@ -516,14 +545,18 @@ namespace Zio.FileSystems
                 // not what we want. Check against the search pattern again to filter out those false results.
                 if (!IsOnWindows || search.Match(Path.GetFileName(subPath)))
                 {
-                    yield return ConvertPathFromInternal(subPath);
+                    filteredResults.Add(ConvertPathFromInternal(subPath));
                 }
             }
+
+            return filteredResults;
         }
 
         /// <inheritdoc />
-        protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
+        protected override async ValueTask<IEnumerable<FileSystemItem>> EnumerateItemsImpl(UPath path, SearchOption searchOption, SearchPredicate? searchPredicate)
         {
+            var list = new List<FileSystemItem>();
+
             if (IsOnWindows)
             {
                 if (IsWithinSpecialDirectory(path))
@@ -539,18 +572,18 @@ namespace Zio.FileSystems
                         var item = new FileSystemItem(this, PathDrivePrefixOnWindows, true);
                         if (searchPredicate == null || searchPredicate(ref item))
                         {
-                            yield return item;
+                            list.Add(item);
                         }
 
                         if (searchOption == SearchOption.AllDirectories)
                         {
-                            foreach (var subItem in EnumerateItemsImpl(PathDrivePrefixOnWindows, searchOption, searchPredicate))
+                            foreach (var subItem in await EnumerateItemsImpl(PathDrivePrefixOnWindows, searchOption, searchPredicate))
                             {
-                                yield return subItem;
+                                list.Add(subItem);
                             }
                         }
 
-                        yield break;
+                        return list;
                     }
 
                     // When listing for /drive, return the list of drives available
@@ -571,7 +604,7 @@ namespace Zio.FileSystems
                             var item = new FileSystemItem(this, pathDrive, true);
                             if (searchPredicate == null || searchPredicate(ref item))
                             {
-                                yield return item;
+                                list.Add(item);
                             }
                         }
 
@@ -579,19 +612,19 @@ namespace Zio.FileSystems
                         {
                             foreach (var pathDrive in pathDrives)
                             {
-                                foreach (var subItem in EnumerateItemsImpl(pathDrive, searchOption, searchPredicate))
+                                foreach (var subItem in await EnumerateItemsImpl(pathDrive, searchOption, searchPredicate))
                                 {
-                                    yield return subItem;
+                                    list.Add(subItem);
                                 }
                             }
                         }
 
-                        yield break;
+                        return list;
                     }
                 }
             }
             var pathOnDisk = ConvertPathToInternal(path);
-            if (!Directory.Exists(pathOnDisk)) yield break;
+            if (!Directory.Exists(pathOnDisk)) return list;
 
 #if NETSTANDARD2_1
             var enumerable = new FileSystemEnumerable<FileSystemItem>(pathOnDisk, TransformToFileSystemItem, searchOption == SearchOption.AllDirectories ? CompatibleRecursive : Compatible);
@@ -601,7 +634,7 @@ namespace Zio.FileSystems
                 var localItem = item;
                 if (searchPredicate == null || searchPredicate(ref localItem))
                 {
-                    yield return localItem;
+                    list.Add(localItem);
                 }
             }
 #else
@@ -623,10 +656,11 @@ namespace Zio.FileSystems
                 };
                 if (searchPredicate == null || searchPredicate(ref item))
                 {
-                    yield return item;
+                    list.Add(item);
                 }
             }
 #endif
+            return list;
         }
 
 #if NETSTANDARD2_1

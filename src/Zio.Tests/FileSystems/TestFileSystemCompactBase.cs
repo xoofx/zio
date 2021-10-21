@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 using Zio;
 using Zio.FileSystems;
@@ -23,83 +24,83 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void TestDirectory()
+        public async ValueTask TestDirectory()
         {
-            Assert.True(fs.DirectoryExists("/"));
-            Assert.False(fs.DirectoryExists(null));
+            Assert.True(await fs.DirectoryExists("/"));
+            Assert.False(await fs.DirectoryExists(null));
 
             // Test CreateDirectory
-            fs.CreateDirectory("/test");
-            Assert.True(fs.DirectoryExists("/test"));
-            Assert.False(fs.DirectoryExists("/test2"));
+            await fs.CreateDirectory("/test");
+            Assert.True(await fs.DirectoryExists("/test"));
+            Assert.False(await fs.DirectoryExists("/test2"));
 
             // Test CreateDirectory (sub folders)
-            fs.CreateDirectory("/test/test1/test2/test3");
-            Assert.True(fs.DirectoryExists("/test/test1/test2/test3"));
-            Assert.True(fs.DirectoryExists("/test/test1/test2"));
-            Assert.True(fs.DirectoryExists("/test/test1"));
-            Assert.True(fs.DirectoryExists("/test"));
+            await fs.CreateDirectory("/test/test1/test2/test3");
+            Assert.True(await fs.DirectoryExists("/test/test1/test2/test3"));
+            Assert.True(await fs.DirectoryExists("/test/test1/test2"));
+            Assert.True(await fs.DirectoryExists("/test/test1"));
+            Assert.True(await fs.DirectoryExists("/test"));
 
             // Test DeleteDirectory
-            fs.DeleteDirectory("/test/test1/test2/test3", false);
-            Assert.False(fs.DirectoryExists("/test/test1/test2/test3"));
-            Assert.True(fs.DirectoryExists("/test/test1/test2"));
-            Assert.True(fs.DirectoryExists("/test/test1"));
-            Assert.True(fs.DirectoryExists("/test"));
+            await fs.DeleteDirectory("/test/test1/test2/test3", false);
+            Assert.False(await fs.DirectoryExists("/test/test1/test2/test3"));
+            Assert.True(await fs.DirectoryExists("/test/test1/test2"));
+            Assert.True(await fs.DirectoryExists("/test/test1"));
+            Assert.True(await fs.DirectoryExists("/test"));
 
             // Test MoveDirectory
-            fs.MoveDirectory("/test", "/test2");
-            Assert.True(fs.DirectoryExists("/test2/test1/test2"));
-            Assert.True(fs.DirectoryExists("/test2/test1"));
-            Assert.True(fs.DirectoryExists("/test2"));
+            await fs.MoveDirectory("/test", "/test2");
+            Assert.True(await fs.DirectoryExists("/test2/test1/test2"));
+            Assert.True(await fs.DirectoryExists("/test2/test1"));
+            Assert.True(await fs.DirectoryExists("/test2"));
 
             // Test MoveDirectory to sub directory
-            fs.CreateDirectory("/testsub");
-            Assert.True(fs.DirectoryExists("/testsub"));
-            fs.MoveDirectory("/test2", "/testsub/testx");
-            Assert.False(fs.DirectoryExists("/test2"));
-            Assert.True(fs.DirectoryExists("/testsub/testx/test1/test2"));
-            Assert.True(fs.DirectoryExists("/testsub/testx/test1"));
-            Assert.True(fs.DirectoryExists("/testsub/testx"));
+            await fs.CreateDirectory("/testsub");
+            Assert.True(await fs.DirectoryExists("/testsub"));
+            await fs.MoveDirectory("/test2", "/testsub/testx");
+            Assert.False(await fs.DirectoryExists("/test2"));
+            Assert.True(await fs.DirectoryExists("/testsub/testx/test1/test2"));
+            Assert.True(await fs.DirectoryExists("/testsub/testx/test1"));
+            Assert.True(await fs.DirectoryExists("/testsub/testx"));
 
             // Test DeleteDirectory - recursive
-            fs.DeleteDirectory("/testsub", true);
-            Assert.False(fs.DirectoryExists("/testsub/testx/test1/test2"));
-            Assert.False(fs.DirectoryExists("/testsub/testx/test1"));
-            Assert.False(fs.DirectoryExists("/testsub/testx"));
-            Assert.False(fs.DirectoryExists("/testsub"));
+            await fs.DeleteDirectory("/testsub", true);
+            Assert.False(await fs.DirectoryExists("/testsub/testx/test1/test2"));
+            Assert.False(await fs.DirectoryExists("/testsub/testx/test1"));
+            Assert.False(await fs.DirectoryExists("/testsub/testx"));
+            Assert.False(await fs.DirectoryExists("/testsub"));
         }
 
         [Fact]
-        public void TestDirectoryExceptions()
+        public async ValueTask TestDirectoryExceptions()
         {
-            Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/dir", true));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await fs.DeleteDirectory("/dir", true));
 
-            Assert.Throws<DirectoryNotFoundException>(() => fs.MoveDirectory("/dir1", "/dir2"));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await fs.MoveDirectory("/dir1", "/dir2"));
 
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/"));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await fs.CreateDirectory("/"));
 
-            fs.CreateDirectory("/dir1");
-            Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteFile("/dir1"));
-            Assert.Throws<IOException>(() => fs.MoveDirectory("/dir1", "/dir1"));
+            await fs.CreateDirectory("/dir1");
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await fs.DeleteFile("/dir1"));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.MoveDirectory("/dir1", "/dir1"));
 
-            fs.WriteAllText("/toto.txt", "test");
-            Assert.Throws<IOException>(() => fs.CreateDirectory("/toto.txt"));
-            Assert.Throws<IOException>(() => fs.DeleteDirectory("/toto.txt", true));
-            Assert.Throws<IOException>(() => fs.MoveDirectory("/toto.txt", "/test"));
+            await fs.WriteAllText("/toto.txt", "test");
+            await Assert.ThrowsAsync<IOException>(async () => await fs.CreateDirectory("/toto.txt"));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.DeleteDirectory("/toto.txt", true));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.MoveDirectory("/toto.txt", "/test"));
 
-            fs.CreateDirectory("/dir2");
-            Assert.Throws<IOException>(() => fs.MoveDirectory("/dir1", "/dir2"));
+            await fs.CreateDirectory("/dir2");
+            await Assert.ThrowsAsync<IOException>(async () => await fs.MoveDirectory("/dir1", "/dir2"));
 
-            fs.SetAttributes("/dir1", FileAttributes.Directory | FileAttributes.ReadOnly);
-            Assert.Throws<IOException>(() => fs.DeleteDirectory("/dir1", true));
+            await fs.SetAttributes("/dir1", FileAttributes.Directory | FileAttributes.ReadOnly);
+            await Assert.ThrowsAsync<IOException>(async () => await fs.DeleteDirectory("/dir1", true));
         }
 
         [Fact]
-        public void TestFile()
+        public async ValueTask TestFile()
         {
             // Test CreateFile/OpenFile
-            var stream = fs.CreateFile("/toto.txt");
+            var stream = await fs.CreateFile("/toto.txt");
             var writer = new StreamWriter(stream);
             var originalContent = "This is the content";
             writer.Write(originalContent);
@@ -107,259 +108,259 @@ namespace Zio.Tests.FileSystems
             stream.Dispose();
 
             // Test FileExists
-            Assert.False(fs.FileExists(null));
-            Assert.False(fs.FileExists("/titi.txt"));
-            Assert.True(fs.FileExists("/toto.txt"));
+            Assert.False(await fs.FileExists(null));
+            Assert.False(await fs.FileExists("/titi.txt"));
+            Assert.True(await fs.FileExists("/toto.txt"));
 
             // ReadAllText
-            var content = fs.ReadAllText("/toto.txt");
+            var content = await fs.ReadAllText("/toto.txt");
             Assert.Equal(originalContent, content);
 
             // sleep for creation time comparison
             Thread.Sleep(16);
 
             // Test CopyFile
-            fs.CopyFile("/toto.txt", "/titi.txt", true);
-            Assert.True(fs.FileExists("/toto.txt"));
-            Assert.True(fs.FileExists("/titi.txt"));
-            content = fs.ReadAllText("/titi.txt");
+            await fs.CopyFile("/toto.txt", "/titi.txt", true);
+            Assert.True(await fs.FileExists("/toto.txt"));
+            Assert.True(await fs.FileExists("/titi.txt"));
+            content = await fs.ReadAllText("/titi.txt");
             Assert.Equal(originalContent, content);
             
             // Test Attributes/Times
-            Assert.True(fs.GetFileLength("/toto.txt") > 0);
-            Assert.Equal(fs.GetFileLength("/toto.txt"), fs.GetFileLength("/titi.txt"));
-            Assert.Equal(fs.GetAttributes("/toto.txt"), fs.GetAttributes("/titi.txt"));
-            Assert.NotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
+            Assert.True(await fs.GetFileLength("/toto.txt") > 0);
+            Assert.Equal(await fs.GetFileLength("/toto.txt"), await fs.GetFileLength("/titi.txt"));
+            Assert.Equal(await fs.GetAttributes("/toto.txt"), await fs.GetAttributes("/titi.txt"));
+            Assert.NotEqual(await fs.GetCreationTime("/toto.txt"), await fs.GetCreationTime("/titi.txt"));
             // Because we read titi.txt just before, access time must be different
             // Following test is disabled as it seems unstable with NTFS?
             // Assert.NotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
-            Assert.Equal(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
+            Assert.Equal(await fs.GetLastWriteTime("/toto.txt"), await fs.GetLastWriteTime("/titi.txt"));
 
             var now = DateTime.Now + TimeSpan.FromSeconds(10);
             var now1 = DateTime.Now + TimeSpan.FromSeconds(11);
             var now2 = DateTime.Now + TimeSpan.FromSeconds(12);
-            fs.SetCreationTime("/toto.txt", now);
-            fs.SetLastAccessTime("/toto.txt", now1);
-            fs.SetLastWriteTime("/toto.txt", now2);
-            Assert.Equal(now, fs.GetCreationTime("/toto.txt"));
-            Assert.Equal(now1, fs.GetLastAccessTime("/toto.txt"));
-            Assert.Equal(now2, fs.GetLastWriteTime("/toto.txt"));
+            await fs.SetCreationTime("/toto.txt", now);
+            await fs.SetLastAccessTime("/toto.txt", now1);
+            await fs.SetLastWriteTime("/toto.txt", now2);
+            Assert.Equal(now, await fs.GetCreationTime("/toto.txt"));
+            Assert.Equal(now1, await fs.GetLastAccessTime("/toto.txt"));
+            Assert.Equal(now2, await fs.GetLastWriteTime("/toto.txt"));
 
-            Assert.NotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
-            Assert.NotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
-            Assert.NotEqual(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
+            Assert.NotEqual(await fs.GetCreationTime("/toto.txt"), await fs.GetCreationTime("/titi.txt"));
+            Assert.NotEqual(await fs.GetLastAccessTime("/toto.txt"), await fs.GetLastAccessTime("/titi.txt"));
+            Assert.NotEqual(await fs.GetLastWriteTime("/toto.txt"), await fs.GetLastWriteTime("/titi.txt"));
 
             // Test MoveFile
-            fs.MoveFile("/toto.txt", "/tata.txt");
-            Assert.False(fs.FileExists("/toto.txt"));
-            Assert.True(fs.FileExists("/tata.txt"));
-            Assert.True(fs.FileExists("/titi.txt"));
-            content = fs.ReadAllText("/tata.txt");
+            await fs.MoveFile("/toto.txt", "/tata.txt");
+            Assert.False(await fs.FileExists("/toto.txt"));
+            Assert.True(await fs.FileExists("/tata.txt"));
+            Assert.True(await fs.FileExists("/titi.txt"));
+            content = await fs.ReadAllText("/tata.txt");
             Assert.Equal(originalContent, content);
 
             // Test Enumerate file
-            var files = fs.EnumerateFiles("/").Select(p => p.FullName).ToList();
+            var files = (await fs.EnumerateFiles("/")).Select(p => p.FullName).ToList();
             files.Sort();
             Assert.Equal(new List<string>() {"/tata.txt", "/titi.txt"}, files);
 
-            var dirs = fs.EnumerateDirectories("/").Select(p => p.FullName).ToList();
+            var dirs = (await fs.EnumerateDirectories("/")).Select(p => p.FullName).ToList();
             Assert.Empty(dirs);
 
             // Check ReplaceFile
             var originalContent2 = "this is a content2";
-            fs.WriteAllText("/tata.txt", originalContent2);
-            fs.ReplaceFile("/tata.txt", "/titi.txt", "/titi.bak.txt", true);
-            Assert.False(fs.FileExists("/tata.txt"));
-            Assert.True(fs.FileExists("/titi.txt"));
-            Assert.True(fs.FileExists("/titi.bak.txt"));
-            content = fs.ReadAllText("/titi.txt");
+            await fs.WriteAllText("/tata.txt", originalContent2);
+            await fs.ReplaceFile("/tata.txt", "/titi.txt", "/titi.bak.txt", true);
+            Assert.False(await fs.FileExists("/tata.txt"));
+            Assert.True(await fs.FileExists("/titi.txt"));
+            Assert.True(await fs.FileExists("/titi.bak.txt"));
+            content = await fs.ReadAllText("/titi.txt");
             Assert.Equal(originalContent2, content);
-            content = fs.ReadAllText("/titi.bak.txt");
+            content = await fs.ReadAllText("/titi.bak.txt");
             Assert.Equal(originalContent, content);
 
             // Check File ReadOnly
-            fs.SetAttributes("/titi.txt", FileAttributes.ReadOnly);
-            Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteFile("/titi.txt"));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CopyFile("/titi.bak.txt", "/titi.txt", true));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.OpenFile("/titi.txt", FileMode.Open, FileAccess.ReadWrite));
-            fs.SetAttributes("/titi.txt", FileAttributes.Normal);
+            await fs.SetAttributes("/titi.txt", FileAttributes.ReadOnly);
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await fs.DeleteFile("/titi.txt"));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await fs.CopyFile("/titi.bak.txt", "/titi.txt", true));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await fs.OpenFile("/titi.txt", FileMode.Open, FileAccess.ReadWrite));
+            await fs.SetAttributes("/titi.txt", FileAttributes.Normal);
 
             // Delete File
-            fs.DeleteFile("/titi.txt");
-            Assert.False(fs.FileExists("/titi.txt"));
-            fs.DeleteFile("/titi.bak.txt");
-            Assert.False(fs.FileExists("/titi.bak.txt"));
+            await fs.DeleteFile("/titi.txt");
+            Assert.False(await fs.FileExists("/titi.txt"));
+            await fs.DeleteFile("/titi.bak.txt");
+            Assert.False(await fs.FileExists("/titi.bak.txt"));
         }
 
         [Fact]
-        public void TestMoveFileDifferentDirectory()
+        public async ValueTask TestMoveFileDifferentDirectory()
         {
-            fs.WriteAllText("/toto.txt", "content");
+            await fs.WriteAllText("/toto.txt", "content");
 
-            fs.CreateDirectory("/dir");
+            await fs.CreateDirectory("/dir");
 
-            fs.MoveFile("/toto.txt", "/dir/titi.txt");
+            await fs.MoveFile("/toto.txt", "/dir/titi.txt");
 
-            Assert.False(fs.FileExists("/toto.txt"));
-            Assert.True(fs.FileExists("/dir/titi.txt"));
+            Assert.False(await fs.FileExists("/toto.txt"));
+            Assert.True(await fs.FileExists("/dir/titi.txt"));
 
-            Assert.Equal("content", fs.ReadAllText("/dir/titi.txt"));
+            Assert.Equal("content", await fs.ReadAllText("/dir/titi.txt"));
         }
 
         [Fact]
-        public void TestReplaceFileDifferentDirectory()
+        public async ValueTask TestReplaceFileDifferentDirectory()
         {
-            fs.WriteAllText("/toto.txt", "content");
+            await fs.WriteAllText("/toto.txt", "content");
 
-            fs.CreateDirectory("/dir");
-            fs.WriteAllText("/dir/tata.txt", "content2");
+            await fs.CreateDirectory("/dir");
+            await fs.WriteAllText("/dir/tata.txt", "content2");
 
-            fs.CreateDirectory("/dir2");
+            await fs.CreateDirectory("/dir2");
 
-            fs.ReplaceFile("/toto.txt", "/dir/tata.txt", "/dir2/titi.txt", true);
-            Assert.True(fs.FileExists("/dir/tata.txt"));
-            Assert.True(fs.FileExists("/dir2/titi.txt"));
+            await fs.ReplaceFile("/toto.txt", "/dir/tata.txt", "/dir2/titi.txt", true);
+            Assert.True(await fs.FileExists("/dir/tata.txt"));
+            Assert.True(await fs.FileExists("/dir2/titi.txt"));
 
-            Assert.Equal("content", fs.ReadAllText("/dir/tata.txt"));
-            Assert.Equal("content2", fs.ReadAllText("/dir2/titi.txt"));
+            Assert.Equal("content", await fs.ReadAllText("/dir/tata.txt"));
+            Assert.Equal("content2", await fs.ReadAllText("/dir2/titi.txt"));
 
-            fs.ReplaceFile("/dir/tata.txt", "/dir2/titi.txt", "/titi.txt", true);
-            Assert.False(fs.FileExists("/dir/tata.txt"));
-            Assert.True(fs.FileExists("/dir2/titi.txt"));
-            Assert.True(fs.FileExists("/titi.txt"));
+            await fs.ReplaceFile("/dir/tata.txt", "/dir2/titi.txt", "/titi.txt", true);
+            Assert.False(await fs.FileExists("/dir/tata.txt"));
+            Assert.True(await fs.FileExists("/dir2/titi.txt"));
+            Assert.True(await fs.FileExists("/titi.txt"));
         }
 
         [Fact]
-        public void TestOpenFileAppend()
+        public async ValueTask TestOpenFileAppend()
         {
-            fs.AppendAllText("/toto.txt", "content");
-            Assert.True(fs.FileExists("/toto.txt"));
-            Assert.Equal("content", fs.ReadAllText("/toto.txt"));
+            await fs.AppendAllText("/toto.txt", "content");
+            Assert.True(await fs.FileExists("/toto.txt"));
+            Assert.Equal("content", await fs.ReadAllText("/toto.txt"));
 
-            fs.AppendAllText("/toto.txt", "content");
-            Assert.True(fs.FileExists("/toto.txt"));
-            Assert.Equal("contentcontent", fs.ReadAllText("/toto.txt"));
+            await fs.AppendAllText("/toto.txt", "content");
+            Assert.True(await fs.FileExists("/toto.txt"));
+            Assert.Equal("contentcontent", await fs.ReadAllText("/toto.txt"));
         }
 
         [Fact]
-        public void TestOpenFileTruncate()
+        public async ValueTask TestOpenFileTruncate()
         {
-            fs.WriteAllText("/toto.txt", "content");
-            Assert.True(fs.FileExists("/toto.txt"));
-            Assert.Equal("content", fs.ReadAllText("/toto.txt"));
+            await fs.WriteAllText("/toto.txt", "content");
+            Assert.True(await fs.FileExists("/toto.txt"));
+            Assert.Equal("content", await fs.ReadAllText("/toto.txt"));
 
-            var stream = fs.OpenFile("/toto.txt", FileMode.Truncate, FileAccess.Write);
+            var stream = await fs.OpenFile("/toto.txt", FileMode.Truncate, FileAccess.Write);
             stream.Dispose();
-            Assert.Equal<long>(0, fs.GetFileLength("/toto.txt"));
-            Assert.Equal("", fs.ReadAllText("/toto.txt"));
+            Assert.Equal<long>(0, await fs.GetFileLength("/toto.txt"));
+            Assert.Equal("", await fs.ReadAllText("/toto.txt"));
         }
 
         [Fact]
-        public void TestFileExceptions()
+        public async ValueTask TestFileExceptions()
         {
-            fs.CreateDirectory("/dir1");
+            await fs.CreateDirectory("/dir1");
 
-            Assert.Throws<FileNotFoundException>(() => fs.GetFileLength("/toto.txt"));
-            Assert.Throws<FileNotFoundException>(() => fs.CopyFile("/toto.txt", "/toto.bak.txt", true));
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CopyFile("/dir1", "/toto.bak.txt", true));
-            Assert.Throws<FileNotFoundException>(() => fs.MoveFile("/toto.txt", "/titi.txt"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.GetFileLength("/toto.txt"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.CopyFile("/toto.txt", "/toto.bak.txt", true));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await fs.CopyFile("/dir1", "/toto.bak.txt", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.MoveFile("/toto.txt", "/titi.txt"));
             // If the file to be deleted does not exist, no exception is thrown.
-            fs.DeleteFile("/toto.txt");
-            Assert.Throws<FileNotFoundException>(() => fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read));
-            Assert.Throws<FileNotFoundException>(() => fs.OpenFile("/toto.txt", FileMode.Truncate, FileAccess.Write));
+            await fs.DeleteFile("/toto.txt");
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.OpenFile("/toto.txt", FileMode.Truncate, FileAccess.Write));
 
-            Assert.Throws<FileNotFoundException>(() => fs.GetFileLength("/dir1/toto.txt"));
-            Assert.Throws<FileNotFoundException>(() => fs.CopyFile("/dir1/toto.txt", "/toto.bak.txt", true));
-            Assert.Throws<FileNotFoundException>(() => fs.MoveFile("/dir1/toto.txt", "/titi.txt"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.GetFileLength("/dir1/toto.txt"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.CopyFile("/dir1/toto.txt", "/toto.bak.txt", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.MoveFile("/dir1/toto.txt", "/titi.txt"));
             // If the file to be deleted does not exist, no exception is thrown.
-            fs.DeleteFile("/dir1/toto.txt");
-            Assert.Throws<FileNotFoundException>(() => fs.OpenFile("/dir1/toto.txt", FileMode.Open, FileAccess.Read));
+            await fs.DeleteFile("/dir1/toto.txt");
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.OpenFile("/dir1/toto.txt", FileMode.Open, FileAccess.Read));
 
-            fs.WriteAllText("/toto.txt", "yo");
-            fs.CopyFile("/toto.txt", "/titi.txt", false);
-            fs.CopyFile("/toto.txt", "/titi.txt", true);
+            await fs.WriteAllText("/toto.txt", "yo");
+            await fs.CopyFile("/toto.txt", "/titi.txt", false);
+            await fs.CopyFile("/toto.txt", "/titi.txt", true);
 
-            Assert.Throws<FileNotFoundException>(() => fs.GetFileLength("/dir1"));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.GetFileLength("/dir1"));
 
             var defaultTime = new DateTime(1601, 01, 01, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
-            Assert.Equal(defaultTime,fs.GetCreationTime("/dest"));
-            Assert.Equal(defaultTime, fs.GetLastWriteTime("/dest"));
-            Assert.Equal(defaultTime, fs.GetLastAccessTime("/dest"));
+            Assert.Equal(defaultTime, await fs.GetCreationTime("/dest"));
+            Assert.Equal(defaultTime, await fs.GetLastWriteTime("/dest"));
+            Assert.Equal(defaultTime, await fs.GetLastAccessTime("/dest"));
 
-            using (var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var stream1 = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                Assert.Throws<IOException>(() =>
+                await Assert.ThrowsAsync<IOException>(async () =>
                 {
-                    using (var stream2 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+                    using (var stream2 = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
                     {
                     }
                 });
             }
 
-            Assert.Throws<UnauthorizedAccessException>(() => fs.OpenFile("/dir1", FileMode.Open, FileAccess.Read));
-            Assert.Throws<DirectoryNotFoundException>(() => fs.OpenFile("/dir/toto.txt", FileMode.Open, FileAccess.Read));
-            Assert.Throws<DirectoryNotFoundException>(() => fs.CopyFile("/toto.txt", "/dest/toto.txt", true));
-            Assert.Throws<IOException>(() => fs.CopyFile("/toto.txt", "/titi.txt", false));
-            Assert.Throws<IOException>(() => fs.CopyFile("/toto.txt", "/dir1", true));
-            Assert.Throws<DirectoryNotFoundException>(() => fs.MoveFile("/toto.txt", "/dest/toto.txt"));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await fs.OpenFile("/dir1", FileMode.Open, FileAccess.Read));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await fs.OpenFile("/dir/toto.txt", FileMode.Open, FileAccess.Read));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await fs.CopyFile("/toto.txt", "/dest/toto.txt", true));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.CopyFile("/toto.txt", "/titi.txt", false));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.CopyFile("/toto.txt", "/dir1", true));
+            await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await fs.MoveFile("/toto.txt", "/dest/toto.txt"));
 
-            fs.WriteAllText("/titi.txt", "yo2");
-            Assert.Throws<IOException>(() => fs.MoveFile("/toto.txt", "/titi.txt"));
+            await fs.WriteAllText("/titi.txt", "yo2");
+            await Assert.ThrowsAsync<IOException>(async () => await fs.MoveFile("/toto.txt", "/titi.txt"));
 
-            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/1.txt", default(UPath), true));
-            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/1.txt", true));
-            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/2.txt", true));
-            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/1.txt", "/2.txt", "/3.txt", true));
-            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/dir/2.txt", "/3.txt", true));
-            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/2.txt", "/3.txt", true));
-            Assert.Throws<FileNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/2.txt", "/toto.txt", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async() => await fs.ReplaceFile("/1.txt", "/1.txt", default(UPath), true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async() => await fs.ReplaceFile("/1.txt", "/2.txt", "/1.txt", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async() => await fs.ReplaceFile("/1.txt", "/2.txt", "/2.txt", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async() => await fs.ReplaceFile("/1.txt", "/2.txt", "/3.txt", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async() => await fs.ReplaceFile("/toto.txt", "/dir/2.txt", "/3.txt", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async() => await fs.ReplaceFile("/toto.txt", "/2.txt", "/3.txt", true));
+            await Assert.ThrowsAsync<FileNotFoundException>(async () => await fs.ReplaceFile("/toto.txt", "/2.txt", "/toto.txt", true));
 
             // Not same behavior in Physical vs Memory
             if (fs is MemoryFileSystem)
             {
-                Assert.Throws<DirectoryNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/titi.txt", "/dir/3.txt", true));
+                await Assert.ThrowsAsync<DirectoryNotFoundException>(async () => await fs.ReplaceFile("/toto.txt", "/titi.txt", "/dir/3.txt", true));
 
-                fs.WriteAllText("/tata.txt", "yo3");
-                Assert.True(fs.FileExists("/tata.txt"));
-                fs.ReplaceFile("/toto.txt", "/titi.txt", "/tata.txt", true);
+                await fs.WriteAllText("/tata.txt", "yo3");
+                Assert.True(await fs.FileExists("/tata.txt"));
+                await fs.ReplaceFile("/toto.txt", "/titi.txt", "/tata.txt", true);
                 // TODO: check that tata.txt was correctly removed
             }
         }
 
         [Fact]
-        public void TestDirectoryDeleteAndOpenFile()
+        public async ValueTask TestDirectoryDeleteAndOpenFile()
         {
-            fs.CreateDirectory("/dir");
-            fs.WriteAllText("/dir/toto.txt", "content");
-            var stream = fs.OpenFile("/dir/toto.txt", FileMode.Open, FileAccess.Read);
+            await fs.CreateDirectory("/dir");
+            await fs.WriteAllText("/dir/toto.txt", "content");
+            var stream = await fs.OpenFile("/dir/toto.txt", FileMode.Open, FileAccess.Read);
 
-            Assert.Throws<IOException>(() => fs.DeleteFile("/dir/toto.txt"));
-            Assert.Throws<IOException>(() => fs.DeleteDirectory("/dir", true));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.DeleteFile("/dir/toto.txt"));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.DeleteDirectory("/dir", true));
 
             stream.Dispose();
-            fs.SetAttributes("/dir/toto.txt", FileAttributes.ReadOnly);
-            Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteDirectory("/dir", true));
-            fs.SetAttributes("/dir/toto.txt", FileAttributes.Normal);
-            fs.DeleteDirectory("/dir", true);
+            await fs.SetAttributes("/dir/toto.txt", FileAttributes.ReadOnly);
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await fs.DeleteDirectory("/dir", true));
+            await fs.SetAttributes("/dir/toto.txt", FileAttributes.Normal);
+            await fs.DeleteDirectory("/dir", true);
 
-            var entries = fs.EnumeratePaths("/").ToList();
+            var entries = (await fs.EnumeratePaths("/")).ToList();
             Assert.Empty(entries);
         }
 
         [Fact]
-        public void TestOpenFileMultipleRead()
+        public async ValueTask TestOpenFileMultipleRead()
         {
-            fs.WriteAllText("/toto.txt", "content");
+            await fs.WriteAllText("/toto.txt", "content");
 
-            Assert.True(fs.FileExists("/toto.txt"));
+            Assert.True(await fs.FileExists("/toto.txt"));
 
-            using (var tmp = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read))
+            using (var tmp = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read))
             {
-                 Assert.Throws<IOException>(() => fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read));
+                 await Assert.ThrowsAsync<IOException>(async () => await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read));
             }
 
-            var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
-            var stream2 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
+            var stream1 = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
+            var stream2 = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
 
             stream1.ReadByte();
             Assert.Equal<long>(1, stream1.Position);
@@ -372,36 +373,36 @@ namespace Zio.Tests.FileSystems
             stream2.Dispose();
 
             // We try to write back on the same file after closing
-            fs.WriteAllText("/toto.txt", "content2");
+            await fs.WriteAllText("/toto.txt", "content2");
         }
 
         [Fact]
-        public void TestOpenFileReadAndWriteFail()
+        public async ValueTask TestOpenFileReadAndWriteFail()
         {
-            fs.WriteAllText("/toto.txt", "content");
+            await fs.WriteAllText("/toto.txt", "content");
 
-            Assert.True(fs.FileExists("/toto.txt"));
+            Assert.True(await fs.FileExists("/toto.txt"));
 
-            var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read);
+            var stream1 = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read);
 
             stream1.ReadByte();
             Assert.Equal<long>(1, stream1.Position);
 
             // We try to write back on the same file before closing
-            Assert.Throws<IOException>(() => fs.WriteAllText("/toto.txt", "content2"));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.WriteAllText("/toto.txt", "content2"));
 
             // Make sure that checking for a file exists or directory exists doesn't throw an exception "being used"
-            Assert.True(fs.FileExists("/toto.txt"));
-            Assert.False(fs.DirectoryExists("/toto.txt"));
+            Assert.True(await fs.FileExists("/toto.txt"));
+            Assert.False(await fs.DirectoryExists("/toto.txt"));
 
             stream1.Dispose();
         }
 
         [Fact]
-        public void TestOpenFileReadAndWriteShared()
+        public async ValueTask TestOpenFileReadAndWriteShared()
         {
-            using (var stream1 = fs.OpenFile("/toto.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
-            using (var stream2 = fs.OpenFile("/toto.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+            using (var stream1 = await fs.OpenFile("/toto.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+            using (var stream2 = await fs.OpenFile("/toto.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
                 var buffer = Encoding.UTF8.GetBytes("abc");
                 stream1.Write(buffer, 0, buffer.Length);
@@ -413,55 +414,55 @@ namespace Zio.Tests.FileSystems
                 stream2.Flush();
             }
 
-            var content = fs.ReadAllText("/toto.txt");
+            var content = await fs.ReadAllText("/toto.txt");
             Assert.Equal("adc", content);
         }
 
         [Fact]
-        public void TestOpenFileReadAndWriteShared2()
+        public async ValueTask TestOpenFileReadAndWriteShared2()
         {
-            fs.WriteAllText("/toto.txt", "content");
+            await fs.WriteAllText("/toto.txt", "content");
             // No exceptions
-            using (var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var stream1 = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
-                using (var stream2 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var stream2 = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                 }
             }
-            var content = fs.ReadAllText("/toto.txt");
+            var content = await fs.ReadAllText("/toto.txt");
             Assert.Equal("content", content);
         }
 
         [Fact]
-        public void TestCopyFileToSameFile()
+        public async ValueTask TestCopyFileToSameFile()
         {
-            fs.WriteAllText("/toto.txt", "content");
-            Assert.Throws<IOException>(() => fs.CopyFile("/toto.txt", "/toto.txt", true));
-            Assert.Throws<IOException>(() => fs.CopyFile("/toto.txt", "/toto.txt", false));
+            await fs.WriteAllText("/toto.txt", "content");
+            await Assert.ThrowsAsync<IOException>(async () => await fs.CopyFile("/toto.txt", "/toto.txt", true));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.CopyFile("/toto.txt", "/toto.txt", false));
 
-            fs.CreateDirectory("/dir");
+            await fs.CreateDirectory("/dir");
 
-            fs.WriteAllText("/dir/toto.txt", "content");
-            Assert.Throws<IOException>(() => fs.CopyFile("/dir/toto.txt", "/dir/toto.txt", true));
-            Assert.Throws<IOException>(() => fs.CopyFile("/dir/toto.txt", "/dir/toto.txt", false));
+            await fs.WriteAllText("/dir/toto.txt", "content");
+            await Assert.ThrowsAsync<IOException>(async () => await fs.CopyFile("/dir/toto.txt", "/dir/toto.txt", true));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.CopyFile("/dir/toto.txt", "/dir/toto.txt", false));
         }
 
         [Fact]
-        public void TestEnumeratePaths()
+        public async ValueTask TestEnumeratePaths()
         {
-            fs.CreateDirectory("/dir1/a/b");
-            fs.CreateDirectory("/dir1/a1");
-            fs.CreateDirectory("/dir2/c");
-            fs.CreateDirectory("/dir3");
+            await fs.CreateDirectory("/dir1/a/b");
+            await fs.CreateDirectory("/dir1/a1");
+            await fs.CreateDirectory("/dir2/c");
+            await fs.CreateDirectory("/dir3");
 
-            fs.WriteAllText("/dir1/a/file10.txt", "content10");
-            fs.WriteAllText("/dir1/a1/file11.txt", "content11");
-            fs.WriteAllText("/dir2/file20.txt", "content20");
+            await fs.WriteAllText("/dir1/a/file10.txt", "content10");
+            await fs.WriteAllText("/dir1/a1/file11.txt", "content11");
+            await fs.WriteAllText("/dir2/file20.txt", "content20");
 
-            fs.WriteAllText("/file01.txt", "content1");
-            fs.WriteAllText("/file02.txt", "content2");
+            await fs.WriteAllText("/file01.txt", "content1");
+            await fs.WriteAllText("/file02.txt", "content2");
 
-            var entries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList<UPath>();
+            var entries = (await fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both)).ToList<UPath>();
             entries.Sort();
 
             Assert.Equal(new List<UPath>()
@@ -482,7 +483,7 @@ namespace Zio.Tests.FileSystems
                 , entries);
 
 
-            var folders = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList<UPath>();
+            var folders = (await fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory)).ToList<UPath>();
             folders.Sort();
 
             Assert.Equal(new List<UPath>()
@@ -498,7 +499,7 @@ namespace Zio.Tests.FileSystems
                 , folders);
 
 
-            var files = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
+            var files = (await fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File)).ToList<UPath>();
             files.Sort();
 
             Assert.Equal(new List<UPath>()
@@ -512,7 +513,7 @@ namespace Zio.Tests.FileSystems
                 , files);
 
 
-            folders = fs.EnumeratePaths("/dir1", "a", SearchOption.AllDirectories, SearchTarget.Directory).ToList<UPath>();
+            folders = (await fs.EnumeratePaths("/dir1", "a", SearchOption.AllDirectories, SearchTarget.Directory)).ToList<UPath>();
             folders.Sort();
             Assert.Equal(new List<UPath>()
                 {
@@ -521,7 +522,7 @@ namespace Zio.Tests.FileSystems
                 , folders);
 
 
-            files = fs.EnumeratePaths("/dir1", "file1?.txt", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
+            files = (await fs.EnumeratePaths("/dir1", "file1?.txt", SearchOption.AllDirectories, SearchTarget.File)).ToList<UPath>();
             files.Sort();
 
             Assert.Equal(new List<UPath>()
@@ -531,7 +532,7 @@ namespace Zio.Tests.FileSystems
                 }
                 , files);
 
-            files = fs.EnumeratePaths("/", "file?0.txt", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
+            files = (await fs.EnumeratePaths("/", "file?0.txt", SearchOption.AllDirectories, SearchTarget.File)).ToList<UPath>();
             files.Sort();
 
             Assert.Equal(new List<UPath>()
@@ -543,45 +544,45 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void TestMultithreaded()
+        public async ValueTask TestMultithreaded()
         {
-            fs.CreateDirectory("/dir1");
-            fs.WriteAllText("/toto.txt", "content");
+            await fs.CreateDirectory("/dir1");
+            await fs.WriteAllText("/toto.txt", "content");
 
             const int CountTest = 200;
 
-            var thread1 = new Thread(() =>
+            var thread1 = new Thread(async () =>
             {
                 for (int i = 0; i < CountTest; i++)
                 {
-                    fs.CopyFile("/toto.txt", "/titi.txt", true);
-                    fs.MoveFile("/titi.txt", "/tata.txt");
-                    fs.MoveFile("/tata.txt", "/dir1/tata.txt");
+                    await fs.CopyFile("/toto.txt", "/titi.txt", true);
+                    await fs.MoveFile("/titi.txt", "/tata.txt");
+                    await fs.MoveFile("/tata.txt", "/dir1/tata.txt");
 
-                    if (fs.FileExists("/dir1/tata.txt"))
+                    if (await fs.FileExists("/dir1/tata.txt"))
                     {
-                        fs.DeleteFile("/dir1/tata.txt");
+                        await fs.DeleteFile("/dir1/tata.txt");
                     }
                 }
             });
-            var thread2 = new Thread(() =>
+            var thread2 = new Thread(async () =>
             {
                 for (int i = 0; i < CountTest; i++)
                 {
-                    fs.EnumeratePaths("/").ToList();
+                    (await fs.EnumeratePaths("/")).ToList();
                 }
             });
 
-            var thread3 = new Thread(() =>
+            var thread3 = new Thread(async () =>
             {
                 for (int i = 0; i < CountTest; i++)
                 {
-                    fs.CreateDirectory("/dir2");
-                    fs.MoveDirectory("/dir2", "/dir1/dir3");
-                    fs.DeleteDirectory("/dir1/dir3", true);
+                    await fs.CreateDirectory("/dir2");
+                    await fs.MoveDirectory("/dir2", "/dir1/dir3");
+                    await fs.DeleteDirectory("/dir1/dir3", true);
 
-                    fs.CreateFile("/0.txt").Dispose();
-                    fs.DeleteFile("/0.txt");
+                    (await fs.CreateFile("/0.txt")).Dispose();
+                    await fs.DeleteFile("/0.txt");
                 }
             });
 
@@ -593,82 +594,82 @@ namespace Zio.Tests.FileSystems
             thread2.Join();
             thread3.Join();
 
-            fs.DeleteDirectory("/dir1", true);
-            fs.DeleteFile("/toto.txt");
+            await fs.DeleteDirectory("/dir1", true);
+            await fs.DeleteFile("/toto.txt");
         }
 
         [Fact]
-        public void TestOpenFileAppendAndRead()
+        public async ValueTask TestOpenFileAppendAndRead()
         {
-            fs.WriteAllText("/toto.txt", "content");
+            await fs.WriteAllText("/toto.txt", "content");
 
-            Assert.Throws<ArgumentException>(() =>
+            await Assert.ThrowsAsync<ArgumentException>(async () =>
             {
-                using (var stream = fs.OpenFile("/toto.txt", FileMode.Append, FileAccess.Read))
+                using (var stream = await fs.OpenFile("/toto.txt", FileMode.Append, FileAccess.Read))
                 {
                 }
             });
         }
 
         [Fact]
-        public void TestOpenFileCreateNewAlreadyExist()
+        public async ValueTask TestOpenFileCreateNewAlreadyExist()
         {
-            fs.WriteAllText("/toto.txt",  "content");
+            await fs.WriteAllText("/toto.txt",  "content");
 
-            Assert.Throws<IOException>(() =>
+            await Assert.ThrowsAsync<IOException>(async () =>
             {
-                using (var stream = fs.OpenFile("/toto.txt", FileMode.CreateNew, FileAccess.Write))
+                using (var stream = await fs.OpenFile("/toto.txt", FileMode.CreateNew, FileAccess.Write))
                 {
                 }
             });
 
-            Assert.Throws<IOException>(() =>
+            await Assert.ThrowsAsync<IOException>(async () =>
             {
-                using (var stream = fs.OpenFile("/toto.txt", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite))
+                using (var stream = await fs.OpenFile("/toto.txt", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite))
                 {
                 }
             });
         }
 
         [Fact]
-        public void TestOpenFileCreate()
+        public async ValueTask TestOpenFileCreate()
         {
-            fs.WriteAllText("/toto.txt", "content");
+            await fs.WriteAllText("/toto.txt", "content");
 
-            using (var stream = fs.OpenFile("/toto.txt", FileMode.Create, FileAccess.Write))
+            using (var stream = await fs.OpenFile("/toto.txt", FileMode.Create, FileAccess.Write))
             {
             }
 
-            Assert.Equal(0, fs.GetFileLength("/toto.txt"));
+            Assert.Equal(0, await fs.GetFileLength("/toto.txt"));
         }
 
         [Fact]
-        public void TestMoveDirectorySubFolderFail()
+        public async ValueTask TestMoveDirectorySubFolderFail()
         {
-            fs.CreateDirectory("/dir");
-            fs.CreateDirectory("/dir/dir1");
+            await fs.CreateDirectory("/dir");
+            await fs.CreateDirectory("/dir/dir1");
 
-            Assert.Throws<IOException>(() => fs.MoveDirectory("/dir", "/dir/dir1/dir2"));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.MoveDirectory("/dir", "/dir/dir1/dir2"));
         }
 
         [Fact]
-        public void TestReplaceFileSameFileFail()
+        public async ValueTask TestReplaceFileSameFileFail()
         {
-            fs.WriteAllText("/toto.txt", "content");
-            Assert.Throws<IOException>(() => fs.ReplaceFile("/toto.txt", "/toto.txt", null, true));
+            await fs.WriteAllText("/toto.txt", "content");
+            await Assert.ThrowsAsync<IOException>(async () => await fs.ReplaceFile("/toto.txt", "/toto.txt", null, true));
 
-            fs.WriteAllText("/tata.txt", "content2");
+            await fs.WriteAllText("/tata.txt", "content2");
 
-            Assert.Throws<IOException>(() => fs.ReplaceFile("/toto.txt", "/tata.txt", "/toto.txt", true));
+            await Assert.ThrowsAsync<IOException>(async () => await fs.ReplaceFile("/toto.txt", "/tata.txt", "/toto.txt", true));
         }
 
         [Fact]
-        public void TestStreamSeek()
+        public async ValueTask TestStreamSeek()
         {
             //                            0123456
-            fs.WriteAllText("/toto.txt", "content", Encoding.ASCII);
+            await fs.WriteAllText("/toto.txt", "content", Encoding.ASCII);
 
-            using (var stream = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read))
+            using (var stream = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read))
             {
                 stream.Seek(0, SeekOrigin.Begin);
                 Assert.Equal((byte) 'c', stream.ReadByte());
@@ -691,10 +692,10 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void TestDispose()
+        public async ValueTask TestDispose()
         {
-            fs.WriteAllText("/toto.txt", "content");
-            var stream = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.ReadWrite);
+            await fs.WriteAllText("/toto.txt", "content");
+            var stream = await fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.ReadWrite);
             stream.Dispose();
             stream.Dispose();
 
@@ -711,28 +712,28 @@ namespace Zio.Tests.FileSystems
         }
 
         [Fact]
-        public void TestDeleteDirectoryNonEmpty()
+        public async ValueTask TestDeleteDirectoryNonEmpty()
         {
-            fs.CreateDirectory("/dir/dir1");
+            await fs.CreateDirectory("/dir/dir1");
             Assert.Throws<IOException>(() => fs.DeleteDirectory("/dir", false));
         }
 
         [Fact]
-        public void TestInvalidCharacter()
+        public async ValueTask TestInvalidCharacter()
         {
-            Assert.Throws<NotSupportedException>(() => fs.CreateDirectory("/toto/ta:ta"));
+            await Assert.ThrowsAsync<NotSupportedException>(async () => await fs.CreateDirectory("/toto/ta:ta"));
         }
 
         [Fact]
-        public void TestFileAttributes()
+        public async ValueTask TestFileAttributes()
         {
-            fs.WriteAllText("/toto.txt", "content");
-            fs.SetAttributes("/toto.txt", 0);
-            Assert.Equal(FileAttributes.Normal, fs.GetAttributes("/toto.txt"));
+            await fs.WriteAllText("/toto.txt", "content");
+            await fs.SetAttributes("/toto.txt", 0);
+            Assert.Equal(FileAttributes.Normal, await fs.GetAttributes("/toto.txt"));
 
-            fs.CreateDirectory("/dir");
-            fs.SetAttributes("/dir", 0);
-            Assert.Equal(FileAttributes.Directory, fs.GetAttributes("/dir"));
+            await fs.CreateDirectory("/dir");
+            await fs.SetAttributes("/dir", 0);
+            Assert.Equal(FileAttributes.Directory, await fs.GetAttributes("/dir"));
         }
     }
 }
