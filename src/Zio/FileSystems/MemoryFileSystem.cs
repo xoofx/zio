@@ -2069,8 +2069,6 @@ namespace Zio.FileSystems
         /// </summary>
         private class FileSystemNodeReadWriteLock
         {
-            private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1);
-
             // _sharedCount  < 0 => This is an exclusive lock (_sharedCount == -1)
             // _sharedCount == 0 => No lock
             // _sharedCount  > 0 => This is a shared lock
@@ -2096,13 +2094,12 @@ namespace Zio.FileSystems
 
             public void EnterShared(FileShare share, UPath context)
             {
-                _semaphore.Wait();
-
+                Monitor.Enter(this);
                 try
                 {
                     while (_sharedCount < 0)
                     {
-                        _semaphore.Wait();
+                        Monitor.Wait(this);
                     }
 
                     if (_shared.HasValue)
@@ -2120,16 +2117,17 @@ namespace Zio.FileSystems
                     }
 
                     _sharedCount++;
+                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    _semaphore.Release();
+                    Monitor.Exit(this);
                 }
             }
 
             public void ExitShared()
             {
-                _semaphore.Wait();
+                Monitor.Enter(this);
                 try
                 {
                     Debug.Assert(_sharedCount > 0);
@@ -2138,33 +2136,35 @@ namespace Zio.FileSystems
                     {
                         _shared = null;
                     }
+                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    _semaphore.Release();
+                    Monitor.Exit(this);
                 }
             }
 
             public void EnterExclusive()
             {
-                _semaphore.Wait();
+                Monitor.Enter(this);
                 try
                 {
                     while (_sharedCount != 0)
                     {
-                        _semaphore.Wait();
+                        Monitor.Wait(this);
                     }
-                    _sharedCount  = -1;
+                    _sharedCount = -1;
+                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    _semaphore.Release();
+                    Monitor.Exit(this);
                 }
             }
 
             public bool TryEnterShared(FileShare share)
             {
-                _semaphore.Wait();
+                Monitor.Enter(this);
                 try
                 {
                     if (_sharedCount < 0)
@@ -2185,17 +2185,18 @@ namespace Zio.FileSystems
                         _shared = share;
                     }
                     _sharedCount++;
+                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    _semaphore.Release();
+                    Monitor.Exit(this);
                 }
                 return true;
             }
 
             public bool TryEnterExclusive()
             {
-                _semaphore.Wait();
+                Monitor.Enter(this);
                 try
                 {
                     if (_sharedCount != 0)
@@ -2203,24 +2204,26 @@ namespace Zio.FileSystems
                         return false;
                     }
                     _sharedCount = -1;
+                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    _semaphore.Release();
+                    Monitor.Exit(this);
                 }
                 return true;
             }
             public void ExitExclusive()
             {
-                _semaphore.Wait();
+                Monitor.Enter(this);
                 try
                 {
                     Debug.Assert(_sharedCount < 0);
                     _sharedCount = 0;
+                    Monitor.PulseAll(this);
                 }
                 finally
                 {
-                    _semaphore.Release();
+                    Monitor.Exit(this);
                 }
             }
 
