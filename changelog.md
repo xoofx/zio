@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.0 (4 Feb 2022)
+- Don't throw on `fs.CreateDirectory("/")` (#61)
+- Fix AggregateFileSystem not following fallbacks (#64)
+
 ## 0.13.0 (31 Aug 2021)
 - Fix PhysicalFileSystem on .NET Framework 4
 
