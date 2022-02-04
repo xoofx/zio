@@ -66,6 +66,14 @@ namespace Zio.Tests.FileSystems
             Assert.True(gotChange);
         }
 
+
+        [Fact]
+        public void TestCreatingTopFile()
+        {
+            var fs = new MemoryFileSystem();
+            fs.CreateDirectory("/");
+        }
+
         [Fact]
         public void TestDispose()
         {

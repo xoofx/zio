@@ -150,7 +150,7 @@ namespace Zio.Tests.FileSystems
         {
             var fs = new PhysicalFileSystem();
             // Try to create a folder on an unauthorized location
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/"));
+            fs.CreateDirectory("/");
             Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt2"));
             Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt"));
             Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt/yoyo"));

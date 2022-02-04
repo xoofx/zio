@@ -77,8 +77,6 @@ namespace Zio.Tests.FileSystems
 
             Assert.Throws<DirectoryNotFoundException>(() => fs.MoveDirectory("/dir1", "/dir2"));
 
-            Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/"));
-
             fs.CreateDirectory("/dir1");
             Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteFile("/dir1"));
             Assert.Throws<IOException>(() => fs.MoveDirectory("/dir1", "/dir1"));

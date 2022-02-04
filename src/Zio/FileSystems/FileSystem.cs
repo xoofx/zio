@@ -65,10 +65,7 @@ namespace Zio.FileSystems
         public void CreateDirectory(UPath path)
         {
             AssertNotDisposed();
-            if (path == UPath.Root)
-            {
-                throw new UnauthorizedAccessException("Cannot create root directory `/`");
-            }
+            if (path == UPath.Root) return; // nop
             CreateDirectoryImpl(ValidatePath(path));
         }
 
