@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections;
+using System.IO;
 using System.Reflection;
 using Xunit;
 using Zio.FileSystems;
@@ -149,6 +150,57 @@ namespace Zio.Tests.FileSystems
                 Assert.Equal(memfs2, entry.FileSystem);
                 Assert.Equal("/a.txt", entry.Path.FullName);
             }
+        }
+
+        [Fact]
+        public void TestFallback()
+        {
+            // aggregate_fs (fs)
+            //      => aggregate_fs (subFs)
+            //              => memory_fs (subFsMemFs)
+            //      => memory_fs (subMemFs)
+            //      => memory_fs (root)
+            var root = new MemoryFileSystem();
+            var fs = new AggregateFileSystem(root);
+            var subFsMemFs = new MemoryFileSystem();
+            var subFs = new AggregateFileSystem(subFsMemFs);
+            fs.AddFileSystem(subFs);
+            var subMemFs = new MemoryFileSystem();
+            fs.AddFileSystem(subMemFs);
+
+            root.CreateDirectory("/a");
+            root.CreateDirectory("/b");
+            root.CreateDirectory("/c");
+            {
+                using var a = root.OpenFile("/a.txt", FileMode.Create, FileAccess.Write);
+                using var b = root.OpenFile("/b.txt", FileMode.Create, FileAccess.Write);
+                using var c = root.OpenFile("/c.txt", FileMode.Create, FileAccess.Write);
+            }
+            subFsMemFs.CreateDirectory("/b");
+            {
+                using var b = subFsMemFs.OpenFile("/b.txt", FileMode.Create, FileAccess.Write);
+            }
+            subMemFs.CreateDirectory("/a");
+            {
+                using var a = subMemFs.OpenFile("/a.txt", FileMode.Create, FileAccess.Write);
+            }
+            
+            var findA = fs.FindFirstFileSystemEntry("/a");
+            Assert.Equal(subMemFs, findA?.FileSystem);
+
+            var findB = fs.FindFirstFileSystemEntry("/b");
+            Assert.Equal(subFsMemFs, findB?.FileSystem);
+
+            var findC = fs.FindFirstFileSystemEntry("/c");
+            Assert.Equal(root, findC?.FileSystem);
+
+            Assert.True(fs.DirectoryExists("/c"));
+            Assert.True(fs.DirectoryExists("/b"));
+            Assert.True(fs.DirectoryExists("/a"));
+
+            Assert.True(fs.FileExists("/c.txt"));
+            Assert.True(fs.FileExists("/b.txt"));
+            Assert.True(fs.FileExists("/a.txt"));
         }
     }
 }
