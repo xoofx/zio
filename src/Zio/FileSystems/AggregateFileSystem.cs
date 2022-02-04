@@ -473,10 +473,13 @@ namespace Zio.FileSystems
                 // Go through aggregates
                 if (fileSystem is AggregateFileSystem aggregate)
                 {
-                    return aggregate.TryGetFile(path);
+                    var result = aggregate.TryGetFile(path);
+                    if (result is not null)
+                    {
+                        return result;
+                    }
                 }
-
-                if (fileSystem != null)
+                else if (fileSystem != null)
                 {
                     if (fileSystem.FileExists(path))
                     {
@@ -499,10 +502,13 @@ namespace Zio.FileSystems
                 // Go through aggregates
                 if (fileSystem is AggregateFileSystem aggregate)
                 {
-                    return aggregate.TryGetDirectory(path);
+                    var result = aggregate.TryGetDirectory(path);
+                    if (result is not null)
+                    {
+                        return result;
+                    }
                 }
-
-                if (fileSystem != null)
+                else if (fileSystem != null)
                 {
                     if (fileSystem.DirectoryExists(path))
                     {
@@ -555,15 +561,17 @@ namespace Zio.FileSystems
                     // Go through aggregates
                     if (fileSystem is AggregateFileSystem aggregate)
                     {
-                        return aggregate.TryGetPath(path, searchTarget);
+                        var result = aggregate.TryGetPath(path, searchTarget);
+                        if (result is not null)
+                        {
+                            return result;
+                        }
                     }
-
-                    if (fileSystem.DirectoryExists(path))
+                    else if (fileSystem.DirectoryExists(path))
                     {
                         return new FileSystemPath(fileSystem, path, false);
                     }
-
-                    if (fileSystem.FileExists(path))
+                    else if (fileSystem.FileExists(path))
                     {
                         return new FileSystemPath(fileSystem, path, true);
                     }
