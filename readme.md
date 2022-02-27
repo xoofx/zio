@@ -1,4 +1,4 @@
-# Zio [![Build Status](https://github.com/xoofx/zio/workflows/ci/badge.svg?branch=master)](https://github.com/xoofx/zio/actions) [![Coverage Status](https://coveralls.io/repos/github/xoofx/zio/badge.svg?branch=master)](https://coveralls.io/github/xoofx/zio?branch=master) [![NuGet](https://img.shields.io/nuget/v/Zio.svg)](https://www.nuget.org/packages/Zio/)
+# Zio [![Build Status](https://github.com/xoofx/zio/workflows/ci/badge.svg?branch=main)](https://github.com/xoofx/zio/actions) [![Coverage Status](https://coveralls.io/repos/github/xoofx/zio/badge.svg?branch=main)](https://coveralls.io/github/xoofx/zio?branch=main) [![NuGet](https://img.shields.io/nuget/v/Zio.svg)](https://www.nuget.org/packages/Zio/)
 
 <img align="right" width="160px" height="160px" src="img/zio.png">
 
