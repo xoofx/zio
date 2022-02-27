@@ -1,0 +1,5 @@
+[msbuild]
+project = "Zio.sln"
+[github]
+user = "xoofx"
+repo = "zio"

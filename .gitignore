@@ -214,3 +214,9 @@ FakesAssemblies/
 **/*.Server/GeneratedArtifacts
 **/*.Server/ModelManifest.xml
 _Pvt_Extensions
+
+# Remove jetbrains
+.idea/
+
+# Remove artifacts produced by dotnet-releaser
+artifacts-dotnet-releaser/
