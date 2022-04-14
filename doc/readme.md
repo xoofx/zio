@@ -234,6 +234,8 @@ The default filesystems provided by Zio comes roughly into two kinds:
 
   - `MemoryFileSystem` operating in-memory
 
+  - `ZipArchiveFileSystem` operating on a zip file
+
 - **Composite file systems** : These are used to built higher level filesystems by composing them with Concrete and Composite filesystems
 
   - `AggregateFileSystem` providing a merged view read-only filesystem over multiple filesystems
@@ -305,6 +307,27 @@ This unique internal design allow this filesystem to provide:
 In addition to a much faster filesystem in memory compare to a `PhysicalFileSystem`, the method `MemoryFileSystem.Clone()` provides also a useful utility method to efficiently clone the entire filesystem.
 
 **This filesystem can be used for mocking scenarios** while keeping the behavior of a real filesystem.
+
+#### `ZipArchiveFileSystem`
+
+This filesystem provides an implementation of `IFileSystem` while performing all operations on a zip archive.
+
+```C#
+var fs = new ZipArchiveFileSystem("C://Test.zip");
+
+fs.DirectoryCreate("test")
+```
+
+It uses ZipArchive class for manipulating file entries.
+
+**There are some limitations** of this filesystem resulting from limitations of ZipArchive:
+
+- This file system is only avaliable on .NET 4.5 and newer.
+- Entry creation time and last access time are not supported. Trying to get them will return last write time and trying to set them will do nothing.
+- File attributes are only supported by .NET Standard 2.1. Trying to get attributes in lower versions will return Normal, Archive or Directory. Trying to set them will do nothing.
+- FileShare is only supported in ZipArchive read mode. Trying to open multiple streams in write and update mode throws an exception.
+
+This filesystem has case sensitive and case insensitive modes.
 
 ### Composite FileSystem
 
