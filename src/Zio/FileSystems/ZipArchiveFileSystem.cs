@@ -32,6 +32,7 @@ namespace Zio.FileSystems
         private readonly Dictionary<string, ZipArchiveEntry> _entries;
         
         private readonly Dictionary<ZipArchiveEntry, EntryState> _openStreams;
+        private readonly object _openStreamsLock = new();
 
 #if NET45 // .Net4.5 uses a backslash as directory separator
         private const char DirectorySeparator = '\\';
@@ -316,9 +317,12 @@ namespace Zio.FileSystems
                 // check if there are no open file in directory
                 foreach (var entry in entries)
                 {
-                    if (_openStreams.ContainsKey(entry))
+                    lock (_openStreamsLock)
                     {
-                        throw new IOException($"There is an open file {entry.FullName} in directory");
+                        if (_openStreams.ContainsKey(entry))
+                        {
+                            throw new IOException($"There is an open file {entry.FullName} in directory");
+                        }
                     }
                 }
 #if NETSTANDARD2_1_OR_GREATER
@@ -934,29 +938,33 @@ namespace Zio.FileSystems
             {
                 _entry = entry;
                 _fileSystem = system;
-                var fileShare = _fileSystem._openStreams.TryGetValue(entry, out var fileData) ? fileData.Share : FileShare.ReadWrite;
-                if (fileData != null)
-                {
-                    // we only check for read share, because ZipArchive doesn't support write share
-                    if (share is not FileShare.Read and not FileShare.ReadWrite)
-                    {
-                        throw new IOException("File is already opened for reading");
-                    }
 
-                    if (fileShare is not FileShare.Read and not FileShare.ReadWrite)
-                    {
-                        throw new IOException("File is already opened for reading by another stream with non compatible share");
-                    }
-
-                    Interlocked.Increment(ref fileData.Count);
-                }
-                else
+                lock (_fileSystem._openStreamsLock)
                 {
-                    _fileSystem._openStreams.Add(_entry, new EntryState(share));
+                    var fileShare = _fileSystem._openStreams.TryGetValue(entry, out var fileData) ? fileData.Share : FileShare.ReadWrite;
+                    if (fileData != null)
+                    {
+                        // we only check for read share, because ZipArchive doesn't support write share
+                        if (share is not FileShare.Read and not FileShare.ReadWrite)
+                        {
+                            throw new IOException("File is already opened for reading");
+                        }
+
+                        if (fileShare is not FileShare.Read and not FileShare.ReadWrite)
+                        {
+                            throw new IOException("File is already opened for reading by another stream with non compatible share");
+                        }
+
+                        fileData.Count++;
+                    }
+                    else
+                    {
+                        _fileSystem._openStreams.Add(_entry, new EntryState(share));
+                    }
+                    _streamImplementation = entry.Open();
                 }
 
                 Share = share;
-                _streamImplementation = entry.Open();
             }
 
             private FileShare Share { get; }
@@ -1009,11 +1017,14 @@ namespace Zio.FileSystems
 
                 _streamImplementation.Close();
                 _isDisposed = true;
-                _fileSystem._openStreams.TryGetValue(_entry, out var fileData);
-                Interlocked.Decrement(ref fileData.Count);
-                if (fileData.Count == 0)
+                lock (_fileSystem._openStreamsLock)
                 {
-                    _fileSystem._openStreams.Remove(_entry);
+                    _fileSystem._openStreams.TryGetValue(_entry, out var fileData);
+                    fileData.Count--;
+                    if (fileData.Count == 0)
+                    {
+                        _fileSystem._openStreams.Remove(_entry);
+                    }
                 }
             }
         }

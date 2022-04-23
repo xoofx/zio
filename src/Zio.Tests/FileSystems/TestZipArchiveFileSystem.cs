@@ -194,5 +194,41 @@ namespace Zio.Tests.FileSystems
             Assert.Equal("abc", copy.ReadAllText());
             Assert.Equal("def", fs.GetFileEntry("/b/backup.txt").ReadAllText());
         }
+
+        [Fact]
+        public void TestOpenStreamsMultithreaded()
+        {
+            var memStream = new MemoryStream();
+            var writeFs = new ZipArchiveFileSystem(memStream, ZipArchiveMode.Update, true);
+            writeFs.WriteAllText("/test.txt", "content");
+            writeFs.Dispose();
+
+            var readFs = new ZipArchiveFileSystem(memStream, ZipArchiveMode.Read);
+
+            readFs.OpenFile("/test.txt", FileMode.Open, FileAccess.Read, FileShare.Read).Dispose();
+
+            const int CountTest = 2000;
+
+            var thread1 = new Thread(() =>
+            {
+                for (int i = 0; i < CountTest; i++)
+                {
+                    readFs.OpenFile("/test.txt", FileMode.Open, FileAccess.Read, FileShare.Read).Dispose();
+                }
+            });
+            var thread2 = new Thread(() =>
+            {
+                for (int i = 0; i < CountTest; i++)
+                {
+                    readFs.OpenFile("/test.txt", FileMode.Open, FileAccess.Read, FileShare.Read).Dispose();
+                }
+            });
+
+            thread1.Start();
+            thread2.Start();
+
+            thread1.Join();
+            thread2.Join();
+        }
     }
 }
