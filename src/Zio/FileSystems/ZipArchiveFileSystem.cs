@@ -31,7 +31,7 @@ namespace Zio.FileSystems
 
         private readonly Dictionary<string, ZipArchiveEntry> _entries;
         
-        private readonly Dictionary<ZipArchiveEntry, Pair<FileShare, int>> _openStreams;
+        private readonly Dictionary<ZipArchiveEntry, EntryState> _openStreams;
 
 #if NET45 // .Net4.5 uses a backslash as directory separator
         private const char DirectorySeparator = '\\';
@@ -71,7 +71,7 @@ namespace Zio.FileSystems
                 _entries = _archive.Entries.ToDictionary(e => e.FullName.ToLowerInvariant(), e => e);
             }
 
-            _openStreams = new Dictionary<ZipArchiveEntry, Pair<FileShare, int>>();
+            _openStreams = new Dictionary<ZipArchiveEntry, EntryState>();
         }
 
         /// <summary>
@@ -934,7 +934,7 @@ namespace Zio.FileSystems
             {
                 _entry = entry;
                 _fileSystem = system;
-                var fileShare = _fileSystem._openStreams.TryGetValue(entry, out var fileData) ? fileData.First : FileShare.ReadWrite;
+                var fileShare = _fileSystem._openStreams.TryGetValue(entry, out var fileData) ? fileData.Share : FileShare.ReadWrite;
                 if (fileData != null)
                 {
                     // we only check for read share, because ZipArchive doesn't support write share
@@ -948,11 +948,11 @@ namespace Zio.FileSystems
                         throw new IOException("File is already opened for reading by another stream with non compatible share");
                     }
 
-                    fileData.Second++;
+                    fileData.Count++;
                 }
                 else
                 {
-                    _fileSystem._openStreams.Add(_entry, new Pair<FileShare, int>(share, 1));
+                    _fileSystem._openStreams.Add(_entry, new EntryState(share));
                 }
 
                 Share = share;
@@ -1010,24 +1010,24 @@ namespace Zio.FileSystems
                 _streamImplementation.Close();
                 _isDisposed = true;
                 _fileSystem._openStreams.TryGetValue(_entry, out var fileData);
-                fileData.Second--;
-                if (fileData.Second == 0)
+                fileData.Count--;
+                if (fileData.Count == 0)
                 {
                     _fileSystem._openStreams.Remove(_entry);
                 }
             }
         }
 
-        private class Pair<T, U>
+        private class EntryState
         {
-            public Pair(T first, U second)
+            public EntryState(FileShare share)
             {
-                First = first;
-                Second = second;
+                Share = share;
+                Count = 1;
             }
 
-            public T First { get; }
-            public U Second { get; set; }
+            public FileShare Share { get; }
+            public int Count { get; set; }
         }
     }
 }
