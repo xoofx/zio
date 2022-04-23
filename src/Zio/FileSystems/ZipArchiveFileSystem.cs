@@ -159,8 +159,8 @@ namespace Zio.FileSystems
                 throw new IOException("Source and destination path must be different.");
             }
 
-            var entry = GetEntry(srcPath.FullName);
-            if (entry == null)
+            var srcEntry = GetEntry(srcPath.FullName);
+            if (srcEntry == null)
             {
                 if (DirectoryExistsImpl(srcPath))
                 {
@@ -210,11 +210,11 @@ namespace Zio.FileSystems
             destEntry = CreateEntry(destPath.FullName);
             using (var destStream = destEntry.Open())
             {
-                using var srcStream = entry == null ? new FileStream(srcPath.FullName, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite) : entry.Open();
+                using var srcStream = srcEntry.Open();
                 srcStream.CopyTo(destStream);
             }
 #if NETSTANDARD2_1_OR_GREATER
-            destEntry.ExternalAttributes = entry.ExternalAttributes | (int)FileAttributes.Archive;
+            destEntry.ExternalAttributes = srcEntry.ExternalAttributes | (int)FileAttributes.Archive;
 #endif
             TryGetDispatcher()?.RaiseCreated(destPath);
         }
