@@ -948,7 +948,7 @@ namespace Zio.FileSystems
                         throw new IOException("File is already opened for reading by another stream with non compatible share");
                     }
 
-                    fileData.Count++;
+                    Interlocked.Increment(ref fileData.Count);
                 }
                 else
                 {
@@ -1010,7 +1010,7 @@ namespace Zio.FileSystems
                 _streamImplementation.Close();
                 _isDisposed = true;
                 _fileSystem._openStreams.TryGetValue(_entry, out var fileData);
-                fileData.Count--;
+                Interlocked.Decrement(ref fileData.Count);
                 if (fileData.Count == 0)
                 {
                     _fileSystem._openStreams.Remove(_entry);
@@ -1027,7 +1027,9 @@ namespace Zio.FileSystems
             }
 
             public FileShare Share { get; }
-            public int Count { get; set; }
+
+            public int Count;
+
         }
     }
 }
