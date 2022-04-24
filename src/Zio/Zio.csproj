@@ -5,7 +5,7 @@
     <AssemblyTitle>Zio</AssemblyTitle>
     <NeutralLanguage>en-US</NeutralLanguage>
     <Authors>Alexandre Mutel</Authors>
-    <TargetFrameworks>net40;net45;netstandard2.0;netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net40;net45;netstandard2.0;netstandard2.1;net6.0</TargetFrameworks>
     <AssemblyName>Zio</AssemblyName>
     <PackageId>Zio</PackageId>
     <PackageTags>filesystem;vfs;VirtualFileSystem;virtual;abstract;directory;files;io;mock</PackageTags>
@@ -67,6 +67,10 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.1'">
+    <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE;HAS_NULLABLEANNOTATIONS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net6.0'">
     <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE;HAS_NULLABLEANNOTATIONS</DefineConstants>
   </PropertyGroup>
   
