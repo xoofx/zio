@@ -193,7 +193,7 @@ namespace Zio.FileSystems
             var destEntry = GetEntry(destPath.FullName);
             if (destEntry != null)
             {
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
                 if ((destEntry.ExternalAttributes & (int)FileAttributes.ReadOnly) == (int)FileAttributes.ReadOnly)
                 {
                     throw new UnauthorizedAccessException("Destination file is read only");
@@ -214,7 +214,7 @@ namespace Zio.FileSystems
                 using var srcStream = srcEntry.Open();
                 srcStream.CopyTo(destStream);
             }
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
             destEntry.ExternalAttributes = srcEntry.ExternalAttributes | (int)FileAttributes.Archive;
 #endif
             TryGetDispatcher()?.RaiseCreated(destPath);
@@ -325,7 +325,7 @@ namespace Zio.FileSystems
                         }
                     }
                 }
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
                 // check if there are none readonly entries
                 foreach (var entry in entries)
                 {
@@ -377,7 +377,7 @@ namespace Zio.FileSystems
             {
                 return;
             }
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
             if ((entry.ExternalAttributes & (int)FileAttributes.ReadOnly) == (int)FileAttributes.ReadOnly)
             {
                 throw new UnauthorizedAccessException("Cannot delete file with readonly attribute");
@@ -491,7 +491,7 @@ namespace Zio.FileSystems
 
             var attributes = entry.FullName[entry.FullName.Length - 1] == DirectorySeparator ? FileAttributes.Directory : 0;
 
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
             if (entry.ExternalAttributes == 0 && attributes == 0)
             {
                 attributes |= FileAttributes.Normal;
@@ -698,7 +698,7 @@ namespace Zio.FileSystems
                 entry = CreateEntry(path.FullName);
             }
 
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
             if ((access == FileAccess.Write || access == FileAccess.ReadWrite) && (entry.ExternalAttributes & (int)FileAttributes.ReadOnly) == (int)FileAttributes.ReadOnly)
             {
                 throw new UnauthorizedAccessException("Cannot open a file for writing in a file with readonly attribute.");
@@ -707,7 +707,7 @@ namespace Zio.FileSystems
 
             var stream = new ZipEntryStream(share, this, entry);
 
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
             if (access is FileAccess.Write or FileAccess.ReadWrite)
             {
                 entry.ExternalAttributes |= (int)FileAttributes.Archive;
@@ -778,7 +778,7 @@ namespace Zio.FileSystems
         /// <param name="attributes">A bitwise combination of the enumeration values.</param>
         protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
         {
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
             var entryPath = RemoveLeadingSlash(path);
             var entry = GetEntry(entryPath) ?? GetEntry(ConvertPathToDirectory(entryPath));
             if (entry == null)
