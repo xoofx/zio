@@ -24,7 +24,7 @@
   <ItemGroup>
     <None Include="../../img/zio.png" Pack="true" PackagePath="" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
-    <PackageReference Include="MinVer" Version="2.5.0">
+    <PackageReference Include="MinVer" Version="3.1.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -85,4 +85,11 @@
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <Target Name="PatchVersion" AfterTargets="MinVer">
+    <PropertyGroup>
+      <!--The minor version is like a major version because Major is 0, need to remove this when will be >= 1.0-->
+      <AssemblyVersion>$(MinVerMajor).$(MinVerMinor).0.0</AssemblyVersion>
+    </PropertyGroup>
+  </Target>
 </Project>
