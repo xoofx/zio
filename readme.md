@@ -22,6 +22,10 @@ Zio provides a simple, powerful, cross-platform **filesystem abstraction for .NE
     - A safe hierarchical locking strategy (following [Unix kernel recommendations for directory locking](https://www.kernel.org/doc/Documentation/filesystems/directory-locking))
     - Support for `FileShare.Read`, `FileShare.Write` and `FileShare.ReadWrite`
     - Internally support for filesystem atomic operations (`File.Replace`)
+  - `ZipArchiveFileSystem` to access zip archives:
+    - This filesystem is a wrapper around the [`ZipArchive`](https://docs.microsoft.com/en-us/dotnet/api/system.io.compression.ziparchive?view=netcore-3.1) class
+	- It can work in case sensitive and case insensitive mode
+	- Support for `FileShare.Read` with `ZipArchiveMode.Read`
   - On top of these final filesystem, you can compose more complex filesystems:
     - `AggregateFileSystem` providing a read-only filesystem aggregating multiple filesystem that offers a merged view
     - `MountFileSystem` to mount different filesystems at a specific mount point name
@@ -68,7 +72,6 @@ In order to build Zio, you need to install Visual Studio 2017 with latest [.NET 
 
 ## TODO
 
-- [ ] Add support for ZipArchive (readonly, readwrite)
 - [ ] Add support for Git FileSystem (readonly)
 
 ## License

@@ -11,6 +11,8 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems
 {
+    using System.IO.Compression;
+
     public abstract class TestFileSystemBase : IDisposable
     {
         private static readonly UPath[] Directories = new UPath[] { "a", "b", "C", "d" };
@@ -177,6 +179,14 @@ namespace Zio.Tests.FileSystems
             aggfs.AddFileSystem(fs3);
 
             return aggfs;
+        }
+
+        protected ZipArchiveFileSystem GetCommonZipArchiveFileSystem()
+        {
+            var archive = new ZipArchive(new MemoryStream(), ZipArchiveMode.Update);
+            var fs = new ZipArchiveFileSystem(archive);
+            CreateFolderStructure(fs);
+            return fs;
         }
 
         protected MountFileSystem GetCommonMountFileSystemWithOnlyBackup()
