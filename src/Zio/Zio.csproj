@@ -9,10 +9,10 @@
     <AssemblyName>Zio</AssemblyName>
     <PackageId>Zio</PackageId>
     <PackageTags>filesystem;vfs;VirtualFileSystem;virtual;abstract;directory;files;io;mock</PackageTags>
-    <PackageReleaseNotes>https://github.com/xoofx/zio/blob/master/changelog.md</PackageReleaseNotes>
     <PackageIcon>zio.png</PackageIcon>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/xoofx/zio</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/xoofx/zio/blob/master/license.txt</PackageLicenseUrl>
+    <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
     <LangVersion>9</LangVersion>
     <!--Add support for sourcelink-->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <None Include="../../img/zio.png" Pack="true" PackagePath="" />
+    <None Include="../../readme.md" Pack="true" PackagePath="/"/>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
     <PackageReference Include="MinVer" Version="3.1.0">
       <PrivateAssets>all</PrivateAssets>
