@@ -21,6 +21,7 @@ namespace Zio.FileSystems
         private readonly bool _isCaseSensitive;
         
         private readonly ZipArchive _archive;
+        private readonly CompressionLevel _compressionLevel;
 
         private readonly ReaderWriterLockSlim _entriesLock = new();
         
@@ -47,11 +48,12 @@ namespace Zio.FileSystems
         /// <param name="archive">An instance of <see cref="ZipArchive" /></param>
         /// <param name="isCaseSensitive">Specifies if entry names should be case sensitive</param>
         /// <exception cref="ArgumentNullException"></exception>
-        public ZipArchiveFileSystem(ZipArchive archive, bool isCaseSensitive = false)
+        public ZipArchiveFileSystem(ZipArchive archive, bool isCaseSensitive = false, CompressionLevel compressionLevel = CompressionLevel.NoCompression)
         {
             _archive = archive;
             _isCaseSensitive = isCaseSensitive;
             _creationTime = DateTime.Now;
+            _compressionLevel = compressionLevel;
             if (archive == null)
             {
                 throw new ArgumentNullException(nameof(archive));
@@ -82,8 +84,8 @@ namespace Zio.FileSystems
         /// <param name="mode">Mode of <see cref="ZipArchive" /></param>
         /// <param name="leaveOpen">True to leave the stream open when <see cref="ZipArchive" /> is disposed</param>
         /// <param name="isCaseSensitive"></param>
-        public ZipArchiveFileSystem(Stream stream, ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false)
-            : this(new ZipArchive(stream, mode, leaveOpen), isCaseSensitive)
+        public ZipArchiveFileSystem(Stream stream, ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false, CompressionLevel compressionLevel = CompressionLevel.NoCompression)
+            : this(new ZipArchive(stream, mode, leaveOpen), isCaseSensitive, compressionLevel)
         {
         }
 
@@ -94,8 +96,8 @@ namespace Zio.FileSystems
         /// <param name="mode">Mode of <see cref="ZipArchive" /></param>
         /// <param name="leaveOpen">True to leave the stream open when <see cref="ZipArchive" /> is disposed</param>
         /// <param name="isCaseSensitive">Specifies if entry names should be case sensitive</param>
-        public ZipArchiveFileSystem(string path, ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false)
-            : this(new ZipArchive(File.Open(path, FileMode.OpenOrCreate), mode, leaveOpen), isCaseSensitive)
+        public ZipArchiveFileSystem(string path, ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false, CompressionLevel compressionLevel = CompressionLevel.NoCompression)
+            : this(new ZipArchive(File.Open(path, FileMode.OpenOrCreate), mode, leaveOpen), isCaseSensitive, compressionLevel)
         {
         }
 
@@ -105,8 +107,8 @@ namespace Zio.FileSystems
         /// <param name="mode">Mode of <see cref="ZipArchive" /></param>
         /// <param name="leaveOpen">True to leave the stream open when <see cref="ZipArchive" /> is disposed</param>
         /// <param name="isCaseSensitive">Specifies if entry names should be case sensitive</param>
-        public ZipArchiveFileSystem(ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false)
-            : this(new ZipArchive(new MemoryStream(), mode, leaveOpen), isCaseSensitive)
+        public ZipArchiveFileSystem(ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false, CompressionLevel compressionLevel = CompressionLevel.NoCompression)
+            : this(new ZipArchive(new MemoryStream(), mode, leaveOpen), isCaseSensitive, compressionLevel)
         {
         }
 
@@ -864,7 +866,7 @@ namespace Zio.FileSystems
             _entriesLock.EnterWriteLock();
             try
             {
-                var entry = _archive.CreateEntry(path);
+                var entry = _archive.CreateEntry(path, _compressionLevel);
 
                 if (!_isCaseSensitive)
                 {
