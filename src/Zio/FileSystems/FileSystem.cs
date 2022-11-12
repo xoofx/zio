@@ -584,6 +584,18 @@ namespace Zio.FileSystems
             {
                 return path;
             }
+
+            // Make sure that we don't have any control characters in the path.
+            var fullPath = path.FullName;
+            for (var i = 0; i < fullPath.Length; i++)
+            {
+                var c = fullPath[i];
+                if (char.IsControl(c))
+                {
+                    throw new ArgumentException($"Invalid character found \\u{(int)c:X4} at index {i}", nameof(path));
+                }
+            }
+
             path.AssertAbsolute(name);
 
             return ValidatePathImpl(path, name);
