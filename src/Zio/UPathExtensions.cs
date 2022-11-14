@@ -200,7 +200,7 @@ namespace Zio
             var target = path.FullName;
             var dir = directory.FullName;
 
-            if (target.Length < dir.Length || !target.StartsWith(dir))
+            if (target.Length < dir.Length || !target.StartsWith(dir, StringComparison.Ordinal))
             {
                 return false;
             }

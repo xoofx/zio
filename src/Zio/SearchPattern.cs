@@ -79,7 +79,7 @@ namespace Zio
                 return;
             }
 
-            if (searchPattern.StartsWith("/"))
+            if (searchPattern.StartsWith("/", StringComparison.Ordinal))
             {
                 throw new ArgumentException($"The search pattern `{searchPattern}` cannot start by an absolute path `/`");
             }

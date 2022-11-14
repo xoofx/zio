@@ -90,7 +90,7 @@ namespace Zio
         /// Gets a value indicating whether this path is absolute by starting with a leading `/`.
         /// </summary>
         /// <value><c>true</c> if this path is absolute; otherwise, <c>false</c>.</value>
-        public bool IsAbsolute => FullName?.StartsWith("/") ?? false;
+        public bool IsAbsolute => FullName?.StartsWith("/", StringComparison.Ordinal) ?? false;
 
         /// <summary>
         /// Gets a value indicating whether this path is relative by **not** starting with a leading `/`.

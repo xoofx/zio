@@ -800,7 +800,7 @@ namespace Zio.FileSystems
 
             if (IsOnWindows)
             {
-                if (!absolutePath.StartsWith(DrivePrefixOnWindows) ||
+                if (!absolutePath.StartsWith(DrivePrefixOnWindows, StringComparison.Ordinal) ||
                     absolutePath.Length == DrivePrefixOnWindows.Length ||
                     !IsDriveLetter(absolutePath[DrivePrefixOnWindows.Length]))
                     throw new ArgumentException($"A path on Windows must start by `{DrivePrefixOnWindows}` followed by the drive letter");
@@ -829,7 +829,7 @@ namespace Zio.FileSystems
             if (IsOnWindows)
             {
                 // We currently don't support special Windows files (\\.\ \??\  DosDevices...etc.)
-                if (innerPath.StartsWith(@"\\") || innerPath.StartsWith(@"\?"))
+                if (innerPath.StartsWith(@"\\", StringComparison.Ordinal) || innerPath.StartsWith(@"\?", StringComparison.Ordinal))
                     throw new NotSupportedException($"Path starting with `\\\\` or `\\?` are not supported -> `{innerPath}` ");
 
                 var absolutePath = Path.GetFullPath(innerPath);

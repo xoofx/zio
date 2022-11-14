@@ -149,6 +149,10 @@ namespace Zio.Tests.FileSystems
         public void TestDirectoryExceptions()
         {
             var fs = new PhysicalFileSystem();
+
+            // Test invalid characters in path
+            Assert.Throws<ArgumentException>(() => fs.CreateFile($"/##/mnt/hello".Replace("#", char.ConvertFromUtf32(0xad))));
+
             // Try to create a folder on an unauthorized location
             fs.CreateDirectory("/");
             Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt2"));
