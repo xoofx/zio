@@ -96,7 +96,7 @@ namespace Zio
             }
             else
             {
-                firstDirectory = fullname.Substring(offset, index - 1);
+                firstDirectory = fullname.Substring(offset, index - offset);
                 if (index + 1 < fullname.Length)
                 {
                     remainingPath = fullname.Substring(index + 1);
