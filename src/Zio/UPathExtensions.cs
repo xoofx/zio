@@ -88,6 +88,7 @@ namespace Zio
 
             string firstDirectory;
             var fullname = path.FullName;
+            var isRelative = path.IsRelative;
             var index = fullname.IndexOf(UPath.DirectorySeparator, 1);
             if (index < 0)
             {
@@ -95,7 +96,7 @@ namespace Zio
             }
             else
             {
-                firstDirectory = fullname.Substring(1, index - 1);
+                firstDirectory = fullname.Substring(isRelative ? 0 : 1, index - 1);
                 if (index + 1 < fullname.Length)
                 {
                     remainingPath = fullname.Substring(index + 1);
