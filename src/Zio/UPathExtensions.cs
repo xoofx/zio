@@ -88,15 +88,15 @@ namespace Zio
 
             string firstDirectory;
             var fullname = path.FullName;
-            var isRelative = path.IsRelative;
-            var index = fullname.IndexOf(UPath.DirectorySeparator, 1);
+            var offset = path.IsRelative ? 0 : 1;
+            var index = fullname.IndexOf(UPath.DirectorySeparator, offset);
             if (index < 0)
             {
-                firstDirectory = fullname.Substring(isRelative ? 0 : 1, fullname.Length - 1);
+                firstDirectory = fullname.Substring(offset, fullname.Length);
             }
             else
             {
-                firstDirectory = fullname.Substring(isRelative ? 0 : 1, index - 1);
+                firstDirectory = fullname.Substring(offset, index - 1);
                 if (index + 1 < fullname.Length)
                 {
                     remainingPath = fullname.Substring(index + 1);
