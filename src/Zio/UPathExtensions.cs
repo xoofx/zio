@@ -92,7 +92,7 @@ namespace Zio
             var index = fullname.IndexOf(UPath.DirectorySeparator, offset);
             if (index < 0)
             {
-                firstDirectory = fullname.Substring(offset, fullname.Length);
+                firstDirectory = fullname.Substring(offset, fullname.Length - offset);
             }
             else
             {

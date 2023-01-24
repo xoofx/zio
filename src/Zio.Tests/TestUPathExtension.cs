@@ -10,10 +10,13 @@ namespace Zio.Tests
 
 
         [Theory]
-        [InlineData("/a/b","a","b")]
-        [InlineData("/a/b/c","a","b/c")]
-        [InlineData("a/b","a","b")]
-        [InlineData("a/b/c","a","b/c")]
+        [InlineData("/a/b", "a", "b")]
+        [InlineData("/a/b/c", "a", "b/c")]
+        [InlineData("a/b", "a", "b")]
+        [InlineData("a/b/c", "a", "b/c")]
+        [InlineData("", "", "")]
+        [InlineData("/z","z","")]
+
         public void TestGetFirstDirectory(string path, string expectedFirstDir, string expectedRest)
         {
             var pathInfo = new UPath(path);
