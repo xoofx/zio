@@ -3,14 +3,13 @@
 // See the license.txt file in the project root for more information.
 using Zio.FileSystems;
 
-namespace Zio.Tests.FileSystems
+namespace Zio.Tests.FileSystems;
+
+public class TestMountFileSystemCompat : TestFileSystemCompactBase
 {
-    public class TestMountFileSystemCompat : TestFileSystemCompactBase
+    public TestMountFileSystemCompat()
     {
-        public TestMountFileSystemCompat()
-        {
-            // Check that the MountFileSystem is working with only a plain backup MemoryFileSystem with the compat test
-            fs = new MountFileSystem(new MemoryFileSystem());
-        }
+        // Check that the MountFileSystem is working with only a plain backup MemoryFileSystem with the compat test
+        fs = new MountFileSystem(new MemoryFileSystem());
     }
 }
