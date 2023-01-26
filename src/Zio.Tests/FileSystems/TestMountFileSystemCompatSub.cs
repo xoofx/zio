@@ -3,18 +3,17 @@
 // See the license.txt file in the project root for more information.
 using Zio.FileSystems;
 
-namespace Zio.Tests.FileSystems
-{
-    public class TestMountFileSystemCompatSub : TestFileSystemCompactBase
-    {
-        public TestMountFileSystemCompatSub()
-        {
-            // Check that MountFileSystem is working with a mount with the compat test
-            var mountfs = new MountFileSystem();
-            mountfs.Mount("/customMount", new MemoryFileSystem());
+namespace Zio.Tests.FileSystems;
 
-            // Use a SubFileSystem to fake the mount to a root folder
-            fs = new SubFileSystem(mountfs, "/customMount");
-        }
+public class TestMountFileSystemCompatSub : TestFileSystemCompactBase
+{
+    public TestMountFileSystemCompatSub()
+    {
+        // Check that MountFileSystem is working with a mount with the compat test
+        var mountfs = new MountFileSystem();
+        mountfs.Mount("/customMount", new MemoryFileSystem());
+
+        // Use a SubFileSystem to fake the mount to a root folder
+        fs = new SubFileSystem(mountfs, "/customMount");
     }
 }

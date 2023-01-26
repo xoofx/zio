@@ -4,13 +4,12 @@
 
 using Zio.FileSystems;
 
-namespace Zio.Tests.FileSystems
+namespace Zio.Tests.FileSystems;
+
+public class TestMemoryFileSystemCompact : TestFileSystemCompactBase
 {
-    public class TestMemoryFileSystemCompact : TestFileSystemCompactBase
+    public TestMemoryFileSystemCompact()
     {
-        public TestMemoryFileSystemCompact()
-        {
-            fs = new MemoryFileSystem();
-        }
+        fs = new MemoryFileSystem();
     }
 }

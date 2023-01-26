@@ -1,29 +1,19 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Xunit;
+namespace Zio.Tests;
 
-namespace Zio.Tests
+public class TestUPathExtension
 {
-    public class TestUPathExtension
+    [Theory]
+    [InlineData("/a/b", "a", "b")]
+    [InlineData("/a/b/c", "a", "b/c")]
+    [InlineData("a/b", "a", "b")]
+    [InlineData("a/b/c", "a", "b/c")]
+    [InlineData("", "", "")]
+    [InlineData("/z","z","")]
+    public void TestGetFirstDirectory(string path, string expectedFirstDir, string expectedRest)
     {
-
-
-        [Theory]
-        [InlineData("/a/b", "a", "b")]
-        [InlineData("/a/b/c", "a", "b/c")]
-        [InlineData("a/b", "a", "b")]
-        [InlineData("a/b/c", "a", "b/c")]
-        [InlineData("", "", "")]
-        [InlineData("/z","z","")]
-
-        public void TestGetFirstDirectory(string path, string expectedFirstDir, string expectedRest)
-        {
-            var pathInfo = new UPath(path);
-            var firstDir = pathInfo.GetFirstDirectory(out var rest);
-            Assert.Equal(expectedFirstDir,firstDir);
-            Assert.Equal(expectedRest,rest);
-        }
+        var pathInfo = new UPath(path);
+        var firstDir = pathInfo.GetFirstDirectory(out var rest);
+        Assert.Equal(expectedFirstDir,firstDir);
+        Assert.Equal(expectedRest,rest);
     }
 }
-
