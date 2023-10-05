@@ -24,7 +24,8 @@ public class SubFileSystem : ComposeFileSystem
     /// <exception cref="DirectoryNotFoundException">If the directory subPath does not exist in the delegate FileSystem</exception>
     public SubFileSystem(IFileSystem fileSystem, UPath subPath, bool owned = true) : base(fileSystem, owned)
     {
-        SubPath = subPath.AssertAbsolute(nameof(subPath));
+        subPath.AssertAbsolute(nameof(subPath));
+        SubPath = subPath;
         if (!fileSystem.DirectoryExists(SubPath))
         {
             throw NewDirectoryNotFoundException(SubPath);

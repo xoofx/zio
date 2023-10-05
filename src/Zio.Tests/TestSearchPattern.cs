@@ -107,7 +107,7 @@ public class TestSearchPattern
             var newPath = path.ChangeExtension(".zip");
             Assert.Equal("/a/b/c/d.zip", newPath.FullName);
             Assert.Equal(new UPath("a/b/c/d.txt"), path.ToRelative());
-            Assert.Equal(path, path.AssertAbsolute());
+            path.AssertNotNull();
             Assert.Throws<ArgumentNullException>(() => new UPath().AssertNotNull());
             Assert.Throws<ArgumentException>(() => new UPath("not_absolute").AssertAbsolute());
         }

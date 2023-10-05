@@ -67,7 +67,7 @@ public static class UPathExtensions
         var lastIndex = fullname.LastIndexOf(UPath.DirectorySeparator);
         if (lastIndex > 0)
         {
-            return fullname.Substring(0, lastIndex);
+            return new UPath(fullname.Substring(0, lastIndex), true);
         }
         return lastIndex == 0 ? UPath.Root : UPath.Empty;
     }
@@ -239,13 +239,13 @@ public static class UPathExtensions
     /// </summary>
     /// <param name="path">The path.</param>
     /// <param name="name">The name of a parameter to include n the <see cref="ArgumentNullException"/>.</param>
-    /// <returns>A path not modified.</returns>
     /// <exception cref="System.ArgumentNullException">If the path was null using the parameter name from <paramref name="name"/></exception>
-    public static UPath AssertNotNull(this UPath path, string name = "path")
+    public static void AssertNotNull(this UPath path, string name = "path")
     {
-        if (path.FullName is null)
-            throw new ArgumentNullException(name);
-        return path;
+        if (path.IsNull)
+            Throw(name);
+
+        static void Throw(string name) => throw new ArgumentNullException(name);
     }
 
     /// <summary>
@@ -253,14 +253,12 @@ public static class UPathExtensions
     /// </summary>
     /// <param name="path">The path.</param>
     /// <param name="name">The name of a parameter to include n the <see cref="ArgumentNullException"/>.</param>
-    /// <returns>A path not modified.</returns>
     /// <exception cref="System.ArgumentException">If the path is not absolute using the parameter name from <paramref name="name"/></exception>
-    public static UPath AssertAbsolute(this UPath path, string name = "path")
+    public static void AssertAbsolute(this UPath path, string name = "path")
     {
-        AssertNotNull(path, name);
-
         if (!path.IsAbsolute)
-            throw new ArgumentException($"Path `{path}` must be absolute", name);
-        return path.FullName;
+            Throw(path, name);
+
+        static void Throw(UPath path, string name) => throw new ArgumentException($"Path `{path}` must be absolute", name);
     }
 }

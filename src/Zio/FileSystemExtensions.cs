@@ -401,7 +401,7 @@ public static class FileSystemExtensions
             using (var reader = new StreamReader(stream))
             {
                 var lines = new List<string>();
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     lines.Add(line);
@@ -430,7 +430,7 @@ public static class FileSystemExtensions
             using (var reader = new StreamReader(stream, encoding))
             {
                 var lines = new List<string>();
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     lines.Add(line);
@@ -601,8 +601,7 @@ public static class FileSystemExtensions
     public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
     {
         if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
-        foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Directory))
-            yield return subPath;
+        return fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.Directory);
     }
 
     /// <summary>
@@ -644,8 +643,7 @@ public static class FileSystemExtensions
     public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern, SearchOption searchOption)
     {
         if (searchPattern is null) throw new ArgumentNullException(nameof(searchPattern));
-        foreach (var subPath in fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.File))
-            yield return subPath;
+        return fileSystem.EnumeratePaths(path, searchPattern, searchOption, SearchTarget.File);
     }
 
     /// <summary>
