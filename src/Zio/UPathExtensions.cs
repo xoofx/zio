@@ -239,6 +239,7 @@ public static class UPathExtensions
     /// </summary>
     /// <param name="path">The path.</param>
     /// <param name="name">The name of a parameter to include n the <see cref="ArgumentNullException"/>.</param>
+    /// <returns>A path not modified.</returns>
     /// <exception cref="System.ArgumentNullException">If the path was null using the parameter name from <paramref name="name"/></exception>
     public static UPath AssertNotNull(this UPath path, string name = "path")
     {
@@ -255,6 +256,7 @@ public static class UPathExtensions
     /// </summary>
     /// <param name="path">The path.</param>
     /// <param name="name">The name of a parameter to include n the <see cref="ArgumentNullException"/>.</param>
+    /// <returns>A path not modified.</returns>
     /// <exception cref="System.ArgumentException">If the path is not absolute using the parameter name from <paramref name="name"/></exception>
     public static UPath AssertAbsolute(this UPath path, string name = "path")
     {
