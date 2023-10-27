@@ -6,7 +6,7 @@ Zio provides a simple, powerful, cross-platform **filesystem abstraction for .NE
 
 ## Features
 
-- Compatible with `.NET 4.0`, `4.5+`, `netstandard2.0`, `netstandard2.1` and `net6.0`
+- Compatible with `.NET 4.6+`, `netstandard2.0`, `netstandard2.1` and `net7.0`
 - API providing all operations provided by the regular System.IO API (e.g File.Move, Directory.Delete... etc.)
   - Allowing atomic filesystem operations (e.g File.Replace...)
 - A simple interface abstraction [`IFileSystem`](https://github.com/xoofx/zio/blob/main/src/Zio/IFileSystem.cs)
