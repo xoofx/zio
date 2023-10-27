@@ -265,6 +265,11 @@ public static class UPathExtensions
 
         return path;
 
-        static void Throw(UPath path, string name) => throw new ArgumentException($"Path `{path}` must be absolute", name);
+        static void Throw(UPath path, string name)
+        {
+            // Assert not null first, as a not absolute path could also be null, and if so, an ArgumentNullException shall be thrown
+            path.AssertNotNull(name);
+            throw new ArgumentException($"Path `{path}` must be absolute", name);
+        }
     }
 }
