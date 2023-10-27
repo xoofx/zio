@@ -67,7 +67,7 @@ public static class UPathExtensions
         var lastIndex = fullname.LastIndexOf(UPath.DirectorySeparator);
         if (lastIndex > 0)
         {
-            return fullname.Substring(0, lastIndex);
+            return new UPath(fullname.Substring(0, lastIndex), true);
         }
         return lastIndex == 0 ? UPath.Root : UPath.Empty;
     }
@@ -243,9 +243,12 @@ public static class UPathExtensions
     /// <exception cref="System.ArgumentNullException">If the path was null using the parameter name from <paramref name="name"/></exception>
     public static UPath AssertNotNull(this UPath path, string name = "path")
     {
-        if (path.FullName is null)
-            throw new ArgumentNullException(name);
+        if (path.IsNull)
+            Throw(name);
+
         return path;
+
+        static void Throw(string name) => throw new ArgumentNullException(name);
     }
 
     /// <summary>
@@ -257,10 +260,16 @@ public static class UPathExtensions
     /// <exception cref="System.ArgumentException">If the path is not absolute using the parameter name from <paramref name="name"/></exception>
     public static UPath AssertAbsolute(this UPath path, string name = "path")
     {
-        AssertNotNull(path, name);
-
         if (!path.IsAbsolute)
+            Throw(path, name);
+
+        return path;
+
+        static void Throw(UPath path, string name)
+        {
+            // Assert not null first, as a not absolute path could also be null, and if so, an ArgumentNullException shall be thrown
+            path.AssertNotNull(name);
             throw new ArgumentException($"Path `{path}` must be absolute", name);
-        return path.FullName;
+        }
     }
 }

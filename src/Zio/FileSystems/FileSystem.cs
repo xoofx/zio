@@ -612,7 +612,12 @@ public abstract class FileSystem : IFileSystem
     {
         if (IsDisposing || IsDisposed)
         {
-            throw new ObjectDisposedException($"This instance `{GetType()}` is already disposed.");
+            Throw(this.GetType());
+        }
+
+        static void Throw(Type type)
+        {
+            throw new ObjectDisposedException($"This instance `{type}` is already disposed.");
         }
     }
 

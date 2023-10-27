@@ -815,9 +815,7 @@ public class PhysicalFileSystem : FileSystem
             if (absolutePath.Length > DrivePrefixOnWindows.Length + 1)
                 builder.Append(absolutePath.Replace(UPath.DirectorySeparator, '\\').Substring(DrivePrefixOnWindows.Length + 2));
 
-            var result = builder.ToString();
-            builder.Length = 0;
-            return result;
+            return builder.ToString();
         }
         return absolutePath;
     }
@@ -841,9 +839,7 @@ public class PhysicalFileSystem : FileSystem
             if (absolutePath.Length > 2)
                 builder.Append(absolutePath.Substring(2));
 
-            var result = builder.ToString();
-            builder.Length = 0;
-            return new UPath(result);
+            return new UPath(builder.ToString());
         }
         return innerPath;
     }

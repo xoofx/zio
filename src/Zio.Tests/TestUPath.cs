@@ -41,6 +41,9 @@ public class TestUPath
     [InlineData("...a/b../", "...a/b..")]
     [InlineData("...a/..", "")]
     [InlineData("...a/b/..", "...a")]
+    [InlineData("..a/b", "..a/b")]
+    [InlineData("c/..d", "c/..d")]
+    [InlineData("c/d..", "c/d..")]
     public void TestNormalize(string pathAsText, string expectedResult)
     {
         var path = new UPath(pathAsText);
@@ -68,6 +71,16 @@ public class TestUPath
     }
 
     [Fact]
+    public void TestIsNullAndEmpty()
+    {
+        Assert.True(default(UPath).IsNull);
+        Assert.False(default(UPath).IsEmpty);
+        Assert.True(new UPath("").IsEmpty);
+        Assert.False(new UPath("").IsNull);
+        Assert.False(new UPath("/").IsEmpty);
+    }
+
+    [Fact]
     public void TestAbsoluteAndRelative()
     {
         var path = new UPath("x");
@@ -83,9 +96,6 @@ public class TestUPath
         Assert.True(path.IsAbsolute);
 
         Assert.Equal(path, path.ToAbsolute());
-
-        path = new UPath();
-        Assert.True(path.IsNull);
     }
 
     [Theory]
