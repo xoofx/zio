@@ -194,7 +194,7 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
     }
 
     /// <inheritdoc />
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is UPath path && Equals(path);
     }

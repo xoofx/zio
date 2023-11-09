@@ -121,7 +121,7 @@ public abstract class FileSystemEntry : IEquatable<FileSystemEntry>
     }
 
     /// <inheritdoc />
-    public bool Equals(FileSystemEntry other)
+    public bool Equals(FileSystemEntry? other)
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
