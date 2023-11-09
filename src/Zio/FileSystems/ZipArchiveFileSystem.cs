@@ -484,7 +484,7 @@ public class ZipArchiveFileSystem : FileSystem
     protected override FileAttributes GetAttributesImpl(UPath path)
     {
         var entry = GetEntry(path.FullName) ?? GetEntry(ConvertPathToDirectory(path));
-        if (entry == null)
+        if (entry is null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(path);
         }
@@ -570,7 +570,7 @@ public class ZipArchiveFileSystem : FileSystem
         destDir = destDir.Replace('\\', DirectorySeparator);
 #endif
         _entriesLock.EnterReadLock();
-        var entries = new ZipArchiveEntry[0];
+        var entries = Array.Empty<ZipArchiveEntry>();
         try
         {
             entries = _archive.Entries.Where(e => e.FullName.StartsWith(srcDir, _isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -618,12 +618,8 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override void MoveFileImpl(UPath srcPath, UPath destPath)
     {
-        var srcEntry = GetEntry(srcPath.FullName);
-        if (srcEntry == null)
-        {
-            throw FileSystemExceptionHelper.NewFileNotFoundException(srcPath);
-        }
-        
+        var srcEntry = GetEntry(srcPath.FullName) ?? throw FileSystemExceptionHelper.NewFileNotFoundException(srcPath);
+
         if (!DirectoryExistsImpl(destPath.GetDirectory()))
         {
             throw FileSystemExceptionHelper.NewDirectoryNotFoundException(destPath.GetDirectory());
@@ -633,8 +629,7 @@ public class ZipArchiveFileSystem : FileSystem
         if (destEntry != null)
         {
             throw new IOException("Cannot overwrite existing file.");
-        }
-        
+        }        
 
         destEntry = CreateEntry(destPath.FullName);
         TryGetDispatcher()?.RaiseCreated(destPath);
@@ -730,7 +725,7 @@ public class ZipArchiveFileSystem : FileSystem
     protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
     {
         var sourceEntry = GetEntry(srcPath.FullName);
-        if (sourceEntry == null)
+        if (sourceEntry is null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(srcPath);
         }
@@ -813,7 +808,7 @@ public class ZipArchiveFileSystem : FileSystem
     protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
     {
         var entry = GetEntry(path.FullName) ?? GetEntry(ConvertPathToDirectory(path.FullName));
-        if (entry == null)
+        if (entry is null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(path);
         }
@@ -879,17 +874,19 @@ public class ZipArchiveFileSystem : FileSystem
         }
     }
 
-    private string GetName(ZipArchiveEntry entry)
+    private static readonly char[] s_slashChars = { '/', '\\' };
+
+    private static string GetName(ZipArchiveEntry entry)
     {
-        var name = entry.FullName.TrimEnd('/', '\\');
-        var index = name.LastIndexOfAny(new[] { '/', '\\' });
+        var name = entry.FullName.TrimEnd(s_slashChars);
+        var index = name.LastIndexOfAny(s_slashChars);
         return name.Substring(index + 1);
     }
 
     private static string GetParent(string path)
     {
-        path = path.TrimEnd('/', '\\');
-        var lastIndex = path.LastIndexOfAny(new[] { '/', '\\' });
+        path = path.TrimEnd(s_slashChars);
+        var lastIndex = path.LastIndexOfAny(s_slashChars);
         return lastIndex == -1 ? "" : path.Substring(0, lastIndex);
     }
 
@@ -926,8 +923,7 @@ public class ZipArchiveFileSystem : FileSystem
         }
     }
 
-
-    private class ZipEntryStream : Stream
+    private sealed class ZipEntryStream : Stream
     {
         private readonly ZipArchiveEntry _entry;
         private readonly ZipArchiveFileSystem _fileSystem;
@@ -1029,7 +1025,7 @@ public class ZipArchiveFileSystem : FileSystem
         }
     }
 
-    private class EntryState
+    private sealed class EntryState
     {
         public EntryState(FileShare share)
         {
