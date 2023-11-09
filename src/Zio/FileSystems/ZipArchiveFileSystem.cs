@@ -33,7 +33,7 @@ public class ZipArchiveFileSystem : FileSystem
     private readonly Dictionary<ZipArchiveEntry, EntryState> _openStreams;
     private readonly object _openStreamsLock = new();
 
-#if NET45 // .Net4.5 uses a backslash as directory separator
+#if NETFRAMEWORK // .Net4.5 uses a backslash as directory separator
     private const char DirectorySeparator = '\\';
 #else
     private const char DirectorySeparator = '/';
@@ -56,7 +56,7 @@ public class ZipArchiveFileSystem : FileSystem
         {
             throw new ArgumentNullException(nameof(archive));
         }
-#if NET45 // .Net4.5 uses a backslash as directory separator
+#if NETFRAMEWORK // .Net4.5 uses a backslash as directory separator
         foreach (var entry in _archive.Entries)
         {
             entry.FullName.Replace('/', DirectorySeparator);
@@ -112,7 +112,7 @@ public class ZipArchiveFileSystem : FileSystem
 
     private ZipArchiveEntry? GetEntry(string path)
     {
-#if NET45
+#if NETFRAMEWORK
         path = path.Replace('/', DirectorySeparator);
 #else
         path = path.Replace('\\', DirectorySeparator);
@@ -243,7 +243,7 @@ public class ZipArchiveFileSystem : FileSystem
         }
 
         var entryPath = RemoveLeadingSlash(path);
-#if NET45
+#if NETFRAMEWORK
         entryPath = entryPath.Replace('/', DirectorySeparator);
 #else
         entryPath = entryPath.Replace('\\', DirectorySeparator);
@@ -256,7 +256,7 @@ public class ZipArchiveFileSystem : FileSystem
     protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
     {
         var entryPath = RemoveLeadingSlash(ConvertPathToDirectory(path));
-#if NET45
+#if NETFRAMEWORK
         entryPath = entryPath.Replace('/', DirectorySeparator);
 #else
         entryPath = entryPath.Replace('\\', DirectorySeparator);
@@ -427,7 +427,7 @@ public class ZipArchiveFileSystem : FileSystem
         var search = SearchPattern.Parse(ref path, ref searchPattern);
         var entryPath = RemoveLeadingSlash(path);
         var root = ConvertPathToDirectory(entryPath);
-#if NET45
+#if NETFRAMEWORK
         root = root.Replace('/', '\\');
 #else
         root = root.Replace('\\', '/');
@@ -562,7 +562,7 @@ public class ZipArchiveFileSystem : FileSystem
 
         var srcDir = RemoveLeadingSlash(ConvertPathToDirectory(srcPath.FullName));
         var destDir = RemoveLeadingSlash(ConvertPathToDirectory(destPath.FullName));
-#if NET45
+#if NETFRAMEWORK
         srcDir = srcDir.Replace('/', DirectorySeparator);
         destDir = destDir.Replace('/', DirectorySeparator);
 #else
@@ -856,7 +856,7 @@ public class ZipArchiveFileSystem : FileSystem
     private ZipArchiveEntry CreateEntry(string path)
     {
         path = RemoveLeadingSlash(path);
-#if NET45
+#if NETFRAMEWORK
         path = path.Replace('/', DirectorySeparator);
 #else
         path = path.Replace('\\', DirectorySeparator);

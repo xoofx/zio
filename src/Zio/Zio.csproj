@@ -13,7 +13,7 @@
     <PackageReadmeFile>readme.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/xoofx/zio</PackageProjectUrl>
     <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
-    <LangVersion>10</LangVersion>
+    <LangVersion>11</LangVersion>
     <!--Add support for sourcelink-->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
@@ -72,7 +72,7 @@
   </PropertyGroup>
   
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net462'">
-    <DefineConstants>$(AdditionalConstants);NET45;HAS_ZIPARCHIVE</DefineConstants>
+    <DefineConstants>$(AdditionalConstants);HAS_ZIPARCHIVE</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
