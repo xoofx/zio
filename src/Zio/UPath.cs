@@ -452,7 +452,7 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
         }
     }
 
-    private struct TextSlice
+    private readonly struct TextSlice
     {
         public TextSlice(int start, int end)
         {
