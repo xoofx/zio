@@ -1179,7 +1179,7 @@ public class MemoryFileSystem : FileSystem
         ExitFindNode(EnterFindNode(path, FindNodeFlags.CreatePathIfNotExist | FindNodeFlags.NodeShared));
     }
 
-    private struct NodeResult
+    private readonly struct NodeResult
     {
         public NodeResult(DirectoryNode? directory, FileSystemNode node, string? name, FindNodeFlags flags)
         {
@@ -1214,7 +1214,7 @@ public class MemoryFileSystem : FileSystem
         KeepParentNodeShared = 1 << 6,
     }
 
-    private void ExitFindNode(NodeResult nodeResult)
+    private void ExitFindNode(in NodeResult nodeResult)
     {
         var flags = nodeResult.Flags;
 
