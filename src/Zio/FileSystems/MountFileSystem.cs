@@ -33,7 +33,7 @@ public class MountFileSystem : ComposeFileSystem
     /// Initializes a new instance of the <see cref="MountFileSystem"/> class with a default backup filesystem.
     /// </summary>
     /// <param name="defaultBackupFileSystem">The default backup file system.</param>
-    /// <param name="owned">True if <paramref name="defaultBackupFileSystem"/> and mounted filesytems should be disposed when this instance is disposed.</param>
+    /// <param name="owned">True if <paramref name="defaultBackupFileSystem"/> and mounted filesystems should be disposed when this instance is disposed.</param>
     public MountFileSystem(IFileSystem? defaultBackupFileSystem, bool owned = true) : base(defaultBackupFileSystem, owned)
     {
         _mounts = new SortedList<UPath, IFileSystem>(new UPathLengthComparer());
@@ -144,7 +144,7 @@ public class MountFileSystem : ComposeFileSystem
     {
         ValidateMountName(name);
 
-        IFileSystem mountFileSystem;
+        IFileSystem? mountFileSystem;
 
         if (!_mounts.TryGetValue(name, out mountFileSystem))
         {
@@ -1011,7 +1011,7 @@ public class MountFileSystem : ComposeFileSystem
             : prefix / remaining.ToRelative();
     }
 
-    private void ValidateMountName(UPath name)
+    private static void ValidateMountName(UPath name)
     {
         name.AssertAbsolute(nameof(name));
         if (name == UPath.Root)

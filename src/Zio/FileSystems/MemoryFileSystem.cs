@@ -796,7 +796,7 @@ public class MemoryFileSystem : FileSystem
                         // and the time we are going to actually visit it, it might have been
                         // removed in the meantime, so we make sure here that we have a folder
                         // and we don't throw an error if it is not
-                        if (!(result.Node is DirectoryNode))
+                        if (result.Node is not DirectoryNode)
                         {
                             continue;
                         }
@@ -885,7 +885,7 @@ public class MemoryFileSystem : FileSystem
                         // and the time we are going to actually visit it, it might have been
                         // removed in the meantime, so we make sure here that we have a folder
                         // and we don't throw an error if it is not
-                        if (!(result.Node is DirectoryNode))
+                        if (result.Node is not DirectoryNode)
                         {
                             continue;
                         }
@@ -1106,8 +1106,7 @@ public class MemoryFileSystem : FileSystem
         }
     }
 
-    
-    private void ValidateDirectory([NotNull] FileSystemNode? node, UPath srcPath)
+    private static void ValidateDirectory([NotNull] FileSystemNode? node, UPath srcPath)
     {
         if (node is FileNode)
         {
@@ -1120,7 +1119,7 @@ public class MemoryFileSystem : FileSystem
         }
     }
 
-    private void ValidateFile([NotNull] FileSystemNode? node, UPath srcPath)
+    private static void ValidateFile([NotNull] FileSystemNode? node, UPath srcPath)
     {
         if (node is null)
         {
@@ -1179,7 +1178,7 @@ public class MemoryFileSystem : FileSystem
         ExitFindNode(EnterFindNode(path, FindNodeFlags.CreatePathIfNotExist | FindNodeFlags.NodeShared));
     }
 
-    private struct NodeResult
+    private readonly struct NodeResult
     {
         public NodeResult(DirectoryNode? directory, FileSystemNode node, string? name, FindNodeFlags flags)
         {
@@ -1214,7 +1213,7 @@ public class MemoryFileSystem : FileSystem
         KeepParentNodeShared = 1 << 6,
     }
 
-    private void ExitFindNode(NodeResult nodeResult)
+    private void ExitFindNode(in NodeResult nodeResult)
     {
         var flags = nodeResult.Flags;
 

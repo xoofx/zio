@@ -340,12 +340,11 @@ public static class FileSystemExtensions
     public static string ReadAllText(this IFileSystem fs, UPath path)
     {
         var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        
+        using (var reader = new StreamReader(stream))
         {
-            using (var reader = new StreamReader(stream))
-            {
-                return reader.ReadToEnd();
-            }
-        }
+            return reader.ReadToEnd();
+        }        
     }
 
     /// <summary>
@@ -359,11 +358,10 @@ public static class FileSystemExtensions
     {
         if (encoding is null) throw new ArgumentNullException(nameof(encoding));
         var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        
+        using (var reader = new StreamReader(stream, encoding))
         {
-            using (var reader = new StreamReader(stream, encoding))
-            {
-                return reader.ReadToEnd();
-            }
+            return reader.ReadToEnd();
         }
     }
 
