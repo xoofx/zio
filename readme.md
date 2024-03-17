@@ -80,4 +80,4 @@ The logo is `File` by [jeff](https://thenounproject.com/jeff955/) from the Noun 
 
 ## Author
 
-Alexandre MUTEL aka [xoofx](https://xoofx.com)
+Alexandre MUTEL aka [xoofx](https://xoofx.github.io)
