@@ -302,7 +302,17 @@ public class PhysicalFileSystem : FileSystem
             throw new UnauthorizedAccessException($"Cannot set creation time on system directory `{path}`");
         }
 
-        File.SetCreationTime(ConvertPathToInternal(path), time);
+        var internalPath = ConvertPathToInternal(path);
+        var attributes = File.GetAttributes(internalPath);
+
+        if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
+        {
+            Directory.SetCreationTime(internalPath, time);
+        }
+        else
+        {
+            File.SetCreationTime(internalPath, time);
+        }
     }
 
     /// <inheritdoc />
@@ -353,7 +363,18 @@ public class PhysicalFileSystem : FileSystem
             }
             throw new UnauthorizedAccessException($"Cannot set last access time on system directory `{path}`");
         }
-        File.SetLastAccessTime(ConvertPathToInternal(path), time);
+
+        var internalPath = ConvertPathToInternal(path);
+        var attributes = File.GetAttributes(internalPath);
+
+        if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
+        {
+            Directory.SetLastAccessTime(internalPath, time);
+        }
+        else
+        {
+            File.SetLastAccessTime(internalPath, time);
+        }
     }
 
     /// <inheritdoc />
@@ -405,7 +426,17 @@ public class PhysicalFileSystem : FileSystem
             throw new UnauthorizedAccessException($"Cannot set last write time on system directory `{path}`");
         }
 
-        File.SetLastWriteTime(ConvertPathToInternal(path), time);
+        var internalPath = ConvertPathToInternal(path);
+        var attributes = File.GetAttributes(internalPath);
+
+        if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
+        {
+            Directory.SetLastWriteTime(internalPath, time);
+        }
+        else
+        {
+            File.SetLastWriteTime(internalPath, time);
+        }
     }
 
     // ----------------------------------------------

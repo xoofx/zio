@@ -89,6 +89,19 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             fs.CreateDirectory(pathToCreate);
             Assert.True(Directory.Exists(systemPathToCreate));
 
+            // LastAccessTime
+            // LastWriteTime
+            // CreationTime
+            var lastWriteTime = DateTime.Now + TimeSpan.FromSeconds(10);
+            var lastAccessTime = DateTime.Now + TimeSpan.FromSeconds(11);
+            var creationTime = DateTime.Now + TimeSpan.FromSeconds(12);
+            fs.SetLastWriteTime(pathToCreate, lastWriteTime);
+            fs.SetLastAccessTime(pathToCreate, lastAccessTime);
+            fs.SetCreationTime(pathToCreate, creationTime);
+            Assert.Equal(lastWriteTime, fs.GetLastWriteTime(pathToCreate));
+            Assert.Equal(lastAccessTime, fs.GetLastAccessTime(pathToCreate));
+            Assert.Equal(creationTime, fs.GetCreationTime(pathToCreate));
+
             // DirectoryExists
             Assert.True(fs.DirectoryExists(pathToCreate));
             Assert.False(fs.DirectoryExists(pathToCreate / "not_found"));
