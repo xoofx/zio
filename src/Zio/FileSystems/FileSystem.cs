@@ -431,6 +431,20 @@ public abstract class FileSystem : IFileSystem
     /// <param name="time">A <see cref="DateTime"/> containing the value to set for the last write date and time of path. This value is expressed in local time.</param>
     protected abstract void SetLastWriteTimeImpl(UPath path, DateTime time);
 
+    /// <inheritdoc />
+    public void CreateSymbolicLink(UPath path, UPath pathToTarget)
+    {
+        AssertNotDisposed();
+        CreateSymbolicLinkImpl(ValidatePath(path), ValidatePath(pathToTarget));
+    }
+
+    /// <summary>
+    /// Creates a symbolic link.
+    /// </summary>
+    /// <param name="path">The path of the symbolic link to create.</param>
+    /// <param name="pathToTarget">The path of the target for the symbolic link.</param>
+    protected abstract void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget);
+    
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

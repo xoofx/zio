@@ -163,6 +163,13 @@ public interface IFileSystem : IDisposable
     /// <param name="time">A <see cref="DateTime"/> containing the value to set for the last write date and time of path. This value is expressed in local time.</param>
     void SetLastWriteTime(UPath path, DateTime time);
 
+    /// <summary>
+    /// Creates a symbolic link.
+    /// </summary>
+    /// <param name="path">The path of the symbolic link to create.</param>
+    /// <param name="pathToTarget">The path of the target for the symbolic link.</param>
+    void CreateSymbolicLink(UPath path, UPath pathToTarget);
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

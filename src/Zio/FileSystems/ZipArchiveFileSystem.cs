@@ -818,6 +818,12 @@ public class ZipArchiveFileSystem : FileSystem
     }
 
     /// <inheritdoc />
+    protected override void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget)
+    {
+        throw new NotSupportedException("Symbolic links are not supported by ZipArchiveFileSystem");
+    }
+
+    /// <inheritdoc />
     protected override IFileSystemWatcher WatchImpl(UPath path)
     {
         var watcher = new FileSystemWatcher(this, path);

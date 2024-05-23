@@ -439,6 +439,82 @@ public class PhysicalFileSystem : FileSystem
         }
     }
 
+    protected override void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget)
+    {
+        if (IsWithinSpecialDirectory(path))
+        {
+            throw new UnauthorizedAccessException($"The access to `{path}` is denied");
+        }
+
+        if (IsWithinSpecialDirectory(pathToTarget))
+        {
+            throw new UnauthorizedAccessException($"The access to `{pathToTarget}` is denied");
+        }
+
+        var systemPath = ConvertPathToInternal(path);
+
+        if (File.Exists(systemPath))
+        {
+            throw NewDestinationFileExistException(path);
+        }
+
+        if (Directory.Exists(systemPath))
+        {
+            throw NewDestinationDirectoryExistException(path);
+        }
+
+        var systemPathToTarget = ConvertPathToInternal(pathToTarget);
+
+        bool isDirectory;
+
+        if (File.Exists(systemPathToTarget))
+        {
+            isDirectory = false;
+        }
+        else if (Directory.Exists(systemPathToTarget))
+        {
+            isDirectory = true;
+        }
+        else
+        {
+            throw NewDirectoryNotFoundException(path);
+        }
+
+#if NET7_0_OR_GREATER
+        if (isDirectory)
+        {
+            Directory.CreateSymbolicLink(systemPath, systemPathToTarget);
+        }
+        else
+        {
+            File.CreateSymbolicLink(systemPath, systemPathToTarget);
+        }
+#else
+        bool success;
+
+        if (IsOnWindows)
+        {
+            var type = isDirectory ? Interop.Windows.SymbolicLink.Directory : Interop.Windows.SymbolicLink.File;
+
+            success = Interop.Windows.CreateSymbolicLink(systemPath, systemPathToTarget, type);
+
+            if (!success && Marshal.GetLastWin32Error() == 1314)
+            {
+                throw new UnauthorizedAccessException($"Could not create symbolic link `{path}` to `{pathToTarget}` due to insufficient privileges");
+            }
+        }
+        else
+        {
+            success = Interop.Unix.symlink(systemPathToTarget, systemPath) == 0;
+        }
+
+        if (!success)
+        {
+            throw new IOException($"Could not create symbolic link `{path}` to `{pathToTarget}`");
+        }
+#endif
+    }
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------
