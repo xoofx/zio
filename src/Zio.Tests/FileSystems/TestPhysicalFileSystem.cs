@@ -445,6 +445,11 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             // FileExists
             Assert.True(fs.FileExists(filePathDest));
             Assert.Equal(buffer.Length, fs.GetFileLength(filePathDest));
+
+            // RemoveDirectory
+            fs.DeleteDirectory(pathDest, false);
+            Assert.False(Directory.Exists(systemPathDest));
+            Assert.True(Directory.Exists(systemPathSource));
         }
         finally
         {
@@ -500,6 +505,11 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             // FileEntry
             var entry = fs.GetFileSystemEntry(pathDest);
             Assert.True(entry.Attributes.HasFlag(FileAttributes.ReparsePoint));
+
+            // DeleteFile
+            fs.DeleteFile(pathDest);
+            Assert.False(File.Exists(systemPathDest));
+            Assert.True(File.Exists(systemPathSource));
         }
         finally
         {
