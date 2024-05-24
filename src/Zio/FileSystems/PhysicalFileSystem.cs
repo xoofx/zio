@@ -516,7 +516,7 @@ public class PhysicalFileSystem : FileSystem
     }
 
     /// <inheritdoc />
-    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
     {
         if (IsWithinSpecialDirectory(linkPath))
         {
@@ -536,7 +536,8 @@ public class PhysicalFileSystem : FileSystem
         }
         else
         {
-            return null;
+            resolvedPath = default;
+            return false;
         }
 
 #if NET7_0_OR_GREATER
@@ -545,7 +546,14 @@ public class PhysicalFileSystem : FileSystem
         var systemResult = IsOnWindows ? Interop.Windows.GetFinalPathName(systemPath) : Interop.Unix.readlink(systemPath);
 #endif
 
-        return systemResult != null ? ConvertPathFromInternal(systemResult) : default(UPath?);
+        if (systemResult == null)
+        {
+            resolvedPath = default;
+            return false;
+        }
+
+        resolvedPath = ConvertPathFromInternal(systemResult);
+        return true;
     }
 
     // ----------------------------------------------

@@ -824,9 +824,10 @@ public class ZipArchiveFileSystem : FileSystem
     }
 
     /// <inheritdoc />
-    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
     {
-        return null;
+        resolvedPath = UPath.Empty;
+        return false;
     }
 
     /// <inheritdoc />

@@ -447,17 +447,18 @@ public abstract class FileSystem : IFileSystem
 
 
     /// <inheritdoc />
-    public UPath? ResolveLinkTarget(UPath linkPath)
+    public bool TryResolveLinkTarget(UPath linkPath, out UPath resolvedPath)
     {
         AssertNotDisposed();
-        return ResolveLinkTargetImpl(ValidatePath(linkPath));
+        return TryResolveLinkTargetImpl(ValidatePath(linkPath), out resolvedPath);
     }
 
     /// <summary>
     /// Resolves the target of a symbolic link.
     /// </summary>
     /// <param name="linkPath">The path of the symbolic link to resolve.</param>
-    protected abstract UPath? ResolveLinkTargetImpl(UPath linkPath);
+    /// <param name="resolvedPath"></param>
+    protected abstract bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath);
 
     // ----------------------------------------------
     // Search API

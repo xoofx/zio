@@ -443,7 +443,8 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             fs.CreateSymbolicLink(pathDest, pathSource);
 
             // ResolveSymbolicLink
-            Assert.Equal(pathSource, fs.ResolveLinkTarget(pathDest));
+            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            Assert.Equal(pathSource, resolvedPath);
 
             // FileExists
             Assert.True(fs.FileExists(filePathDest));
@@ -491,7 +492,8 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             fs.CreateSymbolicLink(pathDest, pathSource);
 
             // ResolveSymbolicLink
-            Assert.Equal(pathSource, fs.ResolveLinkTarget(pathDest));
+            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            Assert.Equal(pathSource, resolvedPath);
 
             // FileExists
             Assert.True(fs.FileExists(pathDest));

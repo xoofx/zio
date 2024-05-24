@@ -760,9 +760,10 @@ public class MemoryFileSystem : FileSystem
     }
 
     /// <inheritdoc />
-    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
     {
-        return null;
+        resolvedPath = default;
+        return false;
     }
 
     // ----------------------------------------------

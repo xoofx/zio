@@ -566,12 +566,24 @@ public class MountFileSystem : ComposeFileSystem
     }
 
     /// <inheritdoc />
-    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
     {
         var mountfs = TryGetMountOrNext(ref linkPath, out var mountPath);
-        var path = mountfs?.ResolveLinkTarget(linkPath);
 
-        return path != null ? CombinePrefix(mountPath, path.Value) : default(UPath?);
+        if (mountfs is null)
+        {
+            resolvedPath = default;
+            return false;
+        }
+
+        if (!mountfs.TryResolveLinkTarget(linkPath, out var resolved))
+        {
+            resolvedPath = default;
+            return false;
+        }
+
+        resolvedPath = CombinePrefix(mountPath, resolved);
+        return true;
     }
 
     /// <inheritdoc />

@@ -174,7 +174,8 @@ public interface IFileSystem : IDisposable
     /// Resolves the target of a symbolic link.
     /// </summary>
     /// <param name="linkPath">The path of the symbolic link to resolve.</param>
-    UPath? ResolveLinkTarget(UPath linkPath);
+    /// <param name="resolvedPath">The path of the symbolic link resolved if true is returned.</param>
+    bool TryResolveLinkTarget(UPath linkPath, out UPath resolvedPath);
 
     // ----------------------------------------------
     // Search API

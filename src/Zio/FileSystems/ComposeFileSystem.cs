@@ -193,11 +193,16 @@ public abstract class ComposeFileSystem : FileSystem
     }
 
     /// <inheritdoc />
-    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
     {
-        var path = FallbackSafe.ResolveLinkTarget(ConvertPathToDelegate(linkPath));
+        if (!FallbackSafe.TryResolveLinkTarget(ConvertPathToDelegate(linkPath), out var resolvedPathDelegate))
+        {
+            resolvedPath = default;
+            return false;
+        }
 
-        return path.HasValue ? ConvertPathFromDelegate(path.Value) : default(UPath?);
+        resolvedPath = ConvertPathFromDelegate(resolvedPathDelegate);
+        return true;
     }
 
     // ----------------------------------------------
