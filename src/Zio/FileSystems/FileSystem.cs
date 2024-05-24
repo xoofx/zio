@@ -575,6 +575,7 @@ public abstract class FileSystem : IFileSystem
         if (systemPath is null) throw new ArgumentNullException(nameof(systemPath));
         return ValidatePath(ConvertPathFromInternalImpl(systemPath));
     }
+
     /// <summary>
     /// Implementation for <see cref="ConvertPathToInternal"/>, <paramref name="innerPath"/> is guaranteed to be not null and return path to be validated through <see cref="ValidatePath"/>.
     /// Converts the specified system path to a <see cref="IFileSystem"/> path.

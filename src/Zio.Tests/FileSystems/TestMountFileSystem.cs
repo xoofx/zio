@@ -453,10 +453,10 @@ public class TestMountFileSystem : TestFileSystemBase
         var pathInfo = physicalFs.ConvertPathFromInternal(SystemPath).ToRelative();
         var pathSource = "/physical" / pathInfo / "Source";
         var filePathSource = pathSource / "test.txt";
-        var systemPathSource = fs.ConvertPathToInternal(pathSource);
+        var systemPathSource = Path.Combine(SystemPath, "Source");
         var pathDest = "/physical" / pathInfo / "Dest";
         var filePathDest = pathDest / "test.txt";
-        var systemPathDest = fs.ConvertPathToInternal(pathDest);
+        var systemPathDest = Path.Combine(SystemPath, "Dest");
 
         try
         {

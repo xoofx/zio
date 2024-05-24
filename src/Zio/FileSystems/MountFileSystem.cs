@@ -976,19 +976,6 @@ public class MountFileSystem : ComposeFileSystem
         return path;
     }
 
-    protected override string ConvertPathToInternalImpl(UPath path)
-    {
-        var mountPath = path;
-        var mountfs = TryGetMountOrNext(ref mountPath);
-
-        if (mountfs != null)
-        {
-            return mountfs.ConvertPathToInternal(mountPath);
-        }
-
-        return base.ConvertPathToInternalImpl(path);
-    }
-
     private IFileSystem? TryGetMountOrNext(ref UPath path)
     {
         return TryGetMountOrNext(ref path, out var _);
