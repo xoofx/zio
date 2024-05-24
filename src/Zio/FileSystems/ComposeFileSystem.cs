@@ -192,6 +192,14 @@ public abstract class ComposeFileSystem : FileSystem
         FallbackSafe.CreateSymbolicLink(ConvertPathToDelegate(path), ConvertPathToDelegate(pathToTarget));
     }
 
+    /// <inheritdoc />
+    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    {
+        var path = FallbackSafe.ResolveLinkTarget(ConvertPathToDelegate(linkPath));
+
+        return path.HasValue ? ConvertPathFromDelegate(path.Value) : default(UPath?);
+    }
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

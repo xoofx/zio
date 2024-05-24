@@ -170,6 +170,12 @@ public interface IFileSystem : IDisposable
     /// <param name="pathToTarget">The path of the target for the symbolic link.</param>
     void CreateSymbolicLink(UPath path, UPath pathToTarget);
 
+    /// <summary>
+    /// Resolves the target of a symbolic link.
+    /// </summary>
+    /// <param name="linkPath">The path of the symbolic link to resolve.</param>
+    UPath? ResolveLinkTarget(UPath linkPath);
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

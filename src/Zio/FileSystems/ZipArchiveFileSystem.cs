@@ -824,6 +824,12 @@ public class ZipArchiveFileSystem : FileSystem
     }
 
     /// <inheritdoc />
+    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    {
+        return null;
+    }
+
+    /// <inheritdoc />
     protected override IFileSystemWatcher WatchImpl(UPath path)
     {
         var watcher = new FileSystemWatcher(this, path);

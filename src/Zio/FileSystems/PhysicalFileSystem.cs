@@ -515,6 +515,39 @@ public class PhysicalFileSystem : FileSystem
 #endif
     }
 
+    /// <inheritdoc />
+    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    {
+        if (IsWithinSpecialDirectory(linkPath))
+        {
+            throw new UnauthorizedAccessException($"The access to `{linkPath}` is denied");
+        }
+
+        var systemPath = ConvertPathToInternal(linkPath);
+        bool isDirectory;
+
+        if (File.Exists(systemPath))
+        {
+            isDirectory = false;
+        }
+        else if (Directory.Exists(systemPath))
+        {
+            isDirectory = true;
+        }
+        else
+        {
+            return null;
+        }
+
+#if NET7_0_OR_GREATER
+        var systemResult = isDirectory ? Directory.ResolveLinkTarget(systemPath, true)?.FullName : File.ResolveLinkTarget(systemPath, true)?.FullName;
+#else
+        var systemResult = IsOnWindows ? Interop.Windows.GetFinalPathName(systemPath) : Interop.Unix.readlink(systemPath);
+#endif
+
+        return systemResult != null ? ConvertPathFromInternal(systemResult) : default(UPath?);
+    }
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

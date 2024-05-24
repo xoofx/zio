@@ -759,6 +759,12 @@ public class MemoryFileSystem : FileSystem
         throw new NotSupportedException("Symbolic links are not supported by MemoryFileSystem");
     }
 
+    /// <inheritdoc />
+    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    {
+        return null;
+    }
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

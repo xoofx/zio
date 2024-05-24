@@ -442,6 +442,9 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             // CreateSymbolicLink
             fs.CreateSymbolicLink(pathDest, pathSource);
 
+            // ResolveSymbolicLink
+            Assert.Equal(pathSource, fs.ResolveLinkTarget(pathDest));
+
             // FileExists
             Assert.True(fs.FileExists(filePathDest));
             Assert.Equal(buffer.Length, fs.GetFileLength(filePathDest));
@@ -486,6 +489,9 @@ public class TestPhysicalFileSystem : TestFileSystemBase
 
             // CreateSymbolicLink
             fs.CreateSymbolicLink(pathDest, pathSource);
+
+            // ResolveSymbolicLink
+            Assert.Equal(pathSource, fs.ResolveLinkTarget(pathDest));
 
             // FileExists
             Assert.True(fs.FileExists(pathDest));

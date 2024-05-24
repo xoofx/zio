@@ -444,7 +444,21 @@ public abstract class FileSystem : IFileSystem
     /// <param name="path">The path of the symbolic link to create.</param>
     /// <param name="pathToTarget">The path of the target for the symbolic link.</param>
     protected abstract void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget);
-    
+
+
+    /// <inheritdoc />
+    public UPath? ResolveLinkTarget(UPath linkPath)
+    {
+        AssertNotDisposed();
+        return ResolveLinkTargetImpl(ValidatePath(linkPath));
+    }
+
+    /// <summary>
+    /// Resolves the target of a symbolic link.
+    /// </summary>
+    /// <param name="linkPath">The path of the symbolic link to resolve.</param>
+    protected abstract UPath? ResolveLinkTargetImpl(UPath linkPath);
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

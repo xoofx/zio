@@ -125,6 +125,11 @@ public class FileSystemEntryRedirect : FileSystem
         _fs.CreateSymbolicLink(path, pathToTarget);
     }
 
+    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    {
+        return _fs.ResolveLinkTarget(linkPath);
+    }
+
     protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
     {
         return _fs.GetDirectoryEntry(path).EnumerateEntries(searchPattern, searchOption, searchTarget).Select(e => e.Path);

@@ -566,6 +566,15 @@ public class MountFileSystem : ComposeFileSystem
     }
 
     /// <inheritdoc />
+    protected override UPath? ResolveLinkTargetImpl(UPath linkPath)
+    {
+        var mountfs = TryGetMountOrNext(ref linkPath, out var mountPath);
+        var path = mountfs?.ResolveLinkTarget(linkPath);
+
+        return path != null ? CombinePrefix(mountPath, path.Value) : default(UPath?);
+    }
+
+    /// <inheritdoc />
     protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
     {
         // Use the search pattern to normalize the path/search pattern
