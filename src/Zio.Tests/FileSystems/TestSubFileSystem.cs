@@ -70,7 +70,6 @@ public class TestSubFileSystem : TestFileSystemBase
         Assert.True(gotChange);
     }
 
-
     [SkippableFact]
     public void TestDirectorySymlink()
     {
@@ -87,16 +86,12 @@ public class TestSubFileSystem : TestFileSystemBase
         }
 
         var physicalFs = new PhysicalFileSystem();
-        var memoryFs = new MemoryFileSystem();
-        var fs = new MountFileSystem();
-        fs.Mount("/physical", physicalFs);
-        fs.Mount("/memory", memoryFs);
+        var fs = new SubFileSystem(physicalFs, physicalFs.ConvertPathFromInternal(SystemPath));
 
-        var pathInfo = physicalFs.ConvertPathFromInternal(SystemPath).ToRelative();
-        var pathSource = "/physical" / pathInfo / "Source";
+        UPath pathSource = "/Source";
         var filePathSource = pathSource / "test.txt";
         var systemPathSource = fs.ConvertPathToInternal(pathSource);
-        var pathDest = "/physical" / pathInfo / "Dest";
+        UPath pathDest = "/Dest";
         var filePathDest = pathDest / "test.txt";
         var systemPathDest = fs.ConvertPathToInternal(pathDest);
 
@@ -116,7 +111,6 @@ public class TestSubFileSystem : TestFileSystemBase
 
             // CreateSymbolicLink
             fs.CreateSymbolicLink(pathDest, pathSource);
-            Assert.Throws<InvalidOperationException>(() => fs.CreateSymbolicLink("/memory/invalid", pathSource));
 
             // ResolveSymbolicLink
             Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
