@@ -555,6 +555,13 @@ public class MountFileSystem : ComposeFileSystem
     {
         var originalSrcPath = path;
         var mountfs = TryGetMountOrNext(ref path);
+        var mountTargetfs = TryGetMountOrNext(ref pathToTarget);
+
+        if (mountfs != mountTargetfs)
+        {
+            throw new InvalidOperationException("Cannot create a symbolic link between two different filesystems");
+        }
+
         if (mountfs != null)
         {
             mountfs.CreateSymbolicLink(path, pathToTarget);
@@ -967,6 +974,19 @@ public class MountFileSystem : ComposeFileSystem
     protected override UPath ConvertPathFromDelegate(UPath path)
     {
         return path;
+    }
+
+    protected override string ConvertPathToInternalImpl(UPath path)
+    {
+        var mountPath = path;
+        var mountfs = TryGetMountOrNext(ref mountPath);
+
+        if (mountfs != null)
+        {
+            return mountfs.ConvertPathToInternal(mountPath);
+        }
+
+        return base.ConvertPathToInternalImpl(path);
     }
 
     private IFileSystem? TryGetMountOrNext(ref UPath path)

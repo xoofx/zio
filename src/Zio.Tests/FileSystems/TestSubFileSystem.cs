@@ -3,7 +3,8 @@
 // See the license.txt file in the project root for more information.
 
 using System.IO;
-
+using System.Security.Principal;
+using System.Text;
 using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
@@ -67,5 +68,73 @@ public class TestSubFileSystem : TestFileSystemBase
         fs.WriteAllText("/a/b/watched.txt", "test");
         System.Threading.Thread.Sleep(100);
         Assert.True(gotChange);
+    }
+
+
+    [SkippableFact]
+    public void TestDirectorySymlink()
+    {
+#if NETCOREAPP
+        if (OperatingSystem.IsWindows())
+#else
+        if (IsWindows)
+#endif
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+
+            Skip.IfNot(principal.IsInRole(WindowsBuiltInRole.Administrator), "This test requires to be run as an administrator on Windows");
+        }
+
+        var physicalFs = new PhysicalFileSystem();
+        var memoryFs = new MemoryFileSystem();
+        var fs = new MountFileSystem();
+        fs.Mount("/physical", physicalFs);
+        fs.Mount("/memory", memoryFs);
+
+        var pathInfo = physicalFs.ConvertPathFromInternal(SystemPath).ToRelative();
+        var pathSource = "/physical" / pathInfo / "Source";
+        var filePathSource = pathSource / "test.txt";
+        var systemPathSource = fs.ConvertPathToInternal(pathSource);
+        var pathDest = "/physical" / pathInfo / "Dest";
+        var filePathDest = pathDest / "test.txt";
+        var systemPathDest = fs.ConvertPathToInternal(pathDest);
+
+        try
+        {
+            // CreateDirectory
+            Assert.False(Directory.Exists(systemPathSource));
+            fs.CreateDirectory(pathSource);
+            Assert.True(Directory.Exists(systemPathSource));
+
+            // CreateFile / OpenFile
+            var fileStream = fs.CreateFile(filePathSource);
+            var buffer = Encoding.UTF8.GetBytes("This is a test");
+            fileStream.Write(buffer, 0, buffer.Length);
+            fileStream.Dispose();
+            Assert.Equal(buffer.Length, fs.GetFileLength(filePathSource));
+
+            // CreateSymbolicLink
+            fs.CreateSymbolicLink(pathDest, pathSource);
+            Assert.Throws<InvalidOperationException>(() => fs.CreateSymbolicLink("/memory/invalid", pathSource));
+
+            // ResolveSymbolicLink
+            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            Assert.Equal(pathSource, resolvedPath);
+
+            // FileExists
+            Assert.True(fs.FileExists(filePathDest));
+            Assert.Equal(buffer.Length, fs.GetFileLength(filePathDest));
+
+            // RemoveDirectory
+            fs.DeleteDirectory(pathDest, false);
+            Assert.False(Directory.Exists(systemPathDest));
+            Assert.True(Directory.Exists(systemPathSource));
+        }
+        finally
+        {
+            SafeDeleteDirectory(systemPathSource);
+            SafeDeleteDirectory(systemPathDest);
+        }
     }
 }
