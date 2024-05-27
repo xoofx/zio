@@ -11,7 +11,11 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
     - name: Checkout
@@ -26,7 +30,15 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Build, Test, Pack, Publish
+      if: matrix.os == 'windows-latest'
       shell: bash
       run: |
         dotnet tool install -g dotnet-releaser --configfile .github/workflows/nuget_org_only.config
         dotnet-releaser run --nuget-token "${{secrets.NUGET_TOKEN}}" --github-token "${{secrets.GITHUB_TOKEN}}" src/dotnet-releaser.toml
+
+    - name: Build, Test
+      if: matrix.os == 'ubuntu-latest'
+      shell: bash
+      run: |
+        dotnet tool install -g dotnet-releaser --configfile .github/workflows/nuget_org_only.config
+        dotnet-releaser build src/dotnet-releaser.toml
