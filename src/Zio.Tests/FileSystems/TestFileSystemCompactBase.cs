@@ -78,14 +78,23 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
 
         fs.WriteAllText("/toto.txt", "test");
         Assert.Throws<IOException>(() => fs.CreateDirectory("/toto.txt"));
-        Assert.Throws<IOException>(() => fs.DeleteDirectory("/toto.txt", true));
+
+        if (IsWindows)
+        {
+            Assert.Throws<IOException>(() => fs.DeleteDirectory("/toto.txt", true));
+        }
+
         Assert.Throws<IOException>(() => fs.MoveDirectory("/toto.txt", "/test"));
 
         fs.CreateDirectory("/dir2");
         Assert.Throws<IOException>(() => fs.MoveDirectory("/dir1", "/dir2"));
 
-        fs.SetAttributes("/dir1", FileAttributes.Directory | FileAttributes.ReadOnly);
-        Assert.Throws<IOException>(() => fs.DeleteDirectory("/dir1", true));
+        if (IsWindows)
+        {
+            // Linux allows modifications on directories while they are readonly.
+            fs.SetAttributes("/dir1", FileAttributes.Directory | FileAttributes.ReadOnly);
+            Assert.Throws<IOException>(() => fs.DeleteDirectory("/dir1", true));
+        }
     }
 
     [Fact]
@@ -122,25 +131,33 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         Assert.True(fs.GetFileLength("/toto.txt") > 0);
         Assert.Equal(fs.GetFileLength("/toto.txt"), fs.GetFileLength("/titi.txt"));
         Assert.Equal(fs.GetAttributes("/toto.txt"), fs.GetAttributes("/titi.txt"));
-        Assert.NotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
+        if (IsWindows) Assert.NotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
         // Because we read titi.txt just before, access time must be different
         // Following test is disabled as it seems unstable with NTFS?
         // Assert.NotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
         Assert.Equal(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
 
-        var now = DateTime.Now + TimeSpan.FromSeconds(10);
-        var now1 = DateTime.Now + TimeSpan.FromSeconds(11);
-        var now2 = DateTime.Now + TimeSpan.FromSeconds(12);
-        fs.SetCreationTime("/toto.txt", now);
-        fs.SetLastAccessTime("/toto.txt", now1);
-        fs.SetLastWriteTime("/toto.txt", now2);
-        Assert.Equal(now, fs.GetCreationTime("/toto.txt"));
-        Assert.Equal(now1, fs.GetLastAccessTime("/toto.txt"));
-        Assert.Equal(now2, fs.GetLastWriteTime("/toto.txt"));
+        if (IsWindows)
+        {
+            var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
+            fs.SetCreationTime("/toto.txt", creationTime);
+            Assert.Equal(creationTime, fs.GetCreationTime("/toto.txt"));
+        }
 
-        Assert.NotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
-        Assert.NotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
-        Assert.NotEqual(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
+        var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
+        fs.SetLastWriteTime("/toto.txt", lastWriteTime);
+        Assert.Equal(lastWriteTime, fs.GetLastWriteTime("/toto.txt"));
+
+        var lastAccessTime = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Local);
+        fs.SetLastAccessTime("/toto.txt", lastAccessTime);
+        Assert.Equal(lastAccessTime, fs.GetLastAccessTime("/toto.txt"));
+
+        if (IsWindows)
+        {
+            Assert.NotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
+            Assert.NotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
+            Assert.NotEqual(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
+        }
 
         // Test MoveFile
         fs.MoveFile("/toto.txt", "/tata.txt");
@@ -171,11 +188,15 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         Assert.Equal(originalContent, content);
 
         // Check File ReadOnly
-        fs.SetAttributes("/titi.txt", FileAttributes.ReadOnly);
-        Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteFile("/titi.txt"));
-        Assert.Throws<UnauthorizedAccessException>(() => fs.CopyFile("/titi.bak.txt", "/titi.txt", true));
-        Assert.Throws<UnauthorizedAccessException>(() => fs.OpenFile("/titi.txt", FileMode.Open, FileAccess.ReadWrite));
-        fs.SetAttributes("/titi.txt", FileAttributes.Normal);
+        if (IsWindows)
+        {
+            // Linux allows modifications on files while they are readonly.
+            fs.SetAttributes("/titi.txt", FileAttributes.ReadOnly);
+            Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteFile("/titi.txt"));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.CopyFile("/titi.bak.txt", "/titi.txt", true));
+            Assert.Throws<UnauthorizedAccessException>(() => fs.OpenFile("/titi.txt", FileMode.Open, FileAccess.ReadWrite));
+            fs.SetAttributes("/titi.txt", FileAttributes.Normal);
+        }
 
         // Delete File
         fs.DeleteFile("/titi.txt");
@@ -279,21 +300,24 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         Assert.Equal(defaultTime, fs.GetLastWriteTime("/dest"));
         Assert.Equal(defaultTime, fs.GetLastAccessTime("/dest"));
 
-        using (var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
+        if (IsWindows)
         {
-            Assert.Throws<IOException>(() =>
+            using (var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                using (var stream2 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+                Assert.Throws<IOException>(() =>
                 {
-                }
-            });
+                    using (var stream2 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+                    {
+                    }
+                });
+            }
         }
 
         Assert.Throws<UnauthorizedAccessException>(() => fs.OpenFile("/dir1", FileMode.Open, FileAccess.Read));
         Assert.Throws<DirectoryNotFoundException>(() => fs.OpenFile("/dir/toto.txt", FileMode.Open, FileAccess.Read));
         Assert.Throws<DirectoryNotFoundException>(() => fs.CopyFile("/toto.txt", "/dest/toto.txt", true));
         Assert.Throws<IOException>(() => fs.CopyFile("/toto.txt", "/titi.txt", false));
-        Assert.Throws<IOException>(() => fs.CopyFile("/toto.txt", "/dir1", true));
+        if (IsWindows) Assert.Throws<IOException>(() => fs.CopyFile("/toto.txt", "/dir1", true));
         Assert.Throws<DirectoryNotFoundException>(() => fs.MoveFile("/toto.txt", "/dest/toto.txt"));
 
         fs.WriteAllText("/titi.txt", "yo2");
@@ -319,8 +343,8 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         }
     }
 
-    [Fact]
-    public void TestDirectoryDeleteAndOpenFile()
+    [SkippableFact]
+    public virtual void TestDirectoryDeleteAndOpenFileOnWindows()
     {
         fs.CreateDirectory("/dir");
         fs.WriteAllText("/dir/toto.txt", "content");

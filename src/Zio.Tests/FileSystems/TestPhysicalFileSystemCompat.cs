@@ -14,6 +14,13 @@ public class TestPhysicalFileSystemCompat : TestFileSystemCompactBase
         fs = _fsHelper.PhysicalFileSystem;
     }
 
+    public override void TestDirectoryDeleteAndOpenFileOnWindows()
+    {
+        Skip.IfNot(IsWindows, "Linux allows files to be deleted when they are open");
+        
+        base.TestDirectoryDeleteAndOpenFileOnWindows();
+    }
+
     public override void Dispose()
     {
         _fsHelper.Dispose();

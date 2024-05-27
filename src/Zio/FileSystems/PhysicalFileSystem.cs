@@ -23,9 +23,9 @@ public class PhysicalFileSystem : FileSystem
     private const string DrivePrefixOnWindows = "/mnt/";
     private static readonly UPath PathDrivePrefixOnWindows = new UPath(DrivePrefixOnWindows);
 #if NETSTANDARD
-    private static readonly bool IsOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    internal static readonly bool IsOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 #else
-    private static readonly bool IsOnWindows = CheckIsOnWindows();
+    internal static readonly bool IsOnWindows = CheckIsOnWindows();
 
     private static bool CheckIsOnWindows()
     {

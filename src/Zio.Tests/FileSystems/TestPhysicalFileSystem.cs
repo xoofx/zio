@@ -18,9 +18,11 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         AssertCommonRead(fs);
     }
 
-    [Fact]
-    public void TestFileSystemInvalidDriveLetter()
+    [SkippableFact]
+    public void TestFileSystemInvalidDriveLetterOnWindows()
     {
+        Skip.IfNot(IsWindows, "Exception is only thrown on Windows");
+
         var driverLetter = SystemPath[0];
         Assert.Throws<DirectoryNotFoundException>( () => new SubFileSystem(new PhysicalFileSystem(), $"/mnt/{driverLetter}"));
         using (var fs = new SubFileSystem(new PhysicalFileSystem(), $"/mnt/{char.ToLowerInvariant(driverLetter)}"))
@@ -92,15 +94,20 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             // LastAccessTime
             // LastWriteTime
             // CreationTime
-            var lastWriteTime = DateTime.Now + TimeSpan.FromSeconds(10);
-            var lastAccessTime = DateTime.Now + TimeSpan.FromSeconds(11);
-            var creationTime = DateTime.Now + TimeSpan.FromSeconds(12);
+            if (IsWindows)
+            {
+                var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
+                fs.SetCreationTime(pathToCreate, creationTime);
+                Assert.Equal(creationTime, fs.GetCreationTime(pathToCreate));
+            }
+
+            var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetLastWriteTime(pathToCreate, lastWriteTime);
-            fs.SetLastAccessTime(pathToCreate, lastAccessTime);
-            fs.SetCreationTime(pathToCreate, creationTime);
             Assert.Equal(lastWriteTime, fs.GetLastWriteTime(pathToCreate));
+
+            var lastAccessTime = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Local);
+            fs.SetLastAccessTime(pathToCreate, lastAccessTime);
             Assert.Equal(lastAccessTime, fs.GetLastAccessTime(pathToCreate));
-            Assert.Equal(creationTime, fs.GetCreationTime(pathToCreate));
 
             // DirectoryExists
             Assert.True(fs.DirectoryExists(pathToCreate));
@@ -155,9 +162,11 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
-    [Fact]
-    public void TestDirectoryExceptions()
+    [SkippableFact]
+    public void TestDirectoryWindowsExceptions()
     {
+        Skip.IfNot(IsWindows, "Exceptions are only thrown on Windows");
+
         var fs = new PhysicalFileSystem();
 
         // Test invalid characters in path
@@ -185,6 +194,18 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         Assert.Throws<UnauthorizedAccessException>(() => fs.DeleteDirectory("/mnt", false));
         Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/mnt2", false));
         Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/mnt/yoyo", false));
+    }
+
+    [SkippableFact]
+    public void TestWindowsDirectoryAttributes()
+    {
+        Skip.IfNot(IsWindows, "Root attributes are only set on the Windows");
+
+        var fs = new PhysicalFileSystem();
+        var sysAttr = FileAttributes.Directory | FileAttributes.System | FileAttributes.ReadOnly;
+
+        Assert.True((fs.GetAttributes("/") & (sysAttr)) == sysAttr);
+        Assert.True((fs.GetAttributes("/mnt") & (sysAttr)) == sysAttr);
     }
 
     [Fact]
@@ -217,15 +238,20 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             Assert.Equal(File.GetLastAccessTime(systemFilePath), fs.GetLastAccessTime(filePath));
             Assert.Equal(File.GetCreationTime(systemFilePath), fs.GetCreationTime(filePath));
 
-            var lastWriteTime = DateTime.Now + TimeSpan.FromSeconds(10);
-            var lastAccessTime = DateTime.Now + TimeSpan.FromSeconds(11);
-            var creationTime = DateTime.Now + TimeSpan.FromSeconds(12);
+            if (IsWindows)
+            {
+                var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
+                fs.SetCreationTime(filePath, creationTime);
+                Assert.Equal(creationTime, fs.GetCreationTime(filePath));
+            }
+
+            var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetLastWriteTime(filePath, lastWriteTime);
-            fs.SetLastAccessTime(filePath, lastAccessTime);
-            fs.SetCreationTime(filePath, creationTime);
             Assert.Equal(lastWriteTime, fs.GetLastWriteTime(filePath));
+
+            var lastAccessTime = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Local);
+            fs.SetLastAccessTime(filePath, lastAccessTime);
             Assert.Equal(lastAccessTime, fs.GetLastAccessTime(filePath));
-            Assert.Equal(creationTime, fs.GetCreationTime(filePath));
 
             // FileAttributes
             Assert.Equal(File.GetAttributes(systemFilePath), fs.GetAttributes(filePath));
@@ -282,23 +308,22 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             Assert.Equal(buffer2.Length, fs.GetFileLength(filePathDest));
             Assert.Equal(buffer.Length, fs.GetFileLength(filePathBack));
 
-            // RootFileSystem
-            fs.GetLastWriteTime("/");
-            fs.GetLastAccessTime("/");
-            fs.GetCreationTime("/");
+            if (IsWindows)
+            {
+                // RootFileSystem
+                fs.GetLastWriteTime("/");
+                fs.GetLastAccessTime("/");
+                fs.GetCreationTime("/");
 
-            fs.GetLastWriteTime("/mnt");
-            fs.GetLastAccessTime("/mnt");
-            fs.GetCreationTime("/mnt");
+                fs.GetLastWriteTime("/mnt");
+                fs.GetLastAccessTime("/mnt");
+                fs.GetCreationTime("/mnt");
 
-            fs.GetLastWriteTime("/mnt/c");
-            fs.GetLastAccessTime("/mnt/c");
-            fs.GetCreationTime("/mnt/c");
-            fs.GetAttributes("/mnt/c");
-
-            var sysAttr = FileAttributes.Directory | FileAttributes.System | FileAttributes.ReadOnly;
-            Assert.True((fs.GetAttributes("/") & (sysAttr)) == sysAttr);
-            Assert.True((fs.GetAttributes("/mnt") & (sysAttr)) == sysAttr);
+                fs.GetLastWriteTime("/mnt/c");
+                fs.GetLastAccessTime("/mnt/c");
+                fs.GetCreationTime("/mnt/c");
+                fs.GetAttributes("/mnt/c");
+            }
         }
         finally
         {
@@ -319,17 +344,19 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         Assert.Equal(expectedfiles, files);
 
         var dirs = fs.EnumerateDirectories(path / "../../..").Select(p => fs.ConvertPathToInternal(p)).ToList();
-        var expecteddirs = Directory.EnumerateDirectories(Path.GetFullPath(Path.Combine(SystemPath, "..\\..\\.."))).ToList();
+        var expecteddirs = Directory.EnumerateDirectories(Path.GetFullPath(Path.Combine(SystemPath, "../../.."))).ToList();
         Assert.Equal(expecteddirs, dirs);
 
         var paths = fs.EnumeratePaths(path / "../..").Select(p => fs.ConvertPathToInternal(p)).ToList();
-        var expectedPaths = Directory.EnumerateFileSystemEntries(Path.GetFullPath(Path.Combine(SystemPath, "..\\.."))).ToList();
+        var expectedPaths = Directory.EnumerateFileSystemEntries(Path.GetFullPath(Path.Combine(SystemPath, "../.."))).ToList();
         Assert.Equal(expectedPaths, paths);
     }
-
-    [Fact]
-    public void TestFileExceptions()
+    
+    [SkippableFact]
+    public void TestFileWindowsExceptions()
     {
+        Skip.IfNot(IsWindows, "Exceptions are only thrown on Windows");
+
         var fs = new PhysicalFileSystem();
         var path = fs.ConvertPathFromInternal(SystemPath);
         var fileName = $"toto-{Guid.NewGuid()}.txt";

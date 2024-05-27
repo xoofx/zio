@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace Zio.Tests;
 
 public class TestUPath

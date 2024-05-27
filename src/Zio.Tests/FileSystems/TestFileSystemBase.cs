@@ -237,7 +237,7 @@ public abstract class TestFileSystemBase : IDisposable
         AssertCommonRead(fs, true);
     }
 
-    protected void AssertCommonRead(IFileSystem fs, bool isReadOnly = false)
+    protected void AssertCommonRead(IFileSystem fs, bool isReadOnly = false, bool? isWindows = null)
     {
         {
             var innerPath = fs.ConvertPathToInternal("/");
@@ -283,17 +283,26 @@ public abstract class TestFileSystemBase : IDisposable
         Assert.StartsWith("content", fs.ReadAllText("/b.txt"));
         Assert.StartsWith("content", fs.ReadAllText("/a/a/a1.txt"));
 
+        var fileFlag = (isWindows ?? IsWindows, isReadOnly) switch
+        {
+            // Windows
+            (true, true) => FileAttributes.ReadOnly | FileAttributes.Archive,
+            (true, false) => FileAttributes.Archive,
 
-        var readOnlyFlag = isReadOnly ? FileAttributes.ReadOnly : 0;
+            // Linux
+            (false, true) => FileAttributes.ReadOnly,
+            (false, false) => FileAttributes.Normal
+        };
 
-        Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/A.txt"));
-        Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/b.txt"));
-        Assert.Equal(readOnlyFlag | FileAttributes.Archive, fs.GetAttributes("/a/a/a1.txt"));
+        Assert.Equal(fileFlag, fs.GetAttributes("/A.txt"));
+        Assert.Equal(fileFlag, fs.GetAttributes("/b.txt"));
+        Assert.Equal(fileFlag, fs.GetAttributes("/a/a/a1.txt"));
 
         Assert.True(fs.GetFileLength("/A.txt") > 0);
         Assert.True(fs.GetFileLength("/b.txt") > 0);
         Assert.True(fs.GetFileLength("/a/a/a1.txt") > 0);
 
+        var readOnlyFlag = isReadOnly ? FileAttributes.ReadOnly : 0;
         Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a"));
         Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a/a"));
         Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/C"));

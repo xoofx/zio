@@ -492,12 +492,15 @@ public class ZipArchiveFileSystem : FileSystem
         var attributes = entry.FullName[entry.FullName.Length - 1] == DirectorySeparator ? FileAttributes.Directory : 0;
 
 #if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
-        if (entry.ExternalAttributes == 0 && attributes == 0)
+        const FileAttributes validValues = (FileAttributes)0x7FFF /* Up to FileAttributes.Encrypted */ | FileAttributes.IntegrityStream | FileAttributes.NoScrubData;
+        var externalAttributes = (FileAttributes)entry.ExternalAttributes & validValues;
+
+        if (externalAttributes == 0 && attributes == 0)
         {
             attributes |= FileAttributes.Normal;
         }
 
-        return (FileAttributes)entry.ExternalAttributes | attributes;
+        return externalAttributes | attributes;
 #endif
         // return standard attributes if it's not NetStandard2.1
         return attributes == FileAttributes.Directory ? FileAttributes.Directory : entry.LastWriteTime >= _creationTime ? FileAttributes.Archive : FileAttributes.Normal;

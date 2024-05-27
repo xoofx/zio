@@ -1744,7 +1744,8 @@ public class MemoryFileSystem : FileSystem
             }
             else
             {
-                Attributes = FileAttributes.Archive;
+                // Mimic OS-specific attributes.
+                Attributes = PhysicalFileSystem.IsOnWindows ? FileAttributes.Archive : FileAttributes.Normal;
                 Content = new FileContent(this);
             }
         }
