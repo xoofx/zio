@@ -137,9 +137,12 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         // Assert.NotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
         Assert.Equal(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
 
-        var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
-        fs.SetCreationTime("/toto.txt", creationTime);
-        Assert.Equal(creationTime, fs.GetCreationTime("/toto.txt"));
+        if (IsWindows)
+        {
+            var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
+            fs.SetCreationTime("/toto.txt", creationTime);
+            Assert.Equal(creationTime, fs.GetCreationTime("/toto.txt"));
+        }
 
         var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
         fs.SetLastWriteTime("/toto.txt", lastWriteTime);

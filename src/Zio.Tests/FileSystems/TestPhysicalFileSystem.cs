@@ -94,9 +94,12 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             // LastAccessTime
             // LastWriteTime
             // CreationTime
-            var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
-            fs.SetCreationTime(pathToCreate, creationTime);
-            Assert.Equal(creationTime, fs.GetCreationTime(pathToCreate));
+            if (IsWindows)
+            {
+                var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
+                fs.SetCreationTime(pathToCreate, creationTime);
+                Assert.Equal(creationTime, fs.GetCreationTime(pathToCreate));
+            }
 
             var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetLastWriteTime(pathToCreate, lastWriteTime);
@@ -235,9 +238,12 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             Assert.Equal(File.GetLastAccessTime(systemFilePath), fs.GetLastAccessTime(filePath));
             Assert.Equal(File.GetCreationTime(systemFilePath), fs.GetCreationTime(filePath));
 
-            var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
-            fs.SetCreationTime(filePath, creationTime);
-            Assert.Equal(creationTime, fs.GetCreationTime(filePath));
+            if (IsWindows)
+            {
+                var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
+                fs.SetCreationTime(filePath, creationTime);
+                Assert.Equal(creationTime, fs.GetCreationTime(filePath));
+            }
 
             var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetLastWriteTime(filePath, lastWriteTime);
