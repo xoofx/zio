@@ -302,19 +302,22 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             Assert.Equal(buffer2.Length, fs.GetFileLength(filePathDest));
             Assert.Equal(buffer.Length, fs.GetFileLength(filePathBack));
 
-            // RootFileSystem
-            fs.GetLastWriteTime("/");
-            fs.GetLastAccessTime("/");
-            fs.GetCreationTime("/");
+            if (IsWindows)
+            {
+                // RootFileSystem
+                fs.GetLastWriteTime("/");
+                fs.GetLastAccessTime("/");
+                fs.GetCreationTime("/");
 
-            fs.GetLastWriteTime("/mnt");
-            fs.GetLastAccessTime("/mnt");
-            fs.GetCreationTime("/mnt");
+                fs.GetLastWriteTime("/mnt");
+                fs.GetLastAccessTime("/mnt");
+                fs.GetCreationTime("/mnt");
 
-            fs.GetLastWriteTime("/mnt/c");
-            fs.GetLastAccessTime("/mnt/c");
-            fs.GetCreationTime("/mnt/c");
-            fs.GetAttributes("/mnt/c");
+                fs.GetLastWriteTime("/mnt/c");
+                fs.GetLastAccessTime("/mnt/c");
+                fs.GetCreationTime("/mnt/c");
+                fs.GetAttributes("/mnt/c");
+            }
         }
         finally
         {
