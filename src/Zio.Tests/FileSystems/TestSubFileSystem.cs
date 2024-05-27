@@ -29,9 +29,13 @@ public class TestSubFileSystem : TestFileSystemBase
         // Check that SubFileSystem is actually checking that the directory exists in the delegate filesystem
         Assert.Throws<DirectoryNotFoundException>(() => new SubFileSystem(fs, path / "does_not_exist"));
 
-        Assert.Throws<InvalidOperationException>(() => subfs.ConvertPathFromInternal(@"C:\"));
+        if (IsWindows)
+        {
+            Assert.Throws<InvalidOperationException>(() => subfs.ConvertPathFromInternal(@"C:\"));
+        }
+
         // TODO: We could add another test just to make sure that files can be created...etc. But the test above should already cover the code provided in SubFileSystem
-    }
+    } 
 
     [Fact]
     public void TestGetOrCreateFileSystem()

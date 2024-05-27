@@ -16,7 +16,9 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
     public void TestCommonRead()
     {
         var fs = this.GetCommonZipArchiveFileSystem();
-        this.AssertCommonRead(fs);
+        
+        // The ZIP is created on Windows, so it has the FileAttributes of a Windows system.
+        this.AssertCommonRead(fs, isWindows: true);
     }
 
     [Fact]

@@ -102,7 +102,11 @@ public class ReadOnlyFileSystem : ComposeFileSystem
     protected override FileAttributes GetAttributesImpl(UPath path)
     {
         // All paths are readonly
-        return base.GetAttributesImpl(path) | FileAttributes.ReadOnly;
+        var attributes = base.GetAttributesImpl(path);
+
+        return attributes == FileAttributes.Normal
+            ? FileAttributes.ReadOnly
+            : attributes | FileAttributes.ReadOnly;
     }
 
     /// <inheritdoc />

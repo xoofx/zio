@@ -287,7 +287,11 @@ public class AggregateFileSystem : ReadOnlyFileSystem
     protected override FileAttributes GetAttributesImpl(UPath path)
     {
         var entry = GetPath(path);
-        return entry.FileSystem.GetAttributes(path) | FileAttributes.ReadOnly;
+        var attributes = entry.FileSystem.GetAttributes(path);
+
+        return attributes == FileAttributes.Normal
+            ? FileAttributes.ReadOnly
+            : attributes | FileAttributes.ReadOnly;
     }
 
     /// <inheritdoc />
