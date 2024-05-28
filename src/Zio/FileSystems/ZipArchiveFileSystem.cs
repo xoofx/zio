@@ -11,6 +11,18 @@ using System.Threading;
 #if HAS_ZIPARCHIVE
 namespace Zio.FileSystems;
 
+internal readonly struct InternalZipEntry
+{
+    public InternalZipEntry(ZipArchiveEntry entry, bool isDirectory)
+    {
+        Entry = entry;
+        IsDirectory = isDirectory;
+    }
+
+    public readonly ZipArchiveEntry Entry;
+    public readonly bool IsDirectory;
+}
+
 /// <summary>
 ///     Provides a <see cref="IFileSystem" /> for the ZipArchive filesystem.
 /// </summary>
@@ -18,27 +30,26 @@ public class ZipArchiveFileSystem : FileSystem
 {
     private readonly bool _isCaseSensitive;
     
-    private readonly ZipArchive _archive;
+    private ZipArchive _archive;
+    private Dictionary<UPath, InternalZipEntry> _entries;
+
+    private readonly string? _path;
+    private readonly Stream? _stream;
+    private readonly bool _disposeStream;
+
     private readonly CompressionLevel _compressionLevel;
 
     private readonly ReaderWriterLockSlim _entriesLock = new();
     
     private FileSystemEventDispatcher<FileSystemWatcher>? _dispatcher;
     private readonly object _dispatcherLock = new();
-    
+
     private readonly DateTime _creationTime;
 
-    private readonly Dictionary<string, ZipArchiveEntry> _entries;
-    
     private readonly Dictionary<ZipArchiveEntry, EntryState> _openStreams;
     private readonly object _openStreamsLock = new();
 
-#if NETFRAMEWORK // .Net4.5 uses a backslash as directory separator
-    private const char DirectorySeparator = '\\';
-#else
     private const char DirectorySeparator = '/';
-#endif
-
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ZipArchiveFileSystem" /> class.
@@ -56,23 +67,10 @@ public class ZipArchiveFileSystem : FileSystem
         {
             throw new ArgumentNullException(nameof(archive));
         }
-#if NETFRAMEWORK // .Net4.5 uses a backslash as directory separator
-        foreach (var entry in _archive.Entries)
-        {
-            entry.FullName.Replace('/', DirectorySeparator);
-        }
-#else
-        foreach (var entry in _archive.Entries)
-        {
-            entry.FullName.Replace('\\', DirectorySeparator);
-        }
-#endif
-        if (!_isCaseSensitive)
-        {
-            _entries = _archive.Entries.ToDictionary(e => e.FullName.ToLowerInvariant(), e => e);
-        }
 
         _openStreams = new Dictionary<ZipArchiveEntry, EntryState>();
+        _entries = null!; // Loaded below
+        LoadEntries();
     }
 
     /// <summary>
@@ -83,8 +81,10 @@ public class ZipArchiveFileSystem : FileSystem
     /// <param name="leaveOpen">True to leave the stream open when <see cref="ZipArchive" /> is disposed</param>
     /// <param name="isCaseSensitive"></param>
     public ZipArchiveFileSystem(Stream stream, ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false, CompressionLevel compressionLevel = CompressionLevel.NoCompression)
-        : this(new ZipArchive(stream, mode, leaveOpen), isCaseSensitive, compressionLevel)
+        : this(new ZipArchive(stream, mode, leaveOpen: true), isCaseSensitive, compressionLevel)
     {
+        _disposeStream = !leaveOpen;
+        _stream = stream;
     }
 
     /// <summary>
@@ -97,6 +97,7 @@ public class ZipArchiveFileSystem : FileSystem
     public ZipArchiveFileSystem(string path, ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false, CompressionLevel compressionLevel = CompressionLevel.NoCompression)
         : this(new ZipArchive(File.Open(path, FileMode.OpenOrCreate), mode, leaveOpen), isCaseSensitive, compressionLevel)
     {
+        _path = path;
     }
 
     /// <summary>
@@ -106,39 +107,77 @@ public class ZipArchiveFileSystem : FileSystem
     /// <param name="leaveOpen">True to leave the stream open when <see cref="ZipArchive" /> is disposed</param>
     /// <param name="isCaseSensitive">Specifies if entry names should be case sensitive</param>
     public ZipArchiveFileSystem(ZipArchiveMode mode = ZipArchiveMode.Update, bool leaveOpen = false, bool isCaseSensitive = false, CompressionLevel compressionLevel = CompressionLevel.NoCompression)
-        : this(new ZipArchive(new MemoryStream(), mode, leaveOpen), isCaseSensitive, compressionLevel)
+        : this(new MemoryStream(), mode, leaveOpen, isCaseSensitive, compressionLevel)
     {
     }
 
-    private ZipArchiveEntry? GetEntry(string path)
+    /// <summary>
+    /// Saves the archive to the original path or stream.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Cannot save archive without a path or stream</exception>
+    public void Save()
     {
-#if NETFRAMEWORK
-        path = path.Replace('/', DirectorySeparator);
-#else
-        path = path.Replace('\\', DirectorySeparator);
-#endif
-        if (path == null)
+        var mode = _archive.Mode;
+
+        if (_path != null)
         {
-            throw new ArgumentNullException(nameof(path));
+            _archive.Dispose();
+            _archive = new ZipArchive(File.Open(_path, FileMode.OpenOrCreate), mode);
+        }
+        else if (_stream != null)
+        {
+            if (!_stream.CanSeek)
+            {
+                throw new InvalidOperationException("Cannot save archive to a stream that doesn't support seeking");
+            }
+
+            _archive.Dispose();
+            _stream.Seek(0, SeekOrigin.Begin);
+            _archive = new ZipArchive(_stream, mode, leaveOpen: true);
+        }
+        else
+        {
+            throw new InvalidOperationException("Cannot save archive without a path or stream");
         }
 
-        path = RemoveLeadingSlash(path);
+        LoadEntries();
+    }
 
+    private void LoadEntries()
+    {
+        var comparer = _isCaseSensitive ? UPathComparer.Ordinal : UPathComparer.OrdinalIgnoreCase;
+
+        _entries = _archive.Entries.ToDictionary(
+            e => new UPath(e.FullName).ToAbsolute(),
+            static e =>
+            {
+                var lastChar = e.FullName[e.FullName.Length - 1];
+                return new InternalZipEntry(e, lastChar is '/' or '\\');
+            },
+            comparer);
+    }
+
+    private ZipArchiveEntry? GetEntry(UPath path, out bool isDirectory)
+    {
         _entriesLock.EnterReadLock();
         try
         {
-            if (_isCaseSensitive)
+            if (_entries.TryGetValue(path, out var foundEntry))
             {
-                return _archive.GetEntry(path);
+                isDirectory = foundEntry.IsDirectory;
+                return foundEntry.Entry;
             }
-
-            return _entries.TryGetValue(path.ToLowerInvariant(), out var foundEntry) ? foundEntry : null;
         }
         finally
         {
             _entriesLock.ExitReadLock();
         }
+
+        isDirectory = false;
+        return null;
     }
+
+    private ZipArchiveEntry? GetEntry(UPath path) => GetEntry(path, out _);
 
     /// <inheritdoc />
     protected override UPath ConvertPathFromInternalImpl(string innerPath)
@@ -160,14 +199,15 @@ public class ZipArchiveFileSystem : FileSystem
             throw new IOException("Source and destination path must be different.");
         }
 
-        var srcEntry = GetEntry(srcPath.FullName);
+        var srcEntry = GetEntry(srcPath.FullName, out var isDirectory);
+
+        if (isDirectory)
+        {
+            throw new UnauthorizedAccessException(nameof(srcPath) + " is a directory.");
+        }
+
         if (srcEntry == null)
         {
-            if (DirectoryExistsImpl(srcPath))
-            {
-                throw new UnauthorizedAccessException(nameof(srcPath) + " is a directory.");
-            }
-
             if (!DirectoryExistsImpl(srcPath.GetDirectory()))
             {
                 throw new DirectoryNotFoundException(srcPath.GetDirectory().FullName);
@@ -242,25 +282,18 @@ public class ZipArchiveFileSystem : FileSystem
             }
         }
 
-        var entryPath = RemoveLeadingSlash(path);
-#if NETFRAMEWORK
-        entryPath = entryPath.Replace('/', DirectorySeparator);
-#else
-        entryPath = entryPath.Replace('\\', DirectorySeparator);
-#endif
-        CreateEntry(ConvertPathToDirectory(entryPath));
-        TryGetDispatcher()?.RaiseCreated(entryPath);
+        CreateEntry(path, isDirectory: true);
+        TryGetDispatcher()?.RaiseCreated(path);
     }
 
     /// <inheritdoc />
     protected override void DeleteDirectoryImpl(UPath path, bool isRecursive)
     {
-        var entryPath = RemoveLeadingSlash(ConvertPathToDirectory(path));
-#if NETFRAMEWORK
-        entryPath = entryPath.Replace('/', DirectorySeparator);
-#else
-        entryPath = entryPath.Replace('\\', DirectorySeparator);
-#endif
+        if (FileExistsImpl(path))
+        {
+            throw new IOException(nameof(path) + " is a file.");
+        }
+
         var entries = new List<ZipArchiveEntry>();
         if (!isRecursive)
         {
@@ -268,7 +301,11 @@ public class ZipArchiveFileSystem : FileSystem
             _entriesLock.EnterReadLock();
             try
             {
-                entries = _archive.Entries.Where(x => x.FullName.StartsWith(entryPath, _isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase)).Take(2).ToList();
+                entries = _entries
+                    .Where(x => x.Key.FullName.StartsWith(path.FullName, _isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase))
+                    .Take(2)
+                    .Select(x => x.Value.Entry)
+                    .ToList();
             }
             finally
             {
@@ -277,11 +314,6 @@ public class ZipArchiveFileSystem : FileSystem
 
             if (entries.Count == 0)
             {
-                if (FileExistsImpl(path))
-                {
-                    throw new IOException($"{path} is a file");
-                }
-
                 throw FileSystemExceptionHelper.NewDirectoryNotFoundException(path);
             }
 
@@ -302,15 +334,13 @@ public class ZipArchiveFileSystem : FileSystem
         _entriesLock.EnterReadLock();
         try
         {
-            entries = _archive.Entries.Where(x => x.FullName.StartsWith(entryPath, _isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase)).ToList();
+            entries = _entries
+                .Where(x => x.Key.FullName.StartsWith(path.FullName, _isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase))
+                .Select(x => x.Value.Entry)
+                .ToList();
+
             if (entries.Count == 0)
             {
-                entryPath = entryPath.Substring(0, entryPath.Length - 1);
-                if (_isCaseSensitive ? _archive.GetEntry(entryPath) != null : _entries.ContainsKey(entryPath.ToLowerInvariant()))
-                {
-                    throw new IOException($"{path} is a file");
-                }
-
                 throw FileSystemExceptionHelper.NewDirectoryNotFoundException(path);
             }
 
@@ -331,7 +361,7 @@ public class ZipArchiveFileSystem : FileSystem
             {
                 if ((entry.ExternalAttributes & (int)FileAttributes.ReadOnly) == (int)FileAttributes.ReadOnly)
                 {
-                    throw entry.FullName == entryPath
+                    throw entry.FullName.Length == path.FullName.Length + 1
                         ? new IOException("Directory is read only")
                         : new UnauthorizedAccessException($"Cannot delete directory that contains readonly entry {entry.FullName}");
                 }
@@ -348,12 +378,8 @@ public class ZipArchiveFileSystem : FileSystem
         {
             foreach (var entry in entries)
             {
+                _entries.Remove(new UPath(entry.FullName).ToAbsolute());
                 entry.Delete();
-
-                if (!_isCaseSensitive)
-                {
-                    _entries.Remove(entry.FullName.ToLowerInvariant());
-                }
             }
         }
         finally
@@ -396,13 +422,27 @@ public class ZipArchiveFileSystem : FileSystem
             return true;
         }
 
-        return GetEntry(ConvertPathToDirectory(path.FullName)) != null;
+        _entriesLock.EnterReadLock();
+
+        try
+        {
+            return _entries.TryGetValue(path, out var entry) && entry.IsDirectory;
+        }
+        finally
+        {
+            _entriesLock.ExitReadLock();
+        }
     }
 
     /// <inheritdoc />
     protected override void Dispose(bool disposing)
     {
         _archive.Dispose();
+
+        if (_stream != null && _disposeStream)
+        {
+            _stream.Dispose();
+        }
 
         if (disposing)
         {
@@ -425,20 +465,21 @@ public class ZipArchiveFileSystem : FileSystem
     private IEnumerable<string> EnumeratePathsStr(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
     {
         var search = SearchPattern.Parse(ref path, ref searchPattern);
-        var entryPath = RemoveLeadingSlash(path);
-        var root = ConvertPathToDirectory(entryPath);
-#if NETFRAMEWORK
-        root = root.Replace('/', '\\');
-#else
-        root = root.Replace('\\', '/');
-#endif
+
         _entriesLock.EnterReadLock();
         var entriesList = new List<ZipArchiveEntry>();
         try
         {
-            entriesList = root == ""
-                ? _archive.Entries.ToList()
-                : _archive.Entries.Where(e => e.FullName.StartsWith(root, _isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase) && e.FullName.Length > root.Length).ToList();
+            var internEntries = path == UPath.Root
+                ? _entries
+                : _entries.Where(kv => kv.Key.FullName.StartsWith(path.FullName, _isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase) && kv.Key.FullName.Length > path.FullName.Length);
+
+            if (searchOption == SearchOption.TopDirectoryOnly)
+            {
+                internEntries = internEntries.Where(kv => kv.Key.IsInDirectory(path, false));
+            }
+
+            entriesList = internEntries.Select(kv => kv.Value.Entry).ToList();
         }
         finally
         {
@@ -451,11 +492,6 @@ public class ZipArchiveFileSystem : FileSystem
         }
 
         var entries = (IEnumerable<ZipArchiveEntry>)entriesList;
-        if (searchOption == SearchOption.TopDirectoryOnly)
-        {
-            var dir = GetParent(entries.First().FullName);
-            entries = entries.Where(e => string.Equals(ConvertPathToDirectory(GetParent(e.FullName)), root, _isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase));
-        }
 
         if (searchTarget == SearchTarget.File)
         {
@@ -477,13 +513,22 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override bool FileExistsImpl(UPath path)
     {
-        return GetEntry(path.FullName) != null;
+        _entriesLock.EnterReadLock();
+
+        try
+        {
+            return _entries.TryGetValue(path, out var entry) && !entry.IsDirectory;
+        }
+        finally
+        {
+            _entriesLock.ExitReadLock();
+        }
     }
 
     /// <inheritdoc />
     protected override FileAttributes GetAttributesImpl(UPath path)
     {
-        var entry = GetEntry(path.FullName) ?? GetEntry(ConvertPathToDirectory(path));
+        var entry = GetEntry(path.FullName);
         if (entry is null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(path);
@@ -501,16 +546,18 @@ public class ZipArchiveFileSystem : FileSystem
         }
 
         return externalAttributes | attributes;
-#endif
+#else
         // return standard attributes if it's not NetStandard2.1
         return attributes == FileAttributes.Directory ? FileAttributes.Directory : entry.LastWriteTime >= _creationTime ? FileAttributes.Archive : FileAttributes.Normal;
+#endif
     }
 
     /// <inheritdoc />
     protected override long GetFileLengthImpl(UPath path)
     {
-        var entry = GetEntry(path.FullName);
-        if (entry == null)
+        var entry = GetEntry(path.FullName, out var isDirectory);
+
+        if (entry == null || isDirectory)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(path);
         }
@@ -546,7 +593,7 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override DateTime GetLastWriteTimeImpl(UPath path)
     {
-        var entry = GetEntry(path.FullName) ?? GetEntry(ConvertPathToDirectory(path));
+        var entry = GetEntry(path.FullName);
         if (entry == null)
         {
             return DefaultFileTime;
@@ -563,15 +610,13 @@ public class ZipArchiveFileSystem : FileSystem
             throw new IOException("Cannot move directory to itself or a subdirectory.");
         }
 
-        var srcDir = RemoveLeadingSlash(ConvertPathToDirectory(srcPath.FullName));
-        var destDir = RemoveLeadingSlash(ConvertPathToDirectory(destPath.FullName));
-#if NETFRAMEWORK
-        srcDir = srcDir.Replace('/', DirectorySeparator);
-        destDir = destDir.Replace('/', DirectorySeparator);
-#else
-        srcDir = srcDir.Replace('\\', DirectorySeparator);
-        destDir = destDir.Replace('\\', DirectorySeparator);
-#endif
+        if (FileExistsImpl(srcPath))
+        {
+            throw new IOException(nameof(srcPath) + " is a file.");
+        }
+
+        var srcDir = srcPath.FullName;
+
         _entriesLock.EnterReadLock();
         var entries = Array.Empty<ZipArchiveEntry>();
         try
@@ -585,11 +630,6 @@ public class ZipArchiveFileSystem : FileSystem
 
         if (entries.Length == 0)
         {
-            if (FileExistsImpl(srcPath))
-            {
-                throw new IOException(nameof(srcPath) + " is a file.");
-            }
-
             throw FileSystemExceptionHelper.NewDirectoryNotFoundException(srcPath);
         }
 
@@ -605,7 +645,7 @@ public class ZipArchiveFileSystem : FileSystem
             using (var entryStream = entry.Open())
             {
                 var entryName = entry.FullName.Substring(srcDir.Length);
-                var destEntry = CreateEntry(destDir + entryName);
+                var destEntry = CreateEntry(destPath + entryName, isDirectory: true);
                 using (var destEntryStream = destEntry.Open())
                 {
                     entryStream.CopyTo(destEntryStream);
@@ -659,7 +699,12 @@ public class ZipArchiveFileSystem : FileSystem
             throw new ArgumentException("Cannot write in a read-only access.");
         }
 
-        var entry = GetEntry(path.FullName);
+        var entry = GetEntry(path.FullName, out var isDirectory);
+
+        if (isDirectory)
+        {
+            throw new UnauthorizedAccessException(nameof(path) + " is a directory.");
+        }
 
         if (entry == null)
         {
@@ -673,11 +718,6 @@ public class ZipArchiveFileSystem : FileSystem
             }
             else
             {
-                if (DirectoryExistsImpl(path))
-                {
-                    throw new UnauthorizedAccessException(nameof(path) + " is a directory.");
-                }
-
                 if (!DirectoryExistsImpl(path.GetDirectory()))
                 {
                     throw FileSystemExceptionHelper.NewDirectoryNotFoundException(path.GetDirectory());
@@ -742,7 +782,7 @@ public class ZipArchiveFileSystem : FileSystem
         if (destEntry != null)
         {
             // create a backup at destBackupPath if its not null
-            if (destBackupPath != null)
+            if (!destBackupPath.IsEmpty)
             {
                 var destBackupEntry = CreateEntry(destBackupPath.FullName);
                 using var destBackupStream = destBackupEntry.Open();
@@ -777,8 +817,7 @@ public class ZipArchiveFileSystem : FileSystem
     protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
     {
 #if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
-        var entryPath = RemoveLeadingSlash(path);
-        var entry = GetEntry(entryPath) ?? GetEntry(ConvertPathToDirectory(entryPath));
+        var entry = GetEntry(path);
         if (entry == null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(path);
@@ -786,9 +825,9 @@ public class ZipArchiveFileSystem : FileSystem
 
         entry.ExternalAttributes = (int)attributes;
         TryGetDispatcher()?.RaiseChange(path);
-        return;
-#endif
+#else
         Debug.WriteLine("SetAttributes don't work in NetStandard2.0 or older.");
+#endif
     }
 
     /// <summary>
@@ -810,7 +849,7 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
     {
-        var entry = GetEntry(path.FullName) ?? GetEntry(ConvertPathToDirectory(path.FullName));
+        var entry = GetEntry(path.FullName);
         if (entry is null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(path);
@@ -839,11 +878,7 @@ public class ZipArchiveFileSystem : FileSystem
         try
         {
             entry.Delete();
-
-            if (!_isCaseSensitive)
-            {
-                _entries.Remove(entry.FullName.ToLowerInvariant());
-            }
+            _entries.Remove(new UPath(entry.FullName).ToAbsolute());
         }
         finally
         {
@@ -851,24 +886,20 @@ public class ZipArchiveFileSystem : FileSystem
         }
     }
 
-    private ZipArchiveEntry CreateEntry(string path)
+    private ZipArchiveEntry CreateEntry(UPath path, bool isDirectory = false)
     {
-        path = RemoveLeadingSlash(path);
-#if NETFRAMEWORK
-        path = path.Replace('/', DirectorySeparator);
-#else
-        path = path.Replace('\\', DirectorySeparator);
-#endif
         _entriesLock.EnterWriteLock();
         try
         {
-            var entry = _archive.CreateEntry(path, _compressionLevel);
+            var internalPath = path.FullName;
 
-            if (!_isCaseSensitive)
+            if (isDirectory)
             {
-                _entries.Add(entry.FullName.ToLowerInvariant(), entry);
+                internalPath += DirectorySeparator;
             }
 
+            var entry = _archive.CreateEntry(internalPath, _compressionLevel);
+            _entries[path] = new InternalZipEntry(entry, isDirectory);
             return entry;
         }
         finally
@@ -891,31 +922,6 @@ public class ZipArchiveFileSystem : FileSystem
         path = path.TrimEnd(s_slashChars);
         var lastIndex = path.LastIndexOfAny(s_slashChars);
         return lastIndex == -1 ? "" : path.Substring(0, lastIndex);
-    }
-
-    private static string ConvertPathToDirectory(UPath path)
-    {
-        return ConvertPathToDirectory(path.FullName);
-    }
-
-    private static string ConvertPathToDirectory(string path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            return path;
-        }
-
-        return path[path.Length - 1] is DirectorySeparator ? path : path + DirectorySeparator;
-    }
-
-    private static string RemoveLeadingSlash(UPath path)
-    {
-        return path.FullName[0] is '\\' or '/' ? path.FullName.Substring(1) : path.FullName;
-    }
-
-    private static string RemoveLeadingSlash(string path)
-    {
-        return path[0] is '\\' or '/' ? path.Substring(1) : path;
     }
 
     private FileSystemEventDispatcher<FileSystemWatcher>? TryGetDispatcher()
@@ -1018,7 +1024,10 @@ public class ZipArchiveFileSystem : FileSystem
             _isDisposed = true;
             lock (_fileSystem._openStreamsLock)
             {
-                _fileSystem._openStreams.TryGetValue(_entry, out var fileData);
+                if (!_fileSystem._openStreams.TryGetValue(_entry, out var fileData))
+                {
+                    return;
+                }
                 fileData.Count--;
                 if (fileData.Count == 0)
                 {

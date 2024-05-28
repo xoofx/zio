@@ -228,4 +228,60 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         thread1.Join();
         thread2.Join();
     }
+
+
+    [Theory]
+    [InlineData("TestData/Linux.zip")]
+    [InlineData("TestData/Windows.zip")]
+    public void TestCaseInSensitiveZip(string path)
+    {
+        using var stream = File.OpenRead(path);
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        var fs = new ZipArchiveFileSystem(archive);
+
+        Assert.True(fs.FileExists("/Folder/File.txt"));
+        Assert.True(fs.FileExists("/folder/file.txt"));
+    }
+
+    [Theory]
+    [InlineData("TestData/Linux.zip")]
+    [InlineData("TestData/Windows.zip")]
+    public void TestCaseSensitiveZip(string path)
+    {
+        using var stream = File.OpenRead(path);
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        var fs = new ZipArchiveFileSystem(archive, true);
+
+        Assert.True(fs.FileExists("/Folder/File.txt"));
+        Assert.False(fs.FileExists("/folder/file.txt"));
+    }
+
+    [Fact]
+    public void TestSave()
+    {
+        var stream = new MemoryStream();
+
+        var fs = new ZipArchiveFileSystem(stream);
+
+        fs.WriteAllText("/a/b.txt", "abc");
+        fs.Save();
+
+        stream.Seek(0, SeekOrigin.Begin);
+
+        using (var fs2 = new ZipArchiveFileSystem(stream, ZipArchiveMode.Read, leaveOpen: true))
+        {
+            Assert.Equal("abc", fs2.ReadAllText("/a/b.txt"));
+        }
+
+        Assert.Equal("abc", fs.ReadAllText("/a/b.txt"));
+        fs.WriteAllText("/a/b.txt", "def");
+        fs.Save();
+
+        stream.Seek(0, SeekOrigin.Begin);
+
+        using (var fs2 = new ZipArchiveFileSystem(stream, ZipArchiveMode.Read, leaveOpen: true))
+        {
+            Assert.Equal("def", fs2.ReadAllText("/a/b.txt"));
+        }
+    }
 }

@@ -189,7 +189,7 @@ public class MemoryFileSystem : FileSystem
             }
             finally
             {
-                if (deleteRootDirectory)
+                if (deleteRootDirectory && result.Node != null)
                 {
                     result.Node.DetachFromParent();
                     result.Node.Dispose();
@@ -995,7 +995,7 @@ public class MemoryFileSystem : FileSystem
         var parentSrcPath = srcPath.GetDirectory();
         var parentDestPath = destPath.GetDirectory();
 
-        void AssertNoDestination(FileSystemNode node)
+        void AssertNoDestination(FileSystemNode? node)
         {
             if (expectDirectory)
             {
@@ -1127,7 +1127,7 @@ public class MemoryFileSystem : FileSystem
         }
     }
 
-    private FileSystemNode TryFindNodeSafe(UPath path)
+    private FileSystemNode? TryFindNodeSafe(UPath path)
     {
         EnterFileSystemShared();
         try
@@ -1180,7 +1180,7 @@ public class MemoryFileSystem : FileSystem
 
     private readonly struct NodeResult
     {
-        public NodeResult(DirectoryNode? directory, FileSystemNode node, string? name, FindNodeFlags flags)
+        public NodeResult(DirectoryNode? directory, FileSystemNode? node, string? name, FindNodeFlags flags)
         {
             Directory = directory;
             Node = node;
@@ -1190,7 +1190,7 @@ public class MemoryFileSystem : FileSystem
 
         public readonly DirectoryNode? Directory;
 
-        public readonly FileSystemNode Node;
+        public readonly FileSystemNode? Node;
 
         public readonly string? Name;
 
