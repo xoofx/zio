@@ -11,18 +11,6 @@ using System.Threading;
 #if HAS_ZIPARCHIVE
 namespace Zio.FileSystems;
 
-internal readonly struct InternalZipEntry
-{
-    public InternalZipEntry(ZipArchiveEntry entry, bool isDirectory)
-    {
-        Entry = entry;
-        IsDirectory = isDirectory;
-    }
-
-    public readonly ZipArchiveEntry Entry;
-    public readonly bool IsDirectory;
-}
-
 /// <summary>
 ///     Provides a <see cref="IFileSystem" /> for the ZipArchive filesystem.
 /// </summary>
@@ -1049,6 +1037,18 @@ public class ZipArchiveFileSystem : FileSystem
 
         public int Count;
 
+    }
+
+    private readonly struct InternalZipEntry
+    {
+        public InternalZipEntry(ZipArchiveEntry entry, bool isDirectory)
+        {
+            Entry = entry;
+            IsDirectory = isDirectory;
+        }
+
+        public readonly ZipArchiveEntry Entry;
+        public readonly bool IsDirectory;
     }
 }
 #endif
