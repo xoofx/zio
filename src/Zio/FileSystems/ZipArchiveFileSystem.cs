@@ -187,7 +187,7 @@ public class ZipArchiveFileSystem : FileSystem
             throw new IOException("Source and destination path must be different.");
         }
 
-        var srcEntry = GetEntry(srcPath.FullName, out var isDirectory);
+        var srcEntry = GetEntry(srcPath, out var isDirectory);
 
         if (isDirectory)
         {
@@ -218,7 +218,7 @@ public class ZipArchiveFileSystem : FileSystem
             }
         }
 
-        var destEntry = GetEntry(destPath.FullName);
+        var destEntry = GetEntry(destPath);
         if (destEntry != null)
         {
 #if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
@@ -386,7 +386,7 @@ public class ZipArchiveFileSystem : FileSystem
             throw new IOException("Cannot delete a directory");
         }
 
-        var entry = GetEntry(path.FullName);
+        var entry = GetEntry(path);
         if (entry == null)
         {
             return;
@@ -516,7 +516,7 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override FileAttributes GetAttributesImpl(UPath path)
     {
-        var entry = GetEntry(path.FullName);
+        var entry = GetEntry(path);
         if (entry is null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(path);
@@ -543,7 +543,7 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override long GetFileLengthImpl(UPath path)
     {
-        var entry = GetEntry(path.FullName, out var isDirectory);
+        var entry = GetEntry(path, out var isDirectory);
 
         if (entry == null || isDirectory)
         {
@@ -581,7 +581,7 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override DateTime GetLastWriteTimeImpl(UPath path)
     {
-        var entry = GetEntry(path.FullName);
+        var entry = GetEntry(path);
         if (entry == null)
         {
             return DefaultFileTime;
@@ -649,14 +649,14 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override void MoveFileImpl(UPath srcPath, UPath destPath)
     {
-        var srcEntry = GetEntry(srcPath.FullName) ?? throw FileSystemExceptionHelper.NewFileNotFoundException(srcPath);
+        var srcEntry = GetEntry(srcPath) ?? throw FileSystemExceptionHelper.NewFileNotFoundException(srcPath);
 
         if (!DirectoryExistsImpl(destPath.GetDirectory()))
         {
             throw FileSystemExceptionHelper.NewDirectoryNotFoundException(destPath.GetDirectory());
         }
         
-        var destEntry = GetEntry(destPath.FullName);
+        var destEntry = GetEntry(destPath);
         if (destEntry != null)
         {
             throw new IOException("Cannot overwrite existing file.");
@@ -687,7 +687,7 @@ public class ZipArchiveFileSystem : FileSystem
             throw new ArgumentException("Cannot write in a read-only access.");
         }
 
-        var entry = GetEntry(path.FullName, out var isDirectory);
+        var entry = GetEntry(path, out var isDirectory);
 
         if (isDirectory)
         {
@@ -755,13 +755,13 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override void ReplaceFileImpl(UPath srcPath, UPath destPath, UPath destBackupPath, bool ignoreMetadataErrors)
     {
-        var sourceEntry = GetEntry(srcPath.FullName);
+        var sourceEntry = GetEntry(srcPath);
         if (sourceEntry is null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(srcPath);
         }
 
-        var destEntry = GetEntry(destPath.FullName);
+        var destEntry = GetEntry(destPath);
         if (destEntry == sourceEntry)
         {
             throw new IOException("Cannot replace the file with itself.");
@@ -837,7 +837,7 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override void SetLastWriteTimeImpl(UPath path, DateTime time)
     {
-        var entry = GetEntry(path.FullName);
+        var entry = GetEntry(path);
         if (entry is null)
         {
             throw FileSystemExceptionHelper.NewFileNotFoundException(path);
