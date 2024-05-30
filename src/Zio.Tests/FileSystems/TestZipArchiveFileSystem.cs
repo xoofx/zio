@@ -239,8 +239,17 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
         var fs = new ZipArchiveFileSystem(archive);
 
+        Assert.True(fs.DirectoryExists("/Folder"));
+        Assert.True(fs.DirectoryExists("/folder"));
+
+        Assert.False(fs.FileExists("/Folder"));
+        Assert.False(fs.FileExists("/folder"));
+
         Assert.True(fs.FileExists("/Folder/File.txt"));
         Assert.True(fs.FileExists("/folder/file.txt"));
+
+        Assert.False(fs.DirectoryExists("/Folder/file.txt"));
+        Assert.False(fs.DirectoryExists("/folder/File.txt"));
     }
 
     [Theory]
@@ -252,16 +261,25 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
         var fs = new ZipArchiveFileSystem(archive, true);
 
+        Assert.True(fs.DirectoryExists("/Folder"));
+        Assert.False(fs.DirectoryExists("/folder"));
+
+        Assert.False(fs.FileExists("/Folder"));
+        Assert.False(fs.FileExists("/folder"));
+
         Assert.True(fs.FileExists("/Folder/File.txt"));
         Assert.False(fs.FileExists("/folder/file.txt"));
+
+        Assert.False(fs.DirectoryExists("/Folder/file.txt"));
+        Assert.False(fs.DirectoryExists("/folder/File.txt"));
     }
 
     [Fact]
-    public void TestSave()
+    public void TestSaveStream()
     {
         var stream = new MemoryStream();
 
-        var fs = new ZipArchiveFileSystem(stream);
+        using var fs = new ZipArchiveFileSystem(stream);
 
         fs.WriteAllText("/a/b.txt", "abc");
         fs.Save();
@@ -282,6 +300,33 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         using (var fs2 = new ZipArchiveFileSystem(stream, ZipArchiveMode.Read, leaveOpen: true))
         {
             Assert.Equal("def", fs2.ReadAllText("/a/b.txt"));
+        }
+    }
+
+    [Fact]
+    public void TestSaveFile()
+    {
+        var path = Path.Combine(SystemPath, Guid.NewGuid().ToString("N") + ".zip");
+
+        try
+        {
+            using var fs = new ZipArchiveFileSystem(path);
+
+            Assert.Equal(0, new FileInfo(path).Length);
+
+            fs.WriteAllText("/a/b.txt", "abc");
+            fs.Save();
+
+            // We cannot check the content because the file is still open
+            Assert.NotEqual(0, new FileInfo(path).Length);
+
+            // Ensure we can save multiple times
+            fs.WriteAllText("/a/b.txt", "def");
+            fs.Save();
+        }
+        finally
+        {
+            File.Delete(path);
         }
     }
 }
