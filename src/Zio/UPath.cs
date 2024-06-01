@@ -36,12 +36,12 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
     /// <summary>
     /// The default comparer for a <see cref="UPath"/> that is case sensitive.
     /// </summary>
-    public static readonly IComparer<UPath> DefaultComparer = new ComparerCaseSensitive();
+    public static readonly IComparer<UPath> DefaultComparer = UPathComparer.Ordinal;
 
     /// <summary>
     /// The default comparer for a <see cref="UPath"/> that is case insensitive.
     /// </summary>
-    public static readonly IComparer<UPath> DefaultComparerIgnoreCase = new ComparerIgnoreCase();
+    public static readonly IComparer<UPath> DefaultComparerIgnoreCase = UPathComparer.OrdinalIgnoreCase;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UPath"/> struct.
@@ -471,21 +471,5 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
     public int CompareTo(UPath other)
     {
         return string.Compare(FullName, other.FullName, StringComparison.Ordinal);
-    }
-
-    private class ComparerCaseSensitive : IComparer<UPath>
-    {
-        public int Compare(UPath x, UPath y)
-        {
-            return string.Compare(x.FullName, y.FullName, StringComparison.Ordinal);
-        }
-    }
-
-    private class ComparerIgnoreCase : IComparer<UPath>
-    {
-        public int Compare(UPath x, UPath y)
-        {
-            return string.Compare(x.FullName, y.FullName, StringComparison.OrdinalIgnoreCase);
-        }
     }
 }

@@ -223,7 +223,7 @@ public class FileSystemWatcher : IFileSystemWatcher
         return pathFromEvent;
     }
 
-    private void OnChanged(object sender, FileChangedEventArgs args)
+    private void OnChanged(object? sender, FileChangedEventArgs args)
     {
         var newPath = TryConvertPath(args.FullPath);
         if (!newPath.HasValue)
@@ -235,7 +235,7 @@ public class FileSystemWatcher : IFileSystemWatcher
         RaiseChanged(newArgs);
     }
 
-    private void OnCreated(object sender, FileChangedEventArgs args)
+    private void OnCreated(object? sender, FileChangedEventArgs args)
     {
         var newPath = TryConvertPath(args.FullPath);
         if (!newPath.HasValue)
@@ -247,7 +247,7 @@ public class FileSystemWatcher : IFileSystemWatcher
         RaiseCreated(newArgs);
     }
 
-    private void OnDeleted(object sender, FileChangedEventArgs args)
+    private void OnDeleted(object? sender, FileChangedEventArgs args)
     {
         var newPath = TryConvertPath(args.FullPath);
         if (!newPath.HasValue)
@@ -259,12 +259,12 @@ public class FileSystemWatcher : IFileSystemWatcher
         RaiseDeleted(newArgs);
     }
 
-    private void OnError(object sender, FileSystemErrorEventArgs args)
+    private void OnError(object? sender, FileSystemErrorEventArgs args)
     {
         RaiseError(args);
     }
 
-    private void OnRenamed(object sender, FileRenamedEventArgs args)
+    private void OnRenamed(object? sender, FileRenamedEventArgs args)
     {
         var newPath = TryConvertPath(args.FullPath);
         if (!newPath.HasValue)
