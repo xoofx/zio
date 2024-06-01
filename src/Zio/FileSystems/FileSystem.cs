@@ -431,6 +431,35 @@ public abstract class FileSystem : IFileSystem
     /// <param name="time">A <see cref="DateTime"/> containing the value to set for the last write date and time of path. This value is expressed in local time.</param>
     protected abstract void SetLastWriteTimeImpl(UPath path, DateTime time);
 
+    /// <inheritdoc />
+    public void CreateSymbolicLink(UPath path, UPath pathToTarget)
+    {
+        AssertNotDisposed();
+        CreateSymbolicLinkImpl(ValidatePath(path), ValidatePath(pathToTarget));
+    }
+
+    /// <summary>
+    /// Creates a symbolic link.
+    /// </summary>
+    /// <param name="path">The path of the symbolic link to create.</param>
+    /// <param name="pathToTarget">The path of the target for the symbolic link.</param>
+    protected abstract void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget);
+
+
+    /// <inheritdoc />
+    public bool TryResolveLinkTarget(UPath linkPath, out UPath resolvedPath)
+    {
+        AssertNotDisposed();
+        return TryResolveLinkTargetImpl(ValidatePath(linkPath), out resolvedPath);
+    }
+
+    /// <summary>
+    /// Resolves the target of a symbolic link.
+    /// </summary>
+    /// <param name="linkPath">The path of the symbolic link to resolve.</param>
+    /// <param name="resolvedPath"></param>
+    protected abstract bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath);
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------
@@ -546,6 +575,7 @@ public abstract class FileSystem : IFileSystem
         if (systemPath is null) throw new ArgumentNullException(nameof(systemPath));
         return ValidatePath(ConvertPathFromInternalImpl(systemPath));
     }
+
     /// <summary>
     /// Implementation for <see cref="ConvertPathToInternal"/>, <paramref name="innerPath"/> is guaranteed to be not null and return path to be validated through <see cref="ValidatePath"/>.
     /// Converts the specified system path to a <see cref="IFileSystem"/> path.

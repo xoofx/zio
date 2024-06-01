@@ -133,6 +133,12 @@ public class ReadOnlyFileSystem : ComposeFileSystem
         throw new IOException(FileSystemIsReadOnly);
     }
 
+    /// <inheritdoc />
+    protected override void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget)
+    {
+        throw new IOException(FileSystemIsReadOnly);
+    }
+
     // ----------------------------------------------
     // Path
     // ----------------------------------------------

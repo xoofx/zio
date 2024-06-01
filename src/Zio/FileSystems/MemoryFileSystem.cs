@@ -753,6 +753,19 @@ public class MemoryFileSystem : FileSystem
         TryGetDispatcher()?.RaiseChange(path);
     }
 
+    /// <inheritdoc />
+    protected override void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget)
+    {
+        throw new NotSupportedException("Symbolic links are not supported by MemoryFileSystem");
+    }
+
+    /// <inheritdoc />
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
+    {
+        resolvedPath = default;
+        return false;
+    }
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

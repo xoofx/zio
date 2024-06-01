@@ -120,6 +120,16 @@ public class FileSystemEntryRedirect : FileSystem
         _fs.GetFileSystemEntry(path).LastWriteTime = time;
     }
 
+    protected override void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget)
+    {
+        _fs.CreateSymbolicLink(path, pathToTarget);
+    }
+
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
+    {
+        return _fs.TryResolveLinkTarget(linkPath, out resolvedPath);
+    }
+
     protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
     {
         return _fs.GetDirectoryEntry(path).EnumerateEntries(searchPattern, searchOption, searchTarget).Select(e => e.Path);

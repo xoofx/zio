@@ -3,6 +3,7 @@
 // See the license.txt file in the project root for more information.
 
 using System.IO;
+using System.Security.Principal;
 using System.Text;
 
 using Zio.FileSystems;
@@ -425,6 +426,130 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         finally
         {
             SafeDeleteFile(systemFilePath);
+        }
+    }
+
+    [SkippableFact]
+    public void TestDirectorySymlink()
+    {
+#if NETCOREAPP
+        if (OperatingSystem.IsWindows())
+#else
+        if (IsWindows)
+#endif
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+
+            Skip.IfNot(principal.IsInRole(WindowsBuiltInRole.Administrator), "This test requires to be run as an administrator on Windows");
+        }
+
+        var fs = new PhysicalFileSystem();
+        var pathInfo = fs.ConvertPathFromInternal(SystemPath);
+        var pathSource = pathInfo / "Source";
+        var filePathSource = pathSource / "test.txt";
+        var systemPathSource = fs.ConvertPathToInternal(pathSource);
+        var pathDest = pathInfo / "Dest";
+        var filePathDest = pathDest / "test.txt";
+        var systemPathDest = fs.ConvertPathToInternal(pathDest);
+        try
+        {
+            // CreateDirectory
+            Assert.False(Directory.Exists(systemPathSource));
+            fs.CreateDirectory(pathSource);
+            Assert.True(Directory.Exists(systemPathSource));
+
+            // CreateFile / OpenFile
+            var fileStream = fs.CreateFile(filePathSource);
+            var buffer = Encoding.UTF8.GetBytes("This is a test");
+            fileStream.Write(buffer, 0, buffer.Length);
+            fileStream.Dispose();
+            Assert.Equal(buffer.Length, fs.GetFileLength(filePathSource));
+
+            // CreateSymbolicLink
+            fs.CreateSymbolicLink(pathDest, pathSource);
+
+            // ResolveSymbolicLink
+            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            Assert.Equal(pathSource, resolvedPath);
+
+            // FileExists
+            Assert.True(fs.FileExists(filePathDest));
+            Assert.Equal(buffer.Length, fs.GetFileLength(filePathDest));
+
+            // RemoveDirectory
+            fs.DeleteDirectory(pathDest, false);
+            Assert.False(Directory.Exists(systemPathDest));
+            Assert.True(Directory.Exists(systemPathSource));
+        }
+        finally
+        {
+            SafeDeleteDirectory(systemPathSource);
+            SafeDeleteDirectory(systemPathDest);
+        }
+    }
+
+    [SkippableFact]
+    public void TestFileSymlink()
+    {
+#if NETCOREAPP
+        if (OperatingSystem.IsWindows())
+#else
+        if (IsWindows)
+#endif
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+
+            Skip.IfNot(principal.IsInRole(WindowsBuiltInRole.Administrator), "This test requires to be run as an administrator on Windows");
+        }
+
+        var fs = new PhysicalFileSystem();
+        var pathInfo = fs.ConvertPathFromInternal(SystemPath);
+        var pathSource = pathInfo / "source.txt";
+        var systemPathSource = fs.ConvertPathToInternal(pathSource);
+        var pathDest = pathInfo / "dest.txt";
+        var systemPathDest = fs.ConvertPathToInternal(pathDest);
+        try
+        {
+            // CreateEmptyFile
+            fs.CreateFile(pathSource).Dispose();
+
+            // CreateSymbolicLink
+            fs.CreateSymbolicLink(pathDest, pathSource);
+
+            // ResolveSymbolicLink
+            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            Assert.Equal(pathSource, resolvedPath);
+
+            // FileExists
+            Assert.True(fs.FileExists(pathDest));
+
+            // CreateFile / OpenFile
+            var fileStream = fs.OpenFile(pathSource, FileMode.Open, FileAccess.ReadWrite);
+            var buffer = Encoding.UTF8.GetBytes("This is a test");
+            fileStream.Write(buffer, 0, buffer.Length);
+            fileStream.Dispose();
+            Assert.Equal(buffer.Length, fs.GetFileLength(pathSource));
+
+            // ReadAllBytes
+            // Note: we can't check the length, since on Windows the symlink length is 0
+            var symlinkBuffer = fs.ReadAllBytes(pathDest);
+            Assert.Equal(buffer, symlinkBuffer);
+
+            // FileEntry
+            var entry = fs.GetFileSystemEntry(pathDest);
+            Assert.True(entry.Attributes.HasFlag(FileAttributes.ReparsePoint));
+
+            // DeleteFile
+            fs.DeleteFile(pathDest);
+            Assert.False(File.Exists(systemPathDest));
+            Assert.True(File.Exists(systemPathSource));
+        }
+        finally
+        {
+            SafeDeleteFile(systemPathSource);
+            SafeDeleteFile(systemPathDest);
         }
     }
 }

@@ -186,6 +186,25 @@ public abstract class ComposeFileSystem : FileSystem
         FallbackSafe.SetLastWriteTime(ConvertPathToDelegate(path), time);
     }
 
+    /// <inheritdoc />
+    protected override void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget)
+    {
+        FallbackSafe.CreateSymbolicLink(ConvertPathToDelegate(path), ConvertPathToDelegate(pathToTarget));
+    }
+
+    /// <inheritdoc />
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
+    {
+        if (!FallbackSafe.TryResolveLinkTarget(ConvertPathToDelegate(linkPath), out var resolvedPathDelegate))
+        {
+            resolvedPath = default;
+            return false;
+        }
+
+        resolvedPath = ConvertPathFromDelegate(resolvedPathDelegate);
+        return true;
+    }
+
     // ----------------------------------------------
     // Search API
     // ----------------------------------------------

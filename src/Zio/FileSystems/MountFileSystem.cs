@@ -551,6 +551,49 @@ public class MountFileSystem : ComposeFileSystem
     }
 
     /// <inheritdoc />
+    protected override void CreateSymbolicLinkImpl(UPath path, UPath pathToTarget)
+    {
+        var originalSrcPath = path;
+        var mountfs = TryGetMountOrNext(ref path);
+        var mountTargetfs = TryGetMountOrNext(ref pathToTarget);
+
+        if (mountfs != mountTargetfs)
+        {
+            throw new InvalidOperationException("Cannot create a symbolic link between two different filesystems");
+        }
+
+        if (mountfs != null)
+        {
+            mountfs.CreateSymbolicLink(path, pathToTarget);
+        }
+        else
+        {
+            throw NewFileNotFoundException(originalSrcPath);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override bool TryResolveLinkTargetImpl(UPath linkPath, out UPath resolvedPath)
+    {
+        var mountfs = TryGetMountOrNext(ref linkPath, out var mountPath);
+
+        if (mountfs is null)
+        {
+            resolvedPath = default;
+            return false;
+        }
+
+        if (!mountfs.TryResolveLinkTarget(linkPath, out var resolved))
+        {
+            resolvedPath = default;
+            return false;
+        }
+
+        resolvedPath = CombinePrefix(mountPath, resolved);
+        return true;
+    }
+
+    /// <inheritdoc />
     protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
     {
         // Use the search pattern to normalize the path/search pattern

@@ -504,7 +504,7 @@ public static class FileSystemExtensions
     /// <remarks>
     ///     Given a string and a file path, this method opens the specified file, appends the string to the end of the file,
     ///     and then closes the file. The file handle is guaranteed to be closed by this method, even if exceptions are raised.
-    ///     The method creates the file if it doesn’t exist, but it doesn't create new directories. Therefore, the value of the
+    ///     The method creates the file if it doesn't exist, but it doesn't create new directories. Therefore, the value of the
     ///     path parameter must contain existing directories.
     /// </remarks>
     public static void AppendAllText(this IFileSystem fs, UPath path, string content)
@@ -531,7 +531,7 @@ public static class FileSystemExtensions
     /// <remarks>
     ///     Given a string and a file path, this method opens the specified file, appends the string to the end of the file,
     ///     and then closes the file. The file handle is guaranteed to be closed by this method, even if exceptions are raised.
-    ///     The method creates the file if it doesn’t exist, but it doesn't create new directories. Therefore, the value of the
+    ///     The method creates the file if it doesn't exist, but it doesn't create new directories. Therefore, the value of the
     ///     path parameter must contain existing directories.
     /// </remarks>
     public static void AppendAllText(this IFileSystem fs, UPath path, string content, Encoding encoding)
