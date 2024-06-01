@@ -130,6 +130,33 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
     /// <exception cref="System.ArgumentException">If an error occurs while trying to combine paths.</exception>
     public static UPath Combine(UPath path1, UPath path2)
     {
+        if (TryGetAbsolute(path1, path2, out var result))
+        {
+            return result;
+        }
+
+        try
+        {
+#if NET7_0_OR_GREATER
+            return string.Create(path1.FullName.Length + path2.FullName.Length + 1, new KeyValuePair<UPath, UPath>(path1, path2), (span, state) =>
+            {
+                var (left, right) = state;
+                left.FullName.AsSpan().CopyTo(span);
+                span[left.FullName.Length] = '/';
+                right.FullName.AsSpan().CopyTo(span.Slice(left.FullName.Length + 1));
+            });
+#else
+            return new UPath($"{path1.FullName}/{path2.FullName}");
+#endif
+        }
+        catch (ArgumentException ex)
+        {
+            throw new ArgumentException($"Unable to combine path `{path1}` with `{path2}`", ex);
+        }
+    }
+
+    private static bool TryGetAbsolute(UPath path1, UPath path2, out UPath result)
+    {
         if (path1.FullName is null)
             throw new ArgumentNullException(nameof(path1));
 
@@ -138,26 +165,88 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
 
         // If the right path is absolute, it takes priority over path1
         if (path1.IsEmpty || path2.IsAbsolute)
-            return path2;
+        {
+            result = path2;
+            return true;
+        }
 
-        try
-        {
-            return new UPath($"{path1.FullName}/{path2.FullName}");
-        }
-        catch (ArgumentException ex)
-        {
-            throw new ArgumentException($"Unable to combine path `{path1}` with `{path2}`", ex);
-        }
+        result = default;
+        return false;
     }
 
     public static UPath Combine(UPath path1, UPath path2, UPath path3)
     {
+        if (TryGetAbsolute(path1, path2, out var result))
+        {
+            return Combine(result, path3);
+        }
+
+        if (TryGetAbsolute(path2, path3, out result))
+        {
+            return Combine(path1, result);
+        }
+
+#if NET7_0_OR_GREATER
+        return string.Create(path1.FullName.Length + path2.FullName.Length + path3.FullName.Length + 2, (path1, path2, path3), (span, state) =>
+        {
+            var (p1, p2, p3) = state;
+            var remaining = span;
+
+            p1.FullName.AsSpan().CopyTo(remaining);
+            remaining[p1.FullName.Length] = '/';
+            remaining = remaining.Slice(p1.FullName.Length + 1);
+
+            p2.FullName.AsSpan().CopyTo(remaining);
+            remaining[p2.FullName.Length] = '/';
+
+            remaining = remaining.Slice(p2.FullName.Length + 1);
+            p3.FullName.AsSpan().CopyTo(remaining);
+        });
+#else
         return UPath.Combine(UPath.Combine(path1, path2), path3);
+#endif
     }
 
     public static UPath Combine(UPath path1, UPath path2, UPath path3, UPath path4)
     {
-        return UPath.Combine(Combine(path1, path2), Combine(path3, path4));
+        if (TryGetAbsolute(path1, path2, out var result))
+        {
+            return Combine(result, path3, path4);
+        }
+
+        if (TryGetAbsolute(path2, path3, out result))
+        {
+            return Combine(path1, result, path4);
+        }
+
+        if (TryGetAbsolute(path3, path4, out result))
+        {
+            return Combine(path1, path2, result);
+        }
+
+#if NET7_0_OR_GREATER
+        return string.Create(path1.FullName.Length + path2.FullName.Length + path3.FullName.Length + path4.FullName.Length + 3, (path1, path2, path3, path4), (span, state) =>
+        {
+            var (p1, p2, p3, p4) = state;
+            var remaining = span;
+
+            p1.FullName.AsSpan().CopyTo(remaining);
+            remaining[p1.FullName.Length] = '/';
+            remaining = remaining.Slice(p1.FullName.Length + 1);
+
+            p2.FullName.AsSpan().CopyTo(remaining);
+            remaining[p2.FullName.Length] = '/';
+            remaining = remaining.Slice(p2.FullName.Length + 1);
+
+            p3.FullName.AsSpan().CopyTo(remaining);
+            remaining[p3.FullName.Length] = '/';
+            remaining = remaining.Slice(p3.FullName.Length + 1);
+
+            p4.FullName.AsSpan().CopyTo(remaining);
+        });
+#else
+        return UPath.Combine(UPath.Combine(path1, path2), UPath.Combine(path3, path4));
+#endif
     }
 
     public static UPath Combine(params UPath[] paths)
