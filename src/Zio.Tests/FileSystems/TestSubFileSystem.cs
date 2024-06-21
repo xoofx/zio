@@ -74,6 +74,43 @@ public class TestSubFileSystem : TestFileSystemBase
         Assert.True(gotChange);
     }
 
+    [SkippableTheory]
+    [InlineData("/test", "/test", "/foo.txt")]
+    [InlineData("/test", "/test", "/~foo.txt")]
+    [InlineData("/test", "/TEST", "/foo.txt")]
+    [InlineData("/test", "/TEST", "/~foo.txt")]
+    [InlineData("/verylongname", "/VERYLONGNAME", "/foo.txt")]
+    [InlineData("/verylongname", "/VERYLONGNAME", "/~foo.txt")]
+    public void TestWatcherCaseSensitive(string physicalDir, string subDir, string filePath)
+    {
+        Skip.IfNot(IsWindows, "This test involves case insensitivity on Windows");
+
+        var physicalFs = GetCommonPhysicalFileSystem();
+        physicalFs.CreateDirectory(physicalDir);
+
+        Assert.True(physicalFs.DirectoryExists(physicalDir));
+        Assert.True(physicalFs.DirectoryExists(subDir));
+
+        var subFs = new SubFileSystem(physicalFs, subDir);
+        var watcher = subFs.Watch("/");
+
+        var gotChange = false;
+        watcher.Created += (sender, args) =>
+        {
+            if (args.FullPath == filePath)
+            {
+                gotChange = true;
+            }
+        };
+
+        watcher.IncludeSubdirectories = true;
+        watcher.EnableRaisingEvents = true;
+
+        physicalFs.WriteAllText($"{physicalDir}{filePath}", "test");
+        Thread.Sleep(100);
+        Assert.True(gotChange);
+    }
+
     [SkippableFact]
     public void TestDirectorySymlink()
     {
