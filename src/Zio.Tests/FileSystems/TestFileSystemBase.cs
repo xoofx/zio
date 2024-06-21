@@ -421,4 +421,25 @@ public abstract class TestFileSystemBase : IDisposable
         CreateFolderStructure(UPath.Root);
         CreateFolderStructure(UPath.Root / "a");
     }
+
+    protected void AssertFileCreatedEventDispatched(IFileSystem fs, UPath watchPath, UPath filePath)
+    {
+        var watcher = fs.Watch(watchPath);
+        var waitHandle = new ManualResetEvent(false);
+
+        watcher.Created += (_, args) =>
+        {
+            if (args.FullPath == filePath)
+            {
+                waitHandle.Set();
+            }
+        };
+
+        watcher.IncludeSubdirectories = true;
+        watcher.EnableRaisingEvents = true;
+
+        fs.WriteAllText(filePath, "test");
+
+        Assert.True(waitHandle.WaitOne(100));
+    }
 }

@@ -57,12 +57,12 @@ public class TestSubFileSystem : TestFileSystemBase
         var subFs = fs.GetOrCreateSubFileSystem("/a/b");
         var watcher = subFs.Watch("/");
 
-        var gotChange = false;
+        var waitHandle = new ManualResetEvent(false);
         watcher.Created += (sender, args) =>
         {
             if (args.FullPath == "/watched.txt")
             {
-                gotChange = true;
+                waitHandle.Set();
             }
         };
 
@@ -70,8 +70,7 @@ public class TestSubFileSystem : TestFileSystemBase
         watcher.EnableRaisingEvents = true;
 
         fs.WriteAllText("/a/b/watched.txt", "test");
-        System.Threading.Thread.Sleep(100);
-        Assert.True(gotChange);
+        Assert.True(waitHandle.WaitOne(100));
     }
 
     [SkippableTheory]
