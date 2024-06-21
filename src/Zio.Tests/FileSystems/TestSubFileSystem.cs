@@ -93,13 +93,13 @@ public class TestSubFileSystem : TestFileSystemBase
 
         var subFs = new SubFileSystem(physicalFs, subDir);
         var watcher = subFs.Watch("/");
+        var waitHandle = new ManualResetEvent(false);
 
-        var gotChange = false;
         watcher.Created += (sender, args) =>
         {
             if (args.FullPath == filePath)
             {
-                gotChange = true;
+                waitHandle.Set();
             }
         };
 
@@ -107,8 +107,8 @@ public class TestSubFileSystem : TestFileSystemBase
         watcher.EnableRaisingEvents = true;
 
         physicalFs.WriteAllText($"{physicalDir}{filePath}", "test");
-        Thread.Sleep(100);
-        Assert.True(gotChange);
+
+        Assert.True(waitHandle.WaitOne(100));
     }
 
     [SkippableFact]
