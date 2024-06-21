@@ -25,18 +25,19 @@ public class TestAggregateFileSystem : TestFileSystemBase
         var fs = GetCommonAggregateFileSystem(out var fs1, out var fs2, out _);
         var watcher = fs.Watch("/");
 
-        var gotChange1 = false;
-        var gotChange2 = false;
+        var change1WaitHandle = new ManualResetEvent(false);
+        var change2WaitHandle = new ManualResetEvent(false);
+
         watcher.Created += (sender, args) =>
         {
             if (args.FullPath == "/b/watched.txt")
             {
-                gotChange1 = true;
+                change1WaitHandle.Set();
             }
 
             if (args.FullPath == "/C/watched.txt")
             {
-                gotChange2 = true;
+                change2WaitHandle.Set();
             }
         };
 
@@ -46,10 +47,8 @@ public class TestAggregateFileSystem : TestFileSystemBase
         fs1.WriteAllText("/b/watched.txt", "test");
         fs2.WriteAllText("/C/watched.txt", "test");
 
-        System.Threading.Thread.Sleep(100);
-
-        Assert.True(gotChange1);
-        Assert.True(gotChange2);
+        Assert.True(change1WaitHandle.WaitOne(100));
+        Assert.True(change2WaitHandle.WaitOne(100));
     }
 
     [Fact]

@@ -31,69 +31,21 @@ public class TestMountFileSystem : TestFileSystemBase
     public void TestWatcherOnRoot()
     {
         var fs = GetCommonMountFileSystemWithMounts();
-        var watcher = fs.Watch("/");
-
-        var gotChange = false;
-        watcher.Created += (sender, args) =>
-        {
-            if (args.FullPath == "/b/watched.txt")
-            {
-                gotChange = true;
-            }
-        };
-
-        watcher.IncludeSubdirectories = true;
-        watcher.EnableRaisingEvents = true;
-
-        fs.WriteAllText("/b/watched.txt", "test");
-        System.Threading.Thread.Sleep(100);
-        Assert.True(gotChange);
+        AssertFileCreatedEventDispatched(fs, "/", "/b/watched.txt");
     }
 
     [Fact]
     public void TestWatcherOnMount()
     {
         var fs = GetCommonMountFileSystemWithMounts();
-        var watcher = fs.Watch("/b");
-
-        var gotChange = false;
-        watcher.Created += (sender, args) =>
-        {
-            if (args.FullPath == "/b/watched.txt")
-            {
-                gotChange = true;
-            }
-        };
-
-        watcher.IncludeSubdirectories = true;
-        watcher.EnableRaisingEvents = true;
-
-        fs.WriteAllText("/b/watched.txt", "test");
-        System.Threading.Thread.Sleep(100);
-        Assert.True(gotChange);
+        AssertFileCreatedEventDispatched(fs, "/b", "/b/watched.txt");
     }
 
     [Fact]
     public void TestWatcherWithBackupOnRoot()
     {
         var fs = GetCommonMountFileSystemWithOnlyBackup();
-        var watcher = fs.Watch("/");
-
-        var gotChange = false;
-        watcher.Created += (sender, args) =>
-        {
-            if (args.FullPath == "/b/watched.txt")
-            {
-                gotChange = true;
-            }
-        };
-
-        watcher.IncludeSubdirectories = true;
-        watcher.EnableRaisingEvents = true;
-
-        fs.WriteAllText("/b/watched.txt", "test");
-        System.Threading.Thread.Sleep(100);
-        Assert.True(gotChange);
+        AssertFileCreatedEventDispatched(fs, "/", "/b/watched.txt");
     }
 
     [Fact]
