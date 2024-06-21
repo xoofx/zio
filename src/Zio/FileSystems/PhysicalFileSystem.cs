@@ -977,7 +977,7 @@ public class PhysicalFileSystem : FileSystem
             if (innerPath.StartsWith(@"\\", StringComparison.Ordinal) || innerPath.StartsWith(@"\?", StringComparison.Ordinal))
                 throw new NotSupportedException($"Path starting with `\\\\` or `\\?` are not supported -> `{innerPath}` ");
 
-            var absolutePath = Path.GetFullPath(innerPath);
+            var absolutePath = Path.IsPathRooted(innerPath) ? innerPath : Path.GetFullPath(innerPath);
             var driveIndex = absolutePath.IndexOf(":\\", StringComparison.Ordinal);
             if (driveIndex != 1)
                 throw new ArgumentException($"Expecting a drive for the path `{absolutePath}`");
