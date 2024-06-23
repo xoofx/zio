@@ -584,6 +584,25 @@ public abstract class FileSystem : IFileSystem
     /// <returns>The converted path according to the system path.</returns>
     protected abstract UPath ConvertPathFromInternalImpl(string innerPath);
 
+    /// <inheritdoc />
+    public (IFileSystem FileSystem, UPath Path) ResolvePath(UPath path)
+    {
+        AssertNotDisposed();
+        return ResolvePathImpl(ValidatePath(path));
+    }
+
+    /// <summary>
+    /// Implementation for <see cref="ResolvePath" />.
+    /// Resolves the specified path to a path in the underlying file system, if one exists. For instance, a <see cref="Zio.FileSystems.SubFileSystem"/> would
+    /// resolve the path to a qualified path in the underlying file system.
+    /// </summary>
+    /// <param name="path">The path to resolve.</param>
+    /// <returns>
+    /// A tuple of the resolved path and file system. If there is no underlying file
+    /// system, the returned path is the same, and the file system is the same.
+    /// </returns>
+    protected virtual (IFileSystem FileSystem, UPath Path) ResolvePathImpl(UPath path) => (this, path);
+
     /// <summary>
     /// User overridable implementation for <see cref="ValidatePath"/> to validate the specified path.
     /// </summary>

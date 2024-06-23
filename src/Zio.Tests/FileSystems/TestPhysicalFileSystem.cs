@@ -1,5 +1,5 @@
 ﻿// Copyright (c) Alexandre Mutel. All rights reserved.
-// This file is licensed under the BSD-Clause 2 license. 
+// This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
 using System.IO;
@@ -352,7 +352,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         var expectedPaths = Directory.EnumerateFileSystemEntries(Path.GetFullPath(Path.Combine(SystemPath, "../.."))).ToList();
         Assert.Equal(expectedPaths, paths);
     }
-    
+
     [SkippableFact]
     public void TestFileWindowsExceptions()
     {
@@ -551,5 +551,15 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             SafeDeleteFile(systemPathSource);
             SafeDeleteFile(systemPathDest);
         }
+    }
+
+    [Fact]
+    public void TestResolvePath()
+    {
+        var fs = new PhysicalFileSystem();
+        var testPath = fs.ConvertPathFromInternal(SystemPath);
+        var (resFs, resPath) = fs.ResolvePath(testPath);
+        Assert.Equal(testPath, resPath);
+        Assert.Equal(fs, resFs);
     }
 }

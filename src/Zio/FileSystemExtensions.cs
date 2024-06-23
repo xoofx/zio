@@ -1,5 +1,5 @@
 ﻿// Copyright (c) Alexandre Mutel. All rights reserved.
-// This file is licensed under the BSD-Clause 2 license. 
+// This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
 using System.IO;
@@ -149,6 +149,9 @@ public static class FileSystemExtensions
     {
         if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
 
+        (fs, srcPath) = fs.ResolvePath(srcPath);
+        (destFileSystem, destPath) = destFileSystem.ResolvePath(destPath);
+
         // If this is the same filesystem, use the file system directly to perform the action
         if (fs == destFileSystem)
         {
@@ -223,6 +226,9 @@ public static class FileSystemExtensions
     public static void MoveFileCross(this IFileSystem fs, UPath srcPath, IFileSystem destFileSystem, UPath destPath)
     {
         if (destFileSystem is null) throw new ArgumentNullException(nameof(destFileSystem));
+
+        (fs, srcPath) = fs.ResolvePath(srcPath);
+        (destFileSystem, destPath) = destFileSystem.ResolvePath(destPath);
 
         // If this is the same filesystem, use the file system directly to perform the action
         if (fs == destFileSystem)
@@ -340,11 +346,11 @@ public static class FileSystemExtensions
     public static string ReadAllText(this IFileSystem fs, UPath path)
     {
         var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        
+
         using (var reader = new StreamReader(stream))
         {
             return reader.ReadToEnd();
-        }        
+        }
     }
 
     /// <summary>
@@ -358,7 +364,7 @@ public static class FileSystemExtensions
     {
         if (encoding is null) throw new ArgumentNullException(nameof(encoding));
         var stream = fs.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        
+
         using (var reader = new StreamReader(stream, encoding))
         {
             return reader.ReadToEnd();
@@ -576,7 +582,7 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for directories.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
     /// <returns>An enumerable collection of the full names (including paths) for the directories in the directory specified by path.</returns>
     public static IEnumerable<UPath> EnumerateDirectories(this IFileSystem fileSystem, UPath path, string searchPattern)
@@ -590,9 +596,9 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for directories.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
-    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory
     /// or should include all subdirectories.
     /// The default value is TopDirectoryOnly.</param>
     /// <returns>An enumerable collection of the full names (including paths) for the directories in the directory specified by path.</returns>
@@ -618,7 +624,7 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for files.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
     /// <returns>An enumerable collection of the full names (including paths) for the files in the directory specified by path.</returns>
     public static IEnumerable<UPath> EnumerateFiles(this IFileSystem fileSystem, UPath path, string searchPattern)
@@ -632,9 +638,9 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for files.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
-    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory
     /// or should include all subdirectories.
     /// The default value is TopDirectoryOnly.</param>
     /// <returns>An enumerable collection of the full names (including paths) for the files in the directory specified by path.</returns>
@@ -660,7 +666,7 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for files or directories.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
     /// <returns>An enumerable collection of the full names (including paths) for the files and directories in the directory specified by path.</returns>
     public static IEnumerable<UPath> EnumeratePaths(this IFileSystem fileSystem, UPath path, string searchPattern)
@@ -674,9 +680,9 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for files or directories.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
-    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory
     /// or should include all subdirectories.
     /// The default value is TopDirectoryOnly.</param>
     /// <returns>An enumerable collection of the full names (including paths) for the files and directories in the directory specified by path.</returns>
@@ -702,7 +708,7 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for files.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
     /// <returns>An enumerable collection of <see cref="FileEntry"/> from the specified path.</returns>
     public static IEnumerable<FileEntry> EnumerateFileEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
@@ -716,9 +722,9 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for files.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
-    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory
     /// or should include all subdirectories.
     /// The default value is TopDirectoryOnly.</param>
     /// <returns>An enumerable collection of <see cref="FileEntry"/> from the specified path.</returns>
@@ -747,7 +753,7 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for directories.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
     /// <returns>An enumerable collection of <see cref="DirectoryEntry"/> from the specified path.</returns>
     public static IEnumerable<DirectoryEntry> EnumerateDirectoryEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
@@ -761,9 +767,9 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for directories.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
-    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory
     /// or should include all subdirectories.
     /// The default value is TopDirectoryOnly.</param>
     /// <returns>An enumerable collection of <see cref="DirectoryEntry"/> from the specified path.</returns>
@@ -792,7 +798,7 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for files and directories.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
     /// <returns>An enumerable collection of <see cref="FileSystemEntry"/> that match a search pattern in a specified path.</returns>
     public static IEnumerable<FileSystemEntry> EnumerateFileSystemEntries(this IFileSystem fileSystem, UPath path, string searchPattern)
@@ -806,9 +812,9 @@ public static class FileSystemExtensions
     /// </summary>
     /// <param name="fileSystem">The file system.</param>
     /// <param name="path">The path of the directory to look for files and directories.</param>
-    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination 
+    /// <param name="searchPattern">The search string to match against the names of directories in path. This parameter can contain a combination
     /// of valid literal path and wildcard (* and ?) characters (see Remarks), but doesn't support regular expressions.</param>
-    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory 
+    /// <param name="searchOption">One of the enumeration values that specifies whether the search operation should include only the current directory
     /// or should include all subdirectories.
     /// The default value is TopDirectoryOnly.</param>
     /// <param name="searchTarget">The search target either <see cref="SearchTarget.Both"/> or only <see cref="SearchTarget.Directory"/> or <see cref="SearchTarget.File"/>. Default is <see cref="SearchTarget.Both"/></param>

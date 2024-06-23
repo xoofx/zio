@@ -1,5 +1,5 @@
 ﻿// Copyright (c) Alexandre Mutel. All rights reserved.
-// This file is licensed under the BSD-Clause 2 license. 
+// This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
 using System.IO;
@@ -36,7 +36,7 @@ public class TestSubFileSystem : TestFileSystemBase
         }
 
         // TODO: We could add another test just to make sure that files can be created...etc. But the test above should already cover the code provided in SubFileSystem
-    } 
+    }
 
     [Fact]
     public void TestGetOrCreateFileSystem()
@@ -72,6 +72,27 @@ public class TestSubFileSystem : TestFileSystemBase
         fs.WriteAllText("/a/b/watched.txt", "test");
         System.Threading.Thread.Sleep(100);
         Assert.True(gotChange);
+    }
+
+    [Fact]
+    public void TestResolvePath()
+    {
+        var fs = GetCommonMemoryFileSystem();
+        var subFs = fs.GetOrCreateSubFileSystem("/a/b");
+        var (resFs, resPath) = subFs.ResolvePath("/c");
+        Assert.Equal("/a/b/c", resPath);
+        Assert.NotEqual(subFs, resFs);
+        Assert.Equal(fs, resFs);
+        (resFs, resPath) = subFs.ResolvePath("/c/d");
+        Assert.Equal("/a/b/c/d", resPath);
+        Assert.NotEqual(subFs, resFs);
+        Assert.Equal(fs, resFs);
+
+        var subFs2 = subFs.GetOrCreateSubFileSystem("/q");
+        (resFs, resPath) = subFs2.ResolvePath("/c");
+        Assert.Equal("/a/b/q/c", resPath);
+        Assert.NotEqual(subFs2, resFs);
+        Assert.Equal(fs, resFs);
     }
 
     [SkippableFact]

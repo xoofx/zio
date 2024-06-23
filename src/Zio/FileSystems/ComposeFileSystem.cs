@@ -1,5 +1,5 @@
 // Copyright (c) Alexandre Mutel. All rights reserved.
-// This file is licensed under the BSD-Clause 2 license. 
+// This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +7,7 @@ using System.IO;
 namespace Zio.FileSystems;
 
 /// <summary>
-/// Provides an abstract base <see cref="IFileSystem"/> for composing a filesystem with another FileSystem. 
+/// Provides an abstract base <see cref="IFileSystem"/> for composing a filesystem with another FileSystem.
 /// This implementation delegates by default its implementation to the filesystem passed to the constructor.
 /// </summary>
 public abstract class ComposeFileSystem : FileSystem
@@ -274,4 +274,7 @@ public abstract class ComposeFileSystem : FileSystem
     /// <param name="path">The path used by the underlying <see cref="Fallback"/></param>
     /// <returns>A new path translated to this filesystem</returns>
     protected abstract UPath ConvertPathFromDelegate(UPath path);
+
+    protected override (IFileSystem FileSystem, UPath Path) ResolvePathImpl(UPath path)
+        => FallbackSafe.ResolvePath(ConvertPathToDelegate(path));
 }

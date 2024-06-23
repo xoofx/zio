@@ -1,5 +1,5 @@
 ﻿// Copyright (c) Alexandre Mutel. All rights reserved.
-// This file is licensed under the BSD-Clause 2 license. 
+// This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
 using System.IO;
@@ -36,7 +36,7 @@ public interface IFileSystem : IDisposable
     void MoveDirectory(UPath srcPath, UPath destPath);
 
     /// <summary>
-    /// Deletes the specified directory and, if indicated, any subdirectories and files in the directory. 
+    /// Deletes the specified directory and, if indicated, any subdirectories and files in the directory.
     /// </summary>
     /// <param name="path">The path of the directory to remove.</param>
     /// <param name="isRecursive"><c>true</c> to remove directories, subdirectories, and files in path; otherwise, <c>false</c>.</param>
@@ -74,9 +74,9 @@ public interface IFileSystem : IDisposable
     /// Determines whether the specified file exists.
     /// </summary>
     /// <param name="path">The path.</param>
-    /// <returns><c>true</c> if the caller has the required permissions and path contains the name of an existing file; 
-    /// otherwise, <c>false</c>. This method also returns false if path is null, an invalid path, or a zero-length string. 
-    /// If the caller does not have sufficient permissions to read the specified file, 
+    /// <returns><c>true</c> if the caller has the required permissions and path contains the name of an existing file;
+    /// otherwise, <c>false</c>. This method also returns false if path is null, an invalid path, or a zero-length string.
+    /// If the caller does not have sufficient permissions to read the specified file,
     /// no exception is thrown and the method returns false regardless of the existence of path.</returns>
     bool FileExists(UPath path);
 
@@ -88,7 +88,7 @@ public interface IFileSystem : IDisposable
     void MoveFile(UPath srcPath, UPath destPath);
 
     /// <summary>
-    /// Deletes the specified file. 
+    /// Deletes the specified file.
     /// </summary>
     /// <param name="path">The path of the file to be deleted.</param>
     void DeleteFile(UPath path);
@@ -224,7 +224,7 @@ public interface IFileSystem : IDisposable
     // ----------------------------------------------
 
     /// <summary>
-    /// Converts the specified path to the underlying path used by this <see cref="IFileSystem"/>. In case of a <see cref="Zio.FileSystems.PhysicalFileSystem"/>, it 
+    /// Converts the specified path to the underlying path used by this <see cref="IFileSystem"/>. In case of a <see cref="Zio.FileSystems.PhysicalFileSystem"/>, it
     /// would represent the actual path on the disk.
     /// </summary>
     /// <param name="path">The path.</param>
@@ -237,10 +237,21 @@ public interface IFileSystem : IDisposable
     /// <param name="systemPath">The system path.</param>
     /// <returns>The converted path according to the system path.</returns>
     UPath ConvertPathFromInternal(string systemPath);
+
+    /// <summary>
+    /// Resolves the specified path to a path in the underlying file system, if one exists. For instance, a <see cref="Zio.FileSystems.SubFileSystem"/> would
+    /// resolve the path to a qualified path in the underlying file system.
+    /// </summary>
+    /// <param name="path">The path to resolve.</param>
+    /// <returns>
+    /// A tuple of the resolved path and file system. If there is no underlying file
+    /// system, the returned path is the same, and the file system is the same.
+    /// </returns>
+    (IFileSystem FileSystem, UPath Path) ResolvePath(UPath path);
 }
 
 /// <summary>
-/// Used by <see cref="IFileSystem.EnumerateItems"/>. 
+/// Used by <see cref="IFileSystem.EnumerateItems"/>.
 /// </summary>
 /// <param name="item">The file system item to filer.</param>
 /// <returns><c>true</c> if the item should be kept; otherwise <c>false</c>.</returns>
