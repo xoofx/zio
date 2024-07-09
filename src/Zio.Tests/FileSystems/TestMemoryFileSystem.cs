@@ -93,6 +93,23 @@ public class TestMemoryFileSystem : TestFileSystemBase
         Assert.Equal(TriggerMemoryFileSystem.TriggerType.Move, fs.Triggered);
     }
 
+    [Fact]
+    public void TestMoveFileCrossMount()
+    {
+        var fs = new TriggerMemoryFileSystem();
+        fs.CreateDirectory("/sub1");
+        fs.CreateDirectory("/sub2");
+        var mount = new MountFileSystem();
+        var sub1 = new SubFileSystem(fs, "/sub1");
+        var sub2 = new SubFileSystem(fs, "/sub2");
+        mount.Mount("/sub2-mount", sub2);
+        sub1.WriteAllText("/file.txt", "test");
+        sub1.MoveFileCross("/file.txt", mount, "/sub2-mount/file.txt");
+        Assert.Equal("test", sub2.ReadAllText("/file.txt"));
+        Assert.False(sub1.FileExists("/file.txt"));
+        Assert.Equal(TriggerMemoryFileSystem.TriggerType.Move, fs.Triggered);
+    }
+
     private sealed class TriggerMemoryFileSystem : MemoryFileSystem
     {
         public enum TriggerType
