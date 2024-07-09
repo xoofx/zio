@@ -276,5 +276,5 @@ public abstract class ComposeFileSystem : FileSystem
     protected abstract UPath ConvertPathFromDelegate(UPath path);
 
     protected override (IFileSystem FileSystem, UPath Path) ResolvePathImpl(UPath path)
-        => Fallback?.ResolvePath(ConvertPathToDelegate(path)) ?? (this, path);
+        => Fallback?.ResolvePath(ConvertPathToDelegate(path)) ?? base.ResolvePathImpl(path);
 }
