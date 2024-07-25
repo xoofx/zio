@@ -977,9 +977,12 @@ public class PhysicalFileSystem : FileSystem
             if (innerPath.StartsWith(@"\\", StringComparison.Ordinal) || innerPath.StartsWith(@"\?", StringComparison.Ordinal))
                 throw new NotSupportedException($"Path starting with `\\\\` or `\\?` are not supported -> `{innerPath}` ");
 
-            var absolutePath = Path.IsPathRooted(innerPath) ? innerPath : Path.GetFullPath(innerPath);
-            var driveIndex = absolutePath.IndexOf(":\\", StringComparison.Ordinal);
-            if (driveIndex != 1)
+            // We want to avoid using Path.GetFullPath unless absolutely necessary,
+            // because it can change the case of already rooted paths that contain a ~
+            var absolutePath = HasWindowsVolumeLabel(innerPath) ? innerPath : Path.GetFullPath(innerPath);
+
+            // Assert that Path.GetFullPath returned the format we expect
+            if (!HasWindowsVolumeLabel(absolutePath))
                 throw new ArgumentException($"Expecting a drive for the path `{absolutePath}`");
 
             var builder = UPath.GetSharedStringBuilder();
@@ -1031,5 +1034,13 @@ public class PhysicalFileSystem : FileSystem
     private static bool IsDriveLetter(char c)
     {
         return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z';
+    }
+
+    private static bool HasWindowsVolumeLabel( string path )
+    {
+        if ( !IsOnWindows )
+            throw new NotSupportedException( $"{nameof( HasWindowsVolumeLabel )} is only supported on Windows platforms." );
+
+        return path.Length >= 3 && path[1] == ':' && path[2] is '\\' or '/';
     }
 }
