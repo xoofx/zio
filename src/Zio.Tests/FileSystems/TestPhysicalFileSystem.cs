@@ -31,6 +31,19 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
+    [SkippableFact]
+    public void TestRootedPathWithoutDriveOnWindows()
+    {
+        Skip.IfNot(IsWindows, "Testing Windows-specific behavior");
+
+        var driveLetter = Directory.GetCurrentDirectory()[0];
+        var fs = new PhysicalFileSystem();
+
+        var resolvedPath = fs.ConvertPathFromInternal("/test");
+
+        Assert.Equal($"/mnt/{driveLetter}/test", resolvedPath.ToString(), StringComparer.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void TestWatcher()
     {
