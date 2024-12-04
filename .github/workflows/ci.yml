@@ -24,10 +24,10 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Install .NET 8.0
+    - name: Install .NET 9.0
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '9.0.x'
 
     - name: Build, Test, Pack, Publish
       if: matrix.os == 'windows-latest'
