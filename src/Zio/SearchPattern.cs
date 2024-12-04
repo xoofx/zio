@@ -2,6 +2,7 @@
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -41,6 +42,22 @@ public struct SearchPattern
         if (name is null) throw new ArgumentNullException(nameof(name));
         // if _execMatch is null and _regexMatch is null, we have a * match
         return _exactMatch != null ? _exactMatch == name : _regexMatch is null || _regexMatch.IsMatch(name);
+    }
+
+    /// <summary>
+    /// Tries to match the specified path with this instance.
+    /// </summary>
+    /// <param name="name">The path to match.</param>
+    /// <returns><c>true</c> if the path was matched, <c>false</c> otherwise.</returns>
+    public bool Match(ReadOnlySpan<char> name)
+    {
+#if NET7_0_OR_GREATER
+        // if _execMatch is null and _regexMatch is null, we have a * match
+        return _exactMatch != null ? name.SequenceEqual(_exactMatch) : _regexMatch is null || _regexMatch.IsMatch(name);
+#else
+        // Regex.Match(ReadOnlySpan<char>) is only available starting from .NET
+        return Match(name.ToString());
+#endif
     }
 
     /// <summary>

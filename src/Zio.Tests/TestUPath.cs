@@ -268,6 +268,22 @@ public class TestUPath
     }
 
     [Theory]
+    [InlineData("", "")]
+    [InlineData("/", "")]
+    [InlineData("/a", "/")]
+    [InlineData("/a/b", "/a")]
+    [InlineData("/a/b/c.txt", "/a/b")]
+    [InlineData("a", "")]
+    [InlineData("../a", "..")]
+    [InlineData("../../a/b", "../../a")]
+    public void TestGetDirectoryAsSpan(string path1, string expectedDir)
+    {
+        var path = (UPath)path1;
+        var result = path.GetDirectoryAsSpan().ToString();
+        Assert.Equal(expectedDir, result);
+    }
+
+    [Theory]
     [InlineData("", ".txt", "")]
     [InlineData("/", ".txt", "/.txt")]
     [InlineData("/a", ".txt", "/a.txt")]
@@ -322,6 +338,34 @@ public class TestUPath
         Assert.Equal(new List<string>() { "a" }, ((UPath)"a").Split());
         Assert.Equal(new List<string>() { "a", "b" }, ((UPath)"a/b").Split());
         Assert.Equal(new List<string>() { "a", "b", "c" }, ((UPath)"a/b/c").Split());
+    }
+
+    [Fact]
+    public void TestSplitSpan()
+    {
+        Assert.Equal(new List<string>(), ToList((UPath)""));
+        Assert.Equal(new List<string>(), ToList((UPath)"/"));
+        Assert.Equal(new List<string>() { "a" }, ToList((UPath)"/a"));
+        Assert.Equal(new List<string>() {"a", "b", "c"}, ToList((UPath) "/a/b/c"));
+        Assert.Equal(new List<string>() { "a" }, ToList((UPath)"a"));
+        Assert.Equal(new List<string>() { "a", "b" }, ToList((UPath)"a/b"));
+        Assert.Equal(new List<string>() { "a", "b", "c" }, ToList((UPath)"a/b/c"));
+        return;
+
+        List<string> ToList(UPath path)
+        {
+            var enumerator = path.SpanSplit();
+            var list = new List<string>(enumerator.Count);
+
+            foreach (var span in enumerator)
+            {
+                list.Add(span.ToString());
+            }
+
+            Assert.Equal(enumerator.Count, list.Count);
+
+            return list;
+        }
     }
 
 

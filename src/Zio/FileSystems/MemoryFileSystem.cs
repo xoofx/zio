@@ -1304,7 +1304,7 @@ public class MemoryFileSystem : FileSystem
         var isRequiringExclusiveLockForParent = (flags & (FindNodeFlags.CreatePathIfNotExist | FindNodeFlags.KeepParentNodeExclusive)) != 0;
 
         var parentNode = _rootDirectory;
-        var names = path.Split();
+        var names = path.SpanSplit();
 
         // Walking down the nodes in locking order:
         // /a/b/c.txt
@@ -1324,9 +1324,9 @@ public class MemoryFileSystem : FileSystem
             isParentLockTaken = true;
         }
 
-        for (var i = 0; i < names.Count && parentNode != null; i++)
+        for (var i = 0; names.MoveNext() && parentNode != null; i++)
         {
-            var name = names[i];
+            ReadOnlySpan<char> name = names.Current;
             bool isLast = i + 1 == names.Count;
 
             DirectoryNode? nextParent = null;
@@ -1334,11 +1334,15 @@ public class MemoryFileSystem : FileSystem
             try
             {
                 FileSystemNode? subNode;
-                if (!parentNode.Children.TryGetValue(name, out subNode))
+#if HAS_ALTERNATEEQUALITYCOMPARER
+                if (!parentNode.Children.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(name, out subNode))
+#else
+                if (!parentNode.Children.TryGetValue(name.ToString(), out subNode))
+#endif
                 {
                     if ((flags & FindNodeFlags.CreatePathIfNotExist) != 0)
                     {
-                        subNode = new DirectoryNode(this, parentNode, name);
+                        subNode = new DirectoryNode(this, parentNode, name.ToString());
                     }
                 }
                 else
@@ -1361,7 +1365,7 @@ public class MemoryFileSystem : FileSystem
                         flags &= ~(FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.KeepParentNodeShared);
                     }
 
-                    result = new NodeResult(parentNode, subNode, name, flags);
+                    result = new NodeResult(parentNode, subNode, name.ToString(), flags);
 
                     // The last subnode may be null but we still want to return a valid parent
                     // otherwise, lock the final node if necessary
