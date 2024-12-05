@@ -196,7 +196,7 @@ public class ZipArchiveFileSystem : FileSystem
 
         if (srcEntry == null)
         {
-            if (!DirectoryExistsImpl(srcPath.GetDirectory()))
+            if (!DirectoryExistsImpl(srcPath.GetDirectoryAsSpan()))
             {
                 throw new DirectoryNotFoundException(srcPath.GetDirectory().FullName);
             }
@@ -204,10 +204,10 @@ public class ZipArchiveFileSystem : FileSystem
             throw FileSystemExceptionHelper.NewFileNotFoundException(srcPath);
         }
 
-        var parentDirectory = destPath.GetDirectory();
+        var parentDirectory = destPath.GetDirectoryAsSpan();
         if (!DirectoryExistsImpl(parentDirectory))
         {
-            throw FileSystemExceptionHelper.NewDirectoryNotFoundException(parentDirectory);
+            throw FileSystemExceptionHelper.NewDirectoryNotFoundException(parentDirectory.ToString());
         }
 
         if (DirectoryExistsImpl(destPath))
@@ -261,12 +261,12 @@ public class ZipArchiveFileSystem : FileSystem
             throw FileSystemExceptionHelper.NewDestinationDirectoryExistException(path);
         }
 
-        var parentPath = new UPath(GetParent(path.FullName));
-        if (parentPath != "")
+        var parentPath = GetParent(path.AsSpan());
+        if (!parentPath.IsEmpty)
         {
             if (!DirectoryExistsImpl(parentPath))
             {
-                CreateDirectoryImpl(parentPath);
+                CreateDirectoryImpl(parentPath.ToString());
             }
         }
 
@@ -405,7 +405,12 @@ public class ZipArchiveFileSystem : FileSystem
     /// <inheritdoc />
     protected override bool DirectoryExistsImpl(UPath path)
     {
-        if (path.FullName is "/" or "\\" or "")
+        return DirectoryExistsImpl(path.FullName.AsSpan());
+    }
+
+    private bool DirectoryExistsImpl(ReadOnlySpan<char> path)
+    {
+        if (path is "/" or "\\" or "")
         {
             return true;
         }
@@ -414,7 +419,11 @@ public class ZipArchiveFileSystem : FileSystem
 
         try
         {
-            return _entries.TryGetValue(path, out var entry) && entry.IsDirectory;
+#if HAS_ALTERNATEEQUALITYCOMPARER
+            return _entries.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(path, out var entry) && entry.IsDirectory;
+#else
+            return _entries.TryGetValue(path.ToString(), out var entry) && entry.IsDirectory;
+#endif
         }
         finally
         {
@@ -651,7 +660,7 @@ public class ZipArchiveFileSystem : FileSystem
     {
         var srcEntry = GetEntry(srcPath) ?? throw FileSystemExceptionHelper.NewFileNotFoundException(srcPath);
 
-        if (!DirectoryExistsImpl(destPath.GetDirectory()))
+        if (!DirectoryExistsImpl(destPath.GetDirectoryAsSpan()))
         {
             throw FileSystemExceptionHelper.NewDirectoryNotFoundException(destPath.GetDirectory());
         }
@@ -706,7 +715,7 @@ public class ZipArchiveFileSystem : FileSystem
             }
             else
             {
-                if (!DirectoryExistsImpl(path.GetDirectory()))
+                if (!DirectoryExistsImpl(path.GetDirectoryAsSpan()))
                 {
                     throw FileSystemExceptionHelper.NewDirectoryNotFoundException(path.GetDirectory());
                 }
@@ -911,18 +920,18 @@ public class ZipArchiveFileSystem : FileSystem
 
     private static readonly char[] s_slashChars = { '/', '\\' };
 
-    private static string GetName(ZipArchiveEntry entry)
+    private static ReadOnlySpan<char> GetName(ZipArchiveEntry entry)
     {
         var name = entry.FullName.TrimEnd(s_slashChars);
         var index = name.LastIndexOfAny(s_slashChars);
-        return name.Substring(index + 1);
+        return index == -1 ? name.AsSpan() : name.AsSpan(index + 1);
     }
 
-    private static string GetParent(string path)
+    private static ReadOnlySpan<char> GetParent(ReadOnlySpan<char> path)
     {
         path = path.TrimEnd(s_slashChars);
         var lastIndex = path.LastIndexOfAny(s_slashChars);
-        return lastIndex == -1 ? "" : path.Substring(0, lastIndex);
+        return lastIndex == -1 ? ReadOnlySpan<char>.Empty : path.Slice(0, lastIndex);
     }
 
     private FileSystemEventDispatcher<FileSystemWatcher>? TryGetDispatcher()

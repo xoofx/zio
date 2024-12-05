@@ -91,7 +91,7 @@ public class TestSearchPattern
         {
             var searchPattern = "*";
             var search = SearchPattern.Parse(ref path, ref searchPattern);
-            Assert.Throws<ArgumentNullException>(() => search.Match(null));
+            Assert.Throws<ArgumentNullException>(() => search.Match(((string)null)!));
         }
     }
 

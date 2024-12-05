@@ -117,6 +117,16 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
     }
 
     /// <summary>
+    /// Performs an explicit conversion from <see cref="UPath"/> to <see cref="ReadOnlySpan{Char}"/>.
+    /// </summary>
+    /// <param name="path">The path.</param>
+    /// <returns>The result as a span of the conversion.</returns>
+    public static explicit operator ReadOnlySpan<char>(UPath path)
+    {
+        return path.FullName.AsSpan();
+    }
+
+    /// <summary>
     /// Combines two paths into a new path.
     /// </summary>
     /// <param name="path1">The first path to combine.</param>
@@ -320,6 +330,15 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
     public override string ToString()
     {
         return FullName;
+    }
+
+    /// <summary>
+    /// Creates a new readonly span from this path.
+    /// </summary>
+    /// <returns>A new readonly span from this path.</returns>
+    public ReadOnlySpan<char> AsSpan()
+    {
+        return FullName.AsSpan();
     }
 
     /// <summary>

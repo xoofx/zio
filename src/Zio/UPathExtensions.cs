@@ -2,6 +2,7 @@
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
+using System.Collections;
 using System.IO;
 
 namespace Zio;
@@ -73,6 +74,31 @@ public static class UPathExtensions
     }
 
     /// <summary>
+    /// Gets the directory of the specified path as a span.
+    /// </summary>
+    /// <param name="path">The path.</param>
+    /// <returns>The directory of the path.</returns>
+    /// <exception cref="ArgumentNullException">if path is <see cref="UPath.IsNull"/></exception>
+    public static ReadOnlySpan<char> GetDirectoryAsSpan(this UPath path)
+    {
+        path.AssertNotNull();
+
+        var fullname = path.FullName;
+
+        if (fullname is "/")
+        {
+            return ReadOnlySpan<char>.Empty;
+        }
+
+        var lastIndex = fullname.LastIndexOf(UPath.DirectorySeparator);
+        if (lastIndex > 0)
+        {
+            return fullname.AsSpan(0, lastIndex);
+        }
+        return lastIndex == 0 ? UPath.Root.FullName.AsSpan() : ReadOnlySpan<char>.Empty;
+    }
+
+    /// <summary>
     /// Gets the first directory of the specified path and return the remaining path (/a/b/c, first directory: /a, remaining: b/c)
     /// </summary>
     /// <param name="path">The path to extract the first directory and remaining.</param>
@@ -136,6 +162,84 @@ public static class UPathExtensions
             paths.Add(fullname.Substring(previousIndex, fullname.Length - previousIndex));
         }
         return paths;
+    }
+
+    /// <summary>
+    /// Splits the specified path by directories using the directory separator character `/`
+    /// </summary>
+    /// <param name="path">The path.</param>
+    /// <returns>A list of sub path for each directory entry in the path (/a/b/c returns [a,b,c], or a/b/c returns [a,b,c].</returns>
+    public static SplitEnumerator SpanSplit(this UPath path)
+    {
+        path.AssertNotNull();
+
+        var span = path.IsAbsolute
+            ? path.FullName.AsSpan(1)
+            : path.FullName.AsSpan();
+
+        return new SplitEnumerator(span);
+    }
+
+    /// <summary>
+    /// Enumerator for <see cref="SpanSplit(UPath)"/>
+    /// </summary>
+    public ref struct SplitEnumerator
+    {
+        private ReadOnlySpan<char> _remaining;
+
+        public ReadOnlySpan<char> Current { get; private set; }
+
+        public int Count { get; }
+
+        public SplitEnumerator(ReadOnlySpan<char> remaining)
+        {
+            _remaining = remaining;
+
+            if (remaining.IsEmpty)
+            {
+                Count = 0;
+            }
+            else
+            {
+#if NET9_0_OR_GREATER
+                Count = remaining.Count(UPath.DirectorySeparator) + 1;
+#else
+                Count++;
+                foreach (var t in _remaining)
+                {
+                    if (t == UPath.DirectorySeparator)
+                    {
+                        Count++;
+                    }
+                }
+#endif
+            }
+        }
+
+        public bool MoveNext()
+        {
+            if (_remaining.IsEmpty)
+            {
+                return false;
+            }
+
+            var index = _remaining.IndexOf(UPath.DirectorySeparator);
+
+            if (index < 0)
+            {
+                Current = _remaining;
+                _remaining = ReadOnlySpan<char>.Empty;
+            }
+            else
+            {
+                Current = _remaining.Slice(0, index);
+                _remaining = _remaining.Slice(index + 1);
+            }
+
+            return true;
+        }
+
+        public SplitEnumerator GetEnumerator() => this;
     }
 
     /// <summary>
