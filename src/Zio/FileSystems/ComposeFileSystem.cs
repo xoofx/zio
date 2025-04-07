@@ -36,13 +36,13 @@ public abstract class ComposeFileSystem : FileSystem
     /// <summary>
     /// Gets the next delegated file system (may be null).
     /// </summary>
-    protected IFileSystem? Fallback { get; }
+    public IFileSystem? Fallback { get; }
 
     /// <summary>
     /// Gets the next delegated file system or throws an error if it is null.
     /// </summary>
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    protected IFileSystem FallbackSafe
+    public IFileSystem FallbackSafe
     {
         get
         {
