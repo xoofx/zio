@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
@@ -199,5 +199,33 @@ public class TestAggregateFileSystem : TestFileSystemBase
         Assert.True(fs.FileExists("/c.txt"));
         Assert.True(fs.FileExists("/b.txt"));
         Assert.True(fs.FileExists("/a.txt"));
+    }
+
+
+    [Fact]
+    public void TestResolvePath()
+    {
+        var fs = GetCommonAggregateFileSystem(out var fs1, out var fs2, out var fs3);
+
+        // File (fs3)
+        {
+            var (resolvedFs, resolvedPath) = fs.ResolvePath("/A.txt");
+            Assert.Equal(fs3, resolvedFs);
+            Assert.Equal("/A.txt", resolvedPath);
+        }
+
+        // Directory (fs2)
+        {
+            var (resolvedFs, resolvedPath) = fs.ResolvePath("/a/C");
+            Assert.Equal(fs2, resolvedFs);
+            Assert.Equal("/a/C", resolvedPath);
+        }
+
+        // File (fs1)
+        {
+            var (resolvedFs, resolvedPath) = fs.ResolvePath("/a/b");
+            Assert.Equal(fs1, resolvedFs);
+            Assert.Equal("/a/b", resolvedPath);
+        }
     }
 }
