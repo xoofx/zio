@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
@@ -278,7 +278,20 @@ public class AggregateFileSystem : ReadOnlyFileSystem
         var entry = GetFile(path);
         return entry.FileSystem.OpenFile(path, mode, access, share);
     }
+    
+    /// <inheritdoc />
+    protected override (IFileSystem FileSystem, UPath Path) ResolvePathImpl(UPath path)
+    {
+        var fsPath = TryGetFile(path);
 
+        if (!fsPath.HasValue)
+        {
+            return base.ResolvePathImpl(path);
+        }
+
+        return (fsPath.Value.FileSystem, fsPath.Value.Path);
+    }
+    
     // ----------------------------------------------
     // Metadata API
     // ----------------------------------------------
