@@ -68,7 +68,7 @@ Zio is available as a NuGet package: [![NuGet](https://img.shields.io/nuget/v/Zi
 
 ## Build
 
-In order to build Zio, you need to install Visual Studio 2022 with latest [.NET 7.0](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+In order to build Zio, you need to install Visual Studio 2022 with latest [.NET 9.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
 
 ## License
 
