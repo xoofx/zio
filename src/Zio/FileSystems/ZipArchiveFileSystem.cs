@@ -664,18 +664,15 @@ public class ZipArchiveFileSystem : FileSystem
                 continue;
             }
 
-            using (var entryStream = entry.Open())
+            var entryName = entry.FullName.Substring(srcDir.Length);
+            var isDirectory = internalEntry.IsDirectory;
+            var destEntry = CreateEntry(UPath.Combine(destPath, entryName), isDirectory: isDirectory);
+
+            if (!isDirectory)
             {
-                var entryName = entry.FullName.Substring(srcDir.Length);
-                var isDirectory = internalEntry.IsDirectory;
-
-                var destEntry = CreateEntry(UPath.Combine(destPath, entryName), isDirectory: isDirectory);
-
-                if (!isDirectory)
-                {
-                    using var destEntryStream = destEntry.Open();
-                    entryStream.CopyTo(destEntryStream);
-                }
+                using var entryStream = entry.Open();
+                using var destEntryStream = destEntry.Open();
+                entryStream.CopyTo(destEntryStream);
             }
 
             TryGetDispatcher()?.RaiseCreated(destPath);
