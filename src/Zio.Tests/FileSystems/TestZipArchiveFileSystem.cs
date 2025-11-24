@@ -231,8 +231,8 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
 
 
     [Theory]
-    [InlineData("TestData/Linux.zip")]
-    [InlineData("TestData/Windows.zip")]
+    [InlineData("TestData/OsZips/Linux.zip")]
+    [InlineData("TestData/OsZips/Windows.zip")]
     public void TestCaseInSensitiveZip(string path)
     {
         using var stream = File.OpenRead(path);
@@ -253,8 +253,8 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
     }
 
     [Theory]
-    [InlineData("TestData/Linux.zip")]
-    [InlineData("TestData/Windows.zip")]
+    [InlineData("TestData/OsZips/Linux.zip")]
+    [InlineData("TestData/OsZips/Windows.zip")]
     public void TestCaseSensitiveZip(string path)
     {
         using var stream = File.OpenRead(path);
@@ -328,5 +328,51 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         {
             File.Delete(path);
         }
+    }
+
+    [Theory]
+    [InlineData("TestData/RootFiles/WithoutRootSlash.zip", false)]
+    [InlineData("TestData/RootFiles/WithRootSlash.zip", true)]
+    public void TestReadDifferentSlash(string zipPath, bool leadingRootSlash)
+    {
+        using var fs = new ZipArchiveFileSystem(zipPath);
+
+        Assert.Equal(leadingRootSlash, fs.LeadingSlashInArchive);
+
+        Assert.True(fs.FileExists("/Test.txt"));
+        Assert.Equal("Test", fs.ReadAllText("/Test.txt"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TestWriteDifferentSlash(bool leadingRootSlash)
+    {
+        using var memStream = new MemoryStream();
+
+        using (var fs = new ZipArchiveFileSystem(memStream, leaveOpen: true))
+        {
+            fs.LeadingSlashInArchive = leadingRootSlash;
+
+            Assert.Equal(leadingRootSlash, fs.LeadingSlashInArchive);
+
+            fs.WriteAllText("/Test.txt", "Test");
+        }
+
+        memStream.Seek(0, SeekOrigin.Begin);
+
+        using (var fs = new ZipArchiveFileSystem(memStream, leaveOpen: true))
+        {
+            Assert.Equal(leadingRootSlash, fs.LeadingSlashInArchive);
+
+            Assert.True(fs.FileExists("/Test.txt"));
+            Assert.Equal("Test", fs.ReadAllText("/Test.txt"));
+        }
+
+        memStream.Seek(0, SeekOrigin.Begin);
+
+        using var zipArchive = new ZipArchive(memStream, ZipArchiveMode.Read);
+
+        Assert.Equal(leadingRootSlash, zipArchive.Entries[0].FullName.StartsWith("/"));
     }
 }

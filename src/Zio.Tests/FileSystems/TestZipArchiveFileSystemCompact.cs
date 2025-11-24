@@ -92,6 +92,43 @@ public class TestZipArchiveFileSystemCompact
     }
 
     [Fact]
+    public void TestDirectoryDelete()
+    {
+        fs.CreateDirectory("/dir");
+        fs.WriteAllText("/dir/file.txt", "test");
+
+        fs.CreateDirectory("/dir2");
+        fs.WriteAllText("/dir2/file2.txt", "test");
+
+        fs.DeleteDirectory("/dir", isRecursive: true);
+
+        Assert.False(fs.DirectoryExists("/dir"));
+
+        Assert.True(fs.DirectoryExists("/dir2"));
+        Assert.True(fs.FileExists("/dir2/file2.txt"));
+    }
+
+    [Fact]
+    public void TestDirectoryMove()
+    {
+        fs.CreateDirectory("/dir");
+        fs.WriteAllText("/dir/file.txt", "test");
+
+        fs.CreateDirectory("/dir2");
+        fs.WriteAllText("/dir2/file2.txt", "test");
+
+        fs.MoveDirectory("/dir", "/moved");
+
+        Assert.False(fs.DirectoryExists("/dir"));
+
+        Assert.True(fs.DirectoryExists("/moved"));
+        Assert.True(fs.FileExists("/moved/file.txt"));
+
+        Assert.True(fs.DirectoryExists("/dir2"));
+        Assert.True(fs.FileExists("/dir2/file2.txt"));
+    }
+
+    [Fact]
     public void TestFile()
     {
         // Test CreateFile/OpenFile
