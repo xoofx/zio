@@ -480,7 +480,7 @@ public class PhysicalFileSystem : FileSystem
             throw NewDirectoryNotFoundException(path);
         }
 
-#if NET7_0_OR_GREATER
+#if NET
         if (isDirectory)
         {
             Directory.CreateSymbolicLink(systemPath, systemPathToTarget);
@@ -535,7 +535,7 @@ public class PhysicalFileSystem : FileSystem
             }
         }
 
-#if NET7_0_OR_GREATER
+#if NET
         var systemResult = isDirectory ? Directory.ResolveLinkTarget(systemPath, true)?.FullName : File.ResolveLinkTarget(systemPath, true)?.FullName;
 #else
         var systemResult = IsOnWindows ? Interop.Windows.GetFinalPathName(systemPath) : Interop.Unix.readlink(systemPath);

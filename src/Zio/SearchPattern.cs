@@ -51,7 +51,7 @@ public struct SearchPattern
     /// <returns><c>true</c> if the path was matched, <c>false</c> otherwise.</returns>
     public bool Match(ReadOnlySpan<char> name)
     {
-#if NET7_0_OR_GREATER
+#if NET
         // if _execMatch is null and _regexMatch is null, we have a * match
         return _exactMatch != null ? name.SequenceEqual(_exactMatch) : _regexMatch is null || _regexMatch.IsMatch(name);
 #else

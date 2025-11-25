@@ -246,7 +246,7 @@ public class ZipArchiveFileSystem : FileSystem
         var destEntry = GetEntry(destPath);
         if (destEntry != null)
         {
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET
             if ((destEntry.ExternalAttributes & (int)FileAttributes.ReadOnly) == (int)FileAttributes.ReadOnly)
             {
                 throw new UnauthorizedAccessException("Destination file is read only");
@@ -369,7 +369,7 @@ public class ZipArchiveFileSystem : FileSystem
                     }
                 }
             }
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET
             // check if there are none readonly entries
             foreach (var entry in entries)
             {
@@ -417,7 +417,7 @@ public class ZipArchiveFileSystem : FileSystem
         {
             return;
         }
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET
         if ((entry.ExternalAttributes & (int)FileAttributes.ReadOnly) == (int)FileAttributes.ReadOnly)
         {
             throw new UnauthorizedAccessException("Cannot delete file with readonly attribute");
@@ -559,7 +559,7 @@ public class ZipArchiveFileSystem : FileSystem
 
         var attributes = entry.FullName[entry.FullName.Length - 1] == DirectorySeparator ? FileAttributes.Directory : 0;
 
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET
         const FileAttributes validValues = (FileAttributes)0x7FFF /* Up to FileAttributes.Encrypted */ | FileAttributes.IntegrityStream | FileAttributes.NoScrubData;
         var externalAttributes = (FileAttributes)entry.ExternalAttributes & validValues;
 
@@ -787,7 +787,7 @@ public class ZipArchiveFileSystem : FileSystem
             entry = CreateEntry(path.FullName);
         }
 
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET
         if ((access == FileAccess.Write || access == FileAccess.ReadWrite) && (entry.ExternalAttributes & (int)FileAttributes.ReadOnly) == (int)FileAttributes.ReadOnly)
         {
             throw new UnauthorizedAccessException("Cannot open a file for writing in a file with readonly attribute.");
@@ -796,7 +796,7 @@ public class ZipArchiveFileSystem : FileSystem
 
         var stream = new ZipEntryStream(share, this, entry);
 
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET
         if (access is FileAccess.Write or FileAccess.ReadWrite)
         {
             entry.ExternalAttributes |= (int)FileAttributes.Archive;
@@ -869,7 +869,7 @@ public class ZipArchiveFileSystem : FileSystem
     /// <param name="attributes">A bitwise combination of the enumeration values.</param>
     protected override void SetAttributesImpl(UPath path, FileAttributes attributes)
     {
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET
         var entry = GetEntry(path);
         if (entry == null)
         {
@@ -1021,10 +1021,10 @@ public class ZipArchiveFileSystem : FileSystem
             dest.LastWriteTime = source.LastWriteTime;
         }
 
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET
         dest.ExternalAttributes = source.ExternalAttributes;
 #endif
-#if NET6_0_OR_GREATER
+#if NET
         dest.Comment = source.Comment;
 #endif
     }

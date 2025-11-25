@@ -2,7 +2,7 @@
 // This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
-#if !NET7_0_OR_GREATER
+#if !NET
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;

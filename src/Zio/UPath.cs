@@ -147,7 +147,7 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
 
         try
         {
-#if NET7_0_OR_GREATER
+#if NET
             return string.Create(path1.FullName.Length + path2.FullName.Length + 1, new KeyValuePair<UPath, UPath>(path1, path2), (span, state) =>
             {
                 var (left, right) = state;
@@ -196,7 +196,7 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
             return Combine(path1, result);
         }
 
-#if NET7_0_OR_GREATER
+#if NET
         return string.Create(path1.FullName.Length + path2.FullName.Length + path3.FullName.Length + 2, (path1, path2, path3), (span, state) =>
         {
             var (p1, p2, p3) = state;
@@ -234,7 +234,7 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
             return Combine(path1, path2, result);
         }
 
-#if NET7_0_OR_GREATER
+#if NET
         return string.Create(path1.FullName.Length + path2.FullName.Length + path3.FullName.Length + path4.FullName.Length + 3, (path1, path2, path3, path4), (span, state) =>
         {
             var (p1, p2, p3, p4) = state;
