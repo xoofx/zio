@@ -128,6 +128,56 @@ public class TestZipArchiveFileSystemCompact
         Assert.True(fs.FileExists("/dir2/file2.txt"));
     }
 
+#if !NET472
+    [Fact]
+    public void TestDirectoryMoveAttributes()
+    {
+        fs.CreateDirectory("/dir");
+        fs.WriteAllText("/dir/file.txt", "test");
+
+        fs.SetAttributes("/dir", FileAttributes.Temporary);
+        Assert.Equal(FileAttributes.Directory | FileAttributes.Temporary, fs.GetAttributes("/dir"));
+
+        fs.SetAttributes("/dir/file.txt", FileAttributes.Temporary);
+
+        Assert.Equal(FileAttributes.Temporary, fs.GetAttributes("/dir/file.txt"));
+
+        fs.MoveDirectory("/dir", "/moved");
+
+        Assert.True(fs.DirectoryExists("/moved"));
+        Assert.Equal(FileAttributes.Directory | FileAttributes.Temporary, fs.GetAttributes("/moved"));
+
+        Assert.True(fs.FileExists("/moved/file.txt"));
+        Assert.Equal(FileAttributes.Temporary, fs.GetAttributes("/moved/file.txt"));
+    }
+
+    [Fact]
+    public void TestFileMoveAttributes()
+    {
+        fs.WriteAllText("/file.txt", "test");
+        fs.SetAttributes("/file.txt", FileAttributes.Temporary);
+        Assert.Equal(FileAttributes.Temporary, fs.GetAttributes("/file.txt"));
+
+        fs.MoveFile("/file.txt", "/moved.txt");
+
+        Assert.True(fs.FileExists("/moved.txt"));
+        Assert.Equal(FileAttributes.Temporary, fs.GetAttributes("/moved.txt"));
+    }
+
+    [Fact]
+    public void TestCopyFileAttributes()
+    {
+        fs.WriteAllText("/file.txt", "test");
+        fs.SetAttributes("/file.txt", FileAttributes.Temporary);
+        Assert.Equal(FileAttributes.Temporary, fs.GetAttributes("/file.txt"));
+
+        fs.CopyFile("/file.txt", "/copy.txt", true);
+
+        Assert.True(fs.FileExists("/copy.txt"));
+        Assert.Equal(FileAttributes.Temporary, fs.GetAttributes("/copy.txt"));
+    }
+#endif
+
     [Fact]
     public void TestFile()
     {

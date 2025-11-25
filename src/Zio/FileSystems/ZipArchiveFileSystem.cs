@@ -267,14 +267,18 @@ public class ZipArchiveFileSystem : FileSystem
             using var srcStream = srcEntry.Open();
             srcStream.CopyTo(destStream);
         }
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
-        destEntry.ExternalAttributes = srcEntry.ExternalAttributes | (int)FileAttributes.Archive;
-#endif
+        CopyEntryProperties(srcEntry, destEntry, includeLastWriteTime: false);
         TryGetDispatcher()?.RaiseCreated(destPath);
     }
 
     /// <inheritdoc />
     protected override void CreateDirectoryImpl(UPath path)
+    {
+        CreateDirectoryWithoutNotification(path);
+        TryGetDispatcher()?.RaiseCreated(path);
+    }
+
+    private ZipArchiveEntry CreateDirectoryWithoutNotification(UPath path)
     {
         if (FileExistsImpl(path))
         {
@@ -295,8 +299,7 @@ public class ZipArchiveFileSystem : FileSystem
             }
         }
 
-        CreateEntry(path, isDirectory: true);
-        TryGetDispatcher()?.RaiseCreated(path);
+        return CreateEntry(path, isDirectory: true);
     }
 
     /// <inheritdoc />
@@ -653,27 +656,32 @@ public class ZipArchiveFileSystem : FileSystem
             throw FileSystemExceptionHelper.NewDirectoryNotFoundException(srcPath);
         }
 
-        CreateDirectoryImpl(destPath);
+        var rootEntry = CreateDirectoryWithoutNotification(destPath);
         foreach (var internalEntry in entries)
         {
             var entry = internalEntry.Entry;
 
+            ZipArchiveEntry destEntry;
+
             if (entry.FullName.Length == srcDir.Length)
             {
-                RemoveEntry(entry);
-                continue;
+                destEntry = rootEntry;
             }
-
-            var entryName = entry.FullName.Substring(srcDir.Length);
-            var isDirectory = internalEntry.IsDirectory;
-            var destEntry = CreateEntry(UPath.Combine(destPath, entryName), isDirectory: isDirectory);
-
-            if (!isDirectory)
+            else
             {
-                using var entryStream = entry.Open();
-                using var destEntryStream = destEntry.Open();
-                entryStream.CopyTo(destEntryStream);
+                var entryName = entry.FullName.Substring(srcDir.Length);
+                var isDirectory = internalEntry.IsDirectory;
+                destEntry = CreateEntry(UPath.Combine(destPath, entryName), isDirectory: isDirectory);
+
+                if (!isDirectory)
+                {
+                    using var entryStream = entry.Open();
+                    using var destEntryStream = destEntry.Open();
+                    entryStream.CopyTo(destEntryStream);
+                }
             }
+
+            CopyEntryProperties(entry, destEntry);
 
             TryGetDispatcher()?.RaiseCreated(destPath);
             RemoveEntry(entry);
@@ -717,6 +725,7 @@ public class ZipArchiveFileSystem : FileSystem
         }        
 
         destEntry = CreateEntry(destPath.FullName);
+        CopyEntryProperties(srcEntry, destEntry);
         TryGetDispatcher()?.RaiseCreated(destPath);
         using (var destStream = destEntry.Open())
         {
@@ -827,6 +836,7 @@ public class ZipArchiveFileSystem : FileSystem
             if (!destBackupPath.IsEmpty)
             {
                 var destBackupEntry = CreateEntry(destBackupPath.FullName);
+                CopyEntryProperties(destEntry, destBackupEntry);
                 using var destBackupStream = destBackupEntry.Open();
                 using var destStream = destEntry.Open();
                 destStream.CopyTo(destBackupStream);
@@ -836,6 +846,7 @@ public class ZipArchiveFileSystem : FileSystem
         }
 
         var newEntry = CreateEntry(destPath.FullName);
+        CopyEntryProperties(sourceEntry, newEntry);
         using (var newStream = newEntry.Open())
         {
             using (var sourceStream = sourceEntry.Open())
@@ -985,11 +996,11 @@ public class ZipArchiveFileSystem : FileSystem
         {
             if (ctx.LeadingSlashInArchive)
             {
-                ctx.path.FullName.AsSpan().CopyTo(span.Slice(0, ctx.path.FullName.Length));
+                ctx.path.FullName.AsSpan().CopyTo(span);
             }
             else
             {
-                ctx.path.FullName.AsSpan(1, ctx.path.FullName.Length - 1).CopyTo(span);
+                ctx.path.FullName.AsSpan(1).CopyTo(span);
             }
 
             if (ctx.isDirectory)
@@ -1002,6 +1013,21 @@ public class ZipArchiveFileSystem : FileSystem
     }
 
     private static readonly char[] s_slashChars = { '/', '\\' };
+
+    private static void CopyEntryProperties(ZipArchiveEntry source, ZipArchiveEntry dest, bool includeLastWriteTime = true)
+    {
+        if (includeLastWriteTime)
+        {
+            dest.LastWriteTime = source.LastWriteTime;
+        }
+
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+        dest.ExternalAttributes = source.ExternalAttributes;
+#endif
+#if NET6_0_OR_GREATER
+        dest.Comment = source.Comment;
+#endif
+    }
 
     private static ReadOnlySpan<char> GetName(ZipArchiveEntry entry)
     {
