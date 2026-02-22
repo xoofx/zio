@@ -1,11 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>An abstract/virtual filesystem framework with many built-ins filesystems for .NET</Description>
     <Copyright>Alexandre Mutel</Copyright>
     <AssemblyTitle>Zio</AssemblyTitle>
     <NeutralLanguage>en-US</NeutralLanguage>
     <Authors>Alexandre Mutel</Authors>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net10.0</TargetFrameworks>
     <AssemblyName>Zio</AssemblyName>
     <PackageId>Zio</PackageId>
     <PackageTags>filesystem;vfs;VirtualFileSystem;virtual;abstract;directory;files;io;mock</PackageTags>
@@ -24,7 +24,6 @@
   <ItemGroup>
     <None Include="../../img/zio.png" Pack="true" PackagePath="" />
     <None Include="../../readme.md" Pack="true" PackagePath="/" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -32,19 +31,14 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="System.IO.Compression">
-    </PackageReference>
-    <PackageReference Include="System.IO.Compression.ZipFile">
-    </PackageReference>
-    <PackageReference Include="System.Memory">
-    </PackageReference>
+    <PackageReference Include="System.IO.Compression"/>
+    <PackageReference Include="System.IO.Compression.ZipFile"/>
+    <PackageReference Include="System.Memory"/>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-    <PackageReference Include="System.IO.Compression">
-    </PackageReference>
-    <PackageReference Include="System.IO.Compression.ZipFile">
-    </PackageReference>
+    <PackageReference Include="System.IO.Compression"/>
+    <PackageReference Include="System.IO.Compression.ZipFile"/>
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
@@ -61,7 +55,7 @@
     <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE;HAS_NULLABLEANNOTATIONS</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net9.0'">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net10.0'">
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
     <DefineConstants>$(AdditionalConstants);NETSTANDARD;HAS_ZIPARCHIVE;HAS_NULLABLEANNOTATIONS;HAS_ALTERNATEEQUALITYCOMPARER</DefineConstants>

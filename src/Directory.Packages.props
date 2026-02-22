@@ -5,17 +5,10 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-    <PackageVersion Include="MinVer" Version="4.3.0" />
+    <PackageVersion Include="MinVer" Version="7.0.0" />
     <PackageVersion Include="MSTest" Version="4.1.0" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
     <PackageVersion Include="System.IO.Compression" Version="4.3.0" />
     <PackageVersion Include="System.IO.Compression.ZipFile" Version="4.3.0" />
-    <PackageVersion Include="System.Memory" Version="4.6.0" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-    <PackageVersion Include="System.IO.Compression" Version="4.3.0" />
-    <PackageVersion Include="System.IO.Compression.ZipFile" Version="4.3.0" />
+    <PackageVersion Include="System.Memory" Version="4.6.3" />
   </ItemGroup>
 </Project>
