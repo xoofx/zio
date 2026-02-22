@@ -10,16 +10,17 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
 
+[TestClass]
 public class TestAggregateFileSystem : TestFileSystemBase
 {
-    [Fact]
+    [TestMethod]
     public void TestCommonReadOnly()
     {
         var fs = GetCommonAggregateFileSystem();
         AssertCommonReadOnly(fs);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWatcher()
     {
         var fs = GetCommonAggregateFileSystem(out var fs1, out var fs2, out _);
@@ -47,11 +48,11 @@ public class TestAggregateFileSystem : TestFileSystemBase
         fs1.WriteAllText("/b/watched.txt", "test");
         fs2.WriteAllText("/C/watched.txt", "test");
 
-        Assert.True(change1WaitHandle.WaitOne(100));
-        Assert.True(change2WaitHandle.WaitOne(100));
+        Assert.IsTrue(change1WaitHandle.WaitOne(100));
+        Assert.IsTrue(change2WaitHandle.WaitOne(100));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWatcherRemovedWhenDisposed()
     {
         var fs = GetCommonAggregateFileSystem();
@@ -65,14 +66,14 @@ public class TestAggregateFileSystem : TestFileSystemBase
 
         var watchersField = typeof(AggregateFileSystem).GetTypeInfo()
             .GetField("_watchers", BindingFlags.NonPublic | BindingFlags.Instance);
-        Assert.NotNull(watchersField);
+        Assert.IsNotNull(watchersField);
 
         var watchers = (IList)watchersField.GetValue(fs);
-        Assert.NotNull(watchers);
-        Assert.Empty(watchers);
+        Assert.IsNotNull(watchers);
+        AssertEx.Empty(watchers);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestAddRemoveFileSystem()
     {
         var fs = new AggregateFileSystem();
@@ -90,21 +91,21 @@ public class TestAggregateFileSystem : TestFileSystemBase
         Assert.Throws<ArgumentException>(() => fs.RemoveFileSystem(memfs2));
 
         var list = fs.GetFileSystems();
-        Assert.Single(list);
-        Assert.Equal(memfs, list[0]);
+        AssertEx.Single(list);
+        AssertEx.AreEqual(memfs, list[0]);
 
         fs.ClearFileSystems();
-        Assert.Empty(fs.GetFileSystems());
+        AssertEx.Empty(fs.GetFileSystems());
 
         fs.SetFileSystems(list);
 
         fs.RemoveFileSystem(memfs);
 
         list = fs.GetFileSystems();
-        Assert.Empty(list);
+        AssertEx.Empty(list);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestFindFileSystemEntries()
     {
         var fs = new AggregateFileSystem();
@@ -121,36 +122,36 @@ public class TestAggregateFileSystem : TestFileSystemBase
 
         {
             var entries = fs.FindFileSystemEntries("/a.txt");
-            Assert.Equal(2, entries.Count);
+            AssertEx.AreEqual(2, entries.Count);
 
-            Assert.IsType<FileEntry>(entries[0]);
-            Assert.IsType<FileEntry>(entries[1]);
-            Assert.Equal(memfs2, entries[0].FileSystem);
-            Assert.Equal(memfs1, entries[1].FileSystem);
-            Assert.Equal("/a.txt", entries[0].Path.FullName);
-            Assert.Equal("/a.txt", entries[1].Path.FullName);
+            Assert.IsInstanceOfType<FileEntry>(entries[0]);
+            Assert.IsInstanceOfType<FileEntry>(entries[1]);
+            AssertEx.AreEqual(memfs2, entries[0].FileSystem);
+            AssertEx.AreEqual(memfs1, entries[1].FileSystem);
+            AssertEx.AreEqual("/a.txt", entries[0].Path.FullName);
+            AssertEx.AreEqual("/a.txt", entries[1].Path.FullName);
         }
 
         {
             var entries = fs.FindFileSystemEntries("/b");
-            Assert.Single(entries);
+            AssertEx.Single(entries);
 
-            Assert.IsType<DirectoryEntry>(entries[0]);
-            Assert.Equal(memfs2, entries[0].FileSystem);
-            Assert.Equal("/b", entries[0].Path.FullName);
+            Assert.IsInstanceOfType<DirectoryEntry>(entries[0]);
+            AssertEx.AreEqual(memfs2, entries[0].FileSystem);
+            AssertEx.AreEqual("/b", entries[0].Path.FullName);
         }
 
         {
             var entry = fs.FindFirstFileSystemEntry("/a.txt");
-            Assert.NotNull(entry);
+            Assert.IsNotNull(entry);
 
-            Assert.IsType<FileEntry>(entry);
-            Assert.Equal(memfs2, entry.FileSystem);
-            Assert.Equal("/a.txt", entry.Path.FullName);
+            Assert.IsInstanceOfType<FileEntry>(entry);
+            AssertEx.AreEqual(memfs2, entry.FileSystem);
+            AssertEx.AreEqual("/a.txt", entry.Path.FullName);
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void TestFallback()
     {
         // aggregate_fs (fs)
@@ -184,25 +185,25 @@ public class TestAggregateFileSystem : TestFileSystemBase
         }
         
         var findA = fs.FindFirstFileSystemEntry("/a");
-        Assert.Equal(subMemFs, findA?.FileSystem);
+        AssertEx.AreEqual(subMemFs, findA?.FileSystem);
 
         var findB = fs.FindFirstFileSystemEntry("/b");
-        Assert.Equal(subFsMemFs, findB?.FileSystem);
+        AssertEx.AreEqual(subFsMemFs, findB?.FileSystem);
 
         var findC = fs.FindFirstFileSystemEntry("/c");
-        Assert.Equal(root, findC?.FileSystem);
+        AssertEx.AreEqual(root, findC?.FileSystem);
 
-        Assert.True(fs.DirectoryExists("/c"));
-        Assert.True(fs.DirectoryExists("/b"));
-        Assert.True(fs.DirectoryExists("/a"));
+        Assert.IsTrue(fs.DirectoryExists("/c"));
+        Assert.IsTrue(fs.DirectoryExists("/b"));
+        Assert.IsTrue(fs.DirectoryExists("/a"));
 
-        Assert.True(fs.FileExists("/c.txt"));
-        Assert.True(fs.FileExists("/b.txt"));
-        Assert.True(fs.FileExists("/a.txt"));
+        Assert.IsTrue(fs.FileExists("/c.txt"));
+        Assert.IsTrue(fs.FileExists("/b.txt"));
+        Assert.IsTrue(fs.FileExists("/a.txt"));
     }
 
 
-    [Fact]
+    [TestMethod]
     public void TestResolvePath()
     {
 
@@ -219,29 +220,32 @@ public class TestAggregateFileSystem : TestFileSystemBase
         // File (fs3)
         {
             var (resolvedFs, resolvedPath) = fs.ResolvePath("/A.txt");
-            Assert.Equal(fs3, resolvedFs);
-            Assert.Equal("/A.txt", resolvedPath);
+            AssertEx.AreEqual(fs3, resolvedFs);
+            AssertEx.AreEqual("/A.txt", resolvedPath);
         }
 
         // Directory (fs2)
         {
             var (resolvedFs, resolvedPath) = fs.ResolvePath("/a/C");
-            Assert.Equal(fs2, resolvedFs);
-            Assert.Equal("/a/C", resolvedPath);
+            AssertEx.AreEqual(fs2, resolvedFs);
+            AssertEx.AreEqual("/a/C", resolvedPath);
         }
 
         // File (fs1)
         {
             var (resolvedFs, resolvedPath) = fs.ResolvePath("/a/b");
-            Assert.Equal(fs1, resolvedFs);
-            Assert.Equal("/a/b", resolvedPath);
+            AssertEx.AreEqual(fs1, resolvedFs);
+            AssertEx.AreEqual("/a/b", resolvedPath);
         }
 
         // File (fs4Mem) 
         {
             var (resolvedFs, resolvedPath) = fs.ResolvePath("/hello.txt");
-            Assert.Equal(fs4Mem, resolvedFs);
-            Assert.Equal("/test/hello.txt", resolvedPath);
+            AssertEx.AreEqual(fs4Mem, resolvedFs);
+            AssertEx.AreEqual("/test/hello.txt", resolvedPath);
         }
     }
 }
+
+
+

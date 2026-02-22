@@ -215,7 +215,7 @@ public abstract class TestFileSystemBase : IDisposable
 
     protected void AssertCommonReadOnly(IFileSystem fs)
     {
-        Assert.True(fs.DirectoryExists("/"));
+        Assert.IsTrue(fs.DirectoryExists("/"));
 
         Assert.Throws<IOException>(() => fs.CreateDirectory("/test"));
         Assert.Throws<IOException>(() => fs.DeleteDirectory("/test", true));
@@ -242,46 +242,46 @@ public abstract class TestFileSystemBase : IDisposable
         {
             var innerPath = fs.ConvertPathToInternal("/");
             var reverseInnerPath = fs.ConvertPathFromInternal(innerPath);
-            Assert.Equal(UPath.Root, reverseInnerPath);
+            AssertEx.AreEqual(UPath.Root, reverseInnerPath);
         }
 
         {
             var innerPath = fs.ConvertPathToInternal("/a/a");
             var reverseInnerPath = fs.ConvertPathFromInternal(innerPath);
-            Assert.Equal("/a/a", reverseInnerPath);
+            AssertEx.AreEqual("/a/a", reverseInnerPath);
         }
 
         {
             var innerPath = fs.ConvertPathToInternal("/b");
             var reverseInnerPath = fs.ConvertPathFromInternal(innerPath);
-            Assert.Equal("/b", reverseInnerPath);
+            AssertEx.AreEqual("/b", reverseInnerPath);
         }
 
-        Assert.True(fs.DirectoryExists("/"));
-        Assert.False(fs.FileExists(new UPath()));
+        Assert.IsTrue(fs.DirectoryExists("/"));
+        Assert.IsFalse(fs.FileExists(new UPath()));
 
         Assert.Throws<ArgumentNullException>(() => fs.EnumeratePaths("/", null));
         Assert.Throws<ArgumentNullException>(() => fs.ConvertPathFromInternal(null));
         
         Assert.Throws<ArgumentException>(() => fs.FileExists("/\0A.txt"));
-        Assert.True(fs.FileExists("/A.txt"));
-        Assert.True(fs.FileExists("/b.txt"));
-        Assert.True(fs.FileExists("/b/b.i"));
-        Assert.True(fs.FileExists("/a/a/a1.txt"));
-        Assert.False(fs.FileExists("/yoyo.txt"));
+        Assert.IsTrue(fs.FileExists("/A.txt"));
+        Assert.IsTrue(fs.FileExists("/b.txt"));
+        Assert.IsTrue(fs.FileExists("/b/b.i"));
+        Assert.IsTrue(fs.FileExists("/a/a/a1.txt"));
+        Assert.IsFalse(fs.FileExists("/yoyo.txt"));
 
-        Assert.True(fs.DirectoryExists("/a"));
-        Assert.True(fs.DirectoryExists("/a/b"));
-        Assert.True(fs.DirectoryExists("/a/C"));
-        Assert.True(fs.DirectoryExists("/b"));
-        Assert.True(fs.DirectoryExists("/C"));
-        Assert.True(fs.DirectoryExists("/d"));
-        Assert.False(fs.DirectoryExists("/yoyo"));
-        Assert.False(fs.DirectoryExists("/a/yoyo"));
+        Assert.IsTrue(fs.DirectoryExists("/a"));
+        Assert.IsTrue(fs.DirectoryExists("/a/b"));
+        Assert.IsTrue(fs.DirectoryExists("/a/C"));
+        Assert.IsTrue(fs.DirectoryExists("/b"));
+        Assert.IsTrue(fs.DirectoryExists("/C"));
+        Assert.IsTrue(fs.DirectoryExists("/d"));
+        Assert.IsFalse(fs.DirectoryExists("/yoyo"));
+        Assert.IsFalse(fs.DirectoryExists("/a/yoyo"));
 
-        Assert.StartsWith("content", fs.ReadAllText("/A.txt"));
-        Assert.StartsWith("content", fs.ReadAllText("/b.txt"));
-        Assert.StartsWith("content", fs.ReadAllText("/a/a/a1.txt"));
+        StringAssert.StartsWith(fs.ReadAllText("/A.txt"), "content");
+        StringAssert.StartsWith(fs.ReadAllText("/b.txt"), "content");
+        StringAssert.StartsWith(fs.ReadAllText("/a/a/a1.txt"), "content");
 
         var fileFlag = (isWindows ?? IsWindows, isReadOnly) switch
         {
@@ -294,26 +294,26 @@ public abstract class TestFileSystemBase : IDisposable
             (false, false) => FileAttributes.Normal
         };
 
-        Assert.Equal(fileFlag, fs.GetAttributes("/A.txt"));
-        Assert.Equal(fileFlag, fs.GetAttributes("/b.txt"));
-        Assert.Equal(fileFlag, fs.GetAttributes("/a/a/a1.txt"));
+        AssertEx.AreEqual(fileFlag, fs.GetAttributes("/A.txt"));
+        AssertEx.AreEqual(fileFlag, fs.GetAttributes("/b.txt"));
+        AssertEx.AreEqual(fileFlag, fs.GetAttributes("/a/a/a1.txt"));
 
-        Assert.True(fs.GetFileLength("/A.txt") > 0);
-        Assert.True(fs.GetFileLength("/b.txt") > 0);
-        Assert.True(fs.GetFileLength("/a/a/a1.txt") > 0);
+        Assert.IsTrue(fs.GetFileLength("/A.txt") > 0);
+        Assert.IsTrue(fs.GetFileLength("/b.txt") > 0);
+        Assert.IsTrue(fs.GetFileLength("/a/a/a1.txt") > 0);
 
         var readOnlyFlag = isReadOnly ? FileAttributes.ReadOnly : 0;
-        Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a"));
-        Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a/a"));
-        Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/C"));
-        Assert.Equal(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/d"));
+        AssertEx.AreEqual(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a"));
+        AssertEx.AreEqual(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/a/a"));
+        AssertEx.AreEqual(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/C"));
+        AssertEx.AreEqual(readOnlyFlag | FileAttributes.Directory, fs.GetAttributes("/d"));
 
-        Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetCreationTime("/A.txt"));
-        Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastAccessTime("/A.txt"));
-        Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastWriteTime("/A.txt"));
-        Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetCreationTime("/a/a/a1.txt"));
-        Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastAccessTime("/a/a/a1.txt"));
-        Assert.NotEqual(FileSystem.DefaultFileTime, fs.GetLastWriteTime("/a/a/a1.txt"));
+        AssertEx.AreNotEqual(FileSystem.DefaultFileTime, fs.GetCreationTime("/A.txt"));
+        AssertEx.AreNotEqual(FileSystem.DefaultFileTime, fs.GetLastAccessTime("/A.txt"));
+        AssertEx.AreNotEqual(FileSystem.DefaultFileTime, fs.GetLastWriteTime("/A.txt"));
+        AssertEx.AreNotEqual(FileSystem.DefaultFileTime, fs.GetCreationTime("/a/a/a1.txt"));
+        AssertEx.AreNotEqual(FileSystem.DefaultFileTime, fs.GetLastAccessTime("/a/a/a1.txt"));
+        AssertEx.AreNotEqual(FileSystem.DefaultFileTime, fs.GetLastWriteTime("/a/a/a1.txt"));
 
         new EnumeratePathsResult(fs).Check(_referenceEnumeratePathsResult);
     }
@@ -359,38 +359,38 @@ public abstract class TestFileSystemBase : IDisposable
         {
             TopDirs = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.Directory).ToList();
             // Check extension method
-            Assert.Equal(TopDirs, fs.EnumerateDirectories("/").ToList());
-            Assert.Equal(TopDirs, fs.EnumerateDirectoryEntries("/").Select(e => (UPath)e.FullName).ToList());
-            Assert.Equal(TopDirs.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).Where(e => e.IsDirectory).OrderBy(e => e.Path.FullName).Select(e => e.Path).ToList());
+            AssertEx.AreEqual(TopDirs, fs.EnumerateDirectories("/").ToList());
+            AssertEx.AreEqual(TopDirs, fs.EnumerateDirectoryEntries("/").Select(e => (UPath)e.FullName).ToList());
+            AssertEx.AreEqual(TopDirs.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).Where(e => e.IsDirectory).OrderBy(e => e.Path.FullName).Select(e => e.Path).ToList());
 
             TopFiles = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.File).ToList();
             // Check extension method
-            Assert.Equal(TopFiles, fs.EnumerateFiles("/").ToList());
-            Assert.Equal(TopFiles, fs.EnumerateFileEntries("/").Select(e => (UPath)e.FullName).ToList());
-            Assert.Equal(TopFiles.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).Where(e => !e.IsDirectory).OrderBy(e => e.Path.FullName.ToLowerInvariant()).Select(e => e.Path).ToList());
+            AssertEx.AreEqual(TopFiles, fs.EnumerateFiles("/").ToList());
+            AssertEx.AreEqual(TopFiles, fs.EnumerateFileEntries("/").Select(e => (UPath)e.FullName).ToList());
+            AssertEx.AreEqual(TopFiles.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).Where(e => !e.IsDirectory).OrderBy(e => e.Path.FullName.ToLowerInvariant()).Select(e => e.Path).ToList());
 
             TopEntries = fs.EnumeratePaths("/", "*", SearchOption.TopDirectoryOnly, SearchTarget.Both).ToList();
             // Check extension method
-            Assert.Equal(TopEntries, fs.EnumeratePaths("/").ToList());
-            Assert.Equal(TopEntries, fs.EnumerateFileSystemEntries("/").Select(e => (UPath)e.FullName).ToList());
-            Assert.Equal(TopEntries.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).OrderBy(e => e.Path.FullName).Select(e => e.Path).ToList());
+            AssertEx.AreEqual(TopEntries, fs.EnumeratePaths("/").ToList());
+            AssertEx.AreEqual(TopEntries, fs.EnumerateFileSystemEntries("/").Select(e => (UPath)e.FullName).ToList());
+            AssertEx.AreEqual(TopEntries.OrderBy(x => x.FullName).ToList(), fs.EnumerateItems("/", SearchOption.TopDirectoryOnly).OrderBy(e => e.Path.FullName).Select(e => e.Path).ToList());
 
             AllDirs = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
 
             AllFiles = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File).ToList();
             // Check extension method
-            Assert.Equal(AllFiles, fs.EnumerateFiles("/", "*", SearchOption.AllDirectories).ToList());
-            Assert.Equal(AllFiles, fs.EnumerateFileEntries("/", "*", SearchOption.AllDirectories).Select(e => (UPath)e.FullName).ToList());
+            AssertEx.AreEqual(AllFiles, fs.EnumerateFiles("/", "*", SearchOption.AllDirectories).ToList());
+            AssertEx.AreEqual(AllFiles, fs.EnumerateFileEntries("/", "*", SearchOption.AllDirectories).Select(e => (UPath)e.FullName).ToList());
             var expected = AllFiles.OrderBy(x => x.FullName).ToList();
             var actual = fs.EnumerateItems("/", SearchOption.AllDirectories).Where(e => !e.IsDirectory).OrderBy(e => e.Path.FullName).Select(e => e.Path).ToList();
-            Assert.Equal(expected, actual);
+            AssertEx.AreEqual(expected, actual);
 
             AllEntries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList();
 
             AllFiles_txt = fs.EnumeratePaths("/", "*.txt", SearchOption.AllDirectories, SearchTarget.File).ToList();
             // Check extension method
-            Assert.Equal(AllFiles_txt, fs.EnumerateFiles("/", "*.txt", SearchOption.AllDirectories).ToList());
-            Assert.Equal(AllFiles_txt, fs.EnumerateFileEntries("/", "*.txt", SearchOption.AllDirectories).Select(e => (UPath)e.FullName).ToList());
+            AssertEx.AreEqual(AllFiles_txt, fs.EnumerateFiles("/", "*.txt", SearchOption.AllDirectories).ToList());
+            AssertEx.AreEqual(AllFiles_txt, fs.EnumerateFileEntries("/", "*.txt", SearchOption.AllDirectories).Select(e => (UPath)e.FullName).ToList());
 
             AllDirs_a1 = fs.EnumeratePaths("/", "a/*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
             AllDirs_a2 = fs.EnumeratePaths("/a", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList();
@@ -440,6 +440,7 @@ public abstract class TestFileSystemBase : IDisposable
 
         fs.WriteAllText(filePath, "test");
 
-        Assert.True(waitHandle.WaitOne(100));
+        Assert.IsTrue(waitHandle.WaitOne(100));
     }
 }
+

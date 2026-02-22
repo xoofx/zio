@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
@@ -9,9 +9,10 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
 
+[TestClass]
 public class TestFileSystemExtensions : TestFileSystemBase
 {
-    [Fact]
+    [TestMethod]
     public void TestExceptions()
     {
         var fs = new MemoryFileSystem();
@@ -41,37 +42,40 @@ public class TestFileSystemExtensions : TestFileSystemBase
         Assert.Throws<DirectoryNotFoundException>(() => fs.GetDirectoryEntry("/a"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWriteReadAppendAllTextAndLines()
     {
         var fs = new MemoryFileSystem();
         fs.AppendAllText("/a.txt", "test");
         fs.AppendAllText("/a.txt", "test");
-        Assert.Equal("testtest", fs.ReadAllText("/a.txt"));
+        AssertEx.AreEqual("testtest", fs.ReadAllText("/a.txt"));
 
         fs.WriteAllText("/a.txt", "content");
-        Assert.Equal("content", fs.ReadAllText("/a.txt"));
+        AssertEx.AreEqual("content", fs.ReadAllText("/a.txt"));
 
         fs.WriteAllText("/a.txt", "test1", Encoding.UTF8);
         fs.AppendAllText("/a.txt", "test2", Encoding.UTF8);
-        Assert.Equal("test1test2", fs.ReadAllText("/a.txt", Encoding.UTF8));
+        AssertEx.AreEqual("test1test2", fs.ReadAllText("/a.txt", Encoding.UTF8));
 
-        Assert.Equal(new[] {"test1test2"}, fs.ReadAllLines("/a.txt"));
-        Assert.Equal(new[] { "test1test2" }, fs.ReadAllLines("/a.txt", Encoding.UTF8));
+        AssertEx.AreEqual(new[] {"test1test2"}, fs.ReadAllLines("/a.txt"));
+        AssertEx.AreEqual(new[] { "test1test2" }, fs.ReadAllLines("/a.txt", Encoding.UTF8));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestReadWriteAllBytes()
     {
         var fs = new MemoryFileSystem();
 
         fs.WriteAllBytes("/toto.txt", new byte[] {1,2,3});
-        Assert.Equal(new byte[]{1,2,3}, fs.ReadAllBytes("/toto.txt"));
+        AssertEx.AreEqual(new byte[]{1,2,3}, fs.ReadAllBytes("/toto.txt"));
 
         fs.WriteAllBytes("/toto.txt", new byte[] { 5 });
-        Assert.Equal(new byte[] { 5 }, fs.ReadAllBytes("/toto.txt"));
+        AssertEx.AreEqual(new byte[] { 5 }, fs.ReadAllBytes("/toto.txt"));
 
         fs.WriteAllBytes("/toto.txt", new byte[] { });
-        Assert.Equal(new byte[] { }, fs.ReadAllBytes("/toto.txt"));
+        AssertEx.AreEqual(new byte[] { }, fs.ReadAllBytes("/toto.txt"));
     }
 }
+
+
+

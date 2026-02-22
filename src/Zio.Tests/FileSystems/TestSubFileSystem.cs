@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
@@ -9,9 +9,10 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
 
+[TestClass]
 public class TestSubFileSystem : TestFileSystemBase
 {
-    [Fact]
+    [TestMethod]
     public void TestBasic()
     {
         var fs = new PhysicalFileSystem();
@@ -24,8 +25,8 @@ public class TestSubFileSystem : TestFileSystemBase
 
         var files = subfs.EnumeratePaths("/").Select(info => info.GetName()).ToList();
         var expectedFiles = fs.EnumeratePaths(path).Select(info => info.GetName()).ToList();
-        Assert.True(files.Count > 0);
-        Assert.Equal(expectedFiles, files);
+        Assert.IsTrue(files.Count > 0);
+        AssertEx.AreEqual(expectedFiles, files);
 
         // Check that SubFileSystem is actually checking that the directory exists in the delegate filesystem
         Assert.Throws<DirectoryNotFoundException>(() => new SubFileSystem(fs, path / "does_not_exist"));
@@ -38,19 +39,19 @@ public class TestSubFileSystem : TestFileSystemBase
         // TODO: We could add another test just to make sure that files can be created...etc. But the test above should already cover the code provided in SubFileSystem
     }
 
-    [Fact]
+    [TestMethod]
     public void TestGetOrCreateFileSystem()
     {
         var fs = new MemoryFileSystem();
         const string subFolder = "/sub";
         var subFileSystem = fs.GetOrCreateSubFileSystem(subFolder);
-        Assert.True(fs.DirectoryExists(subFolder));
+        Assert.IsTrue(fs.DirectoryExists(subFolder));
         subFileSystem.WriteAllText("/test.txt", "yo");
         var text = fs.ReadAllText(subFolder + "/test.txt");
-        Assert.Equal("yo", text);
+        AssertEx.AreEqual("yo", text);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWatcher()
     {
         var fs = GetCommonMemoryFileSystem();
@@ -70,16 +71,16 @@ public class TestSubFileSystem : TestFileSystemBase
         watcher.EnableRaisingEvents = true;
 
         fs.WriteAllText("/a/b/watched.txt", "test");
-        Assert.True(waitHandle.WaitOne(100));
+        Assert.IsTrue(waitHandle.WaitOne(100));
     }
 
-    [SkippableTheory]
-    [InlineData("/test", "/test", "/foo.txt")]
-    [InlineData("/test", "/test", "/~foo.txt")]
-    [InlineData("/test", "/TEST", "/foo.txt")]
-    [InlineData("/test", "/TEST", "/~foo.txt")]
-    [InlineData("/verylongname", "/VERYLONGNAME", "/foo.txt")]
-    [InlineData("/verylongname", "/VERYLONGNAME", "/~foo.txt")]
+    [TestMethod]
+    [DataRow("/test", "/test", "/foo.txt")]
+    [DataRow("/test", "/test", "/~foo.txt")]
+    [DataRow("/test", "/TEST", "/foo.txt")]
+    [DataRow("/test", "/TEST", "/~foo.txt")]
+    [DataRow("/verylongname", "/VERYLONGNAME", "/foo.txt")]
+    [DataRow("/verylongname", "/VERYLONGNAME", "/~foo.txt")]
     public void TestWatcherCaseSensitive(string physicalDir, string subDir, string filePath)
     {
         Skip.IfNot(IsWindows, "This test involves case insensitivity on Windows");
@@ -87,8 +88,8 @@ public class TestSubFileSystem : TestFileSystemBase
         var physicalFs = GetCommonPhysicalFileSystem();
         physicalFs.CreateDirectory(physicalDir);
 
-        Assert.True(physicalFs.DirectoryExists(physicalDir));
-        Assert.True(physicalFs.DirectoryExists(subDir));
+        Assert.IsTrue(physicalFs.DirectoryExists(physicalDir));
+        Assert.IsTrue(physicalFs.DirectoryExists(subDir));
 
         var subFs = new SubFileSystem(physicalFs, subDir);
         var watcher = subFs.Watch("/");
@@ -107,31 +108,31 @@ public class TestSubFileSystem : TestFileSystemBase
 
         physicalFs.WriteAllText($"{physicalDir}{filePath}", "test");
 
-        Assert.True(waitHandle.WaitOne(100));
+        Assert.IsTrue(waitHandle.WaitOne(100));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestResolvePath()
     {
         var fs = GetCommonMemoryFileSystem();
         var subFs = fs.GetOrCreateSubFileSystem("/a/b");
         var (resFs, resPath) = subFs.ResolvePath("/c");
-        Assert.Equal("/a/b/c", resPath);
-        Assert.NotEqual(subFs, resFs);
-        Assert.Equal(fs, resFs);
+        AssertEx.AreEqual("/a/b/c", resPath);
+        AssertEx.AreNotEqual(subFs, resFs);
+        AssertEx.AreEqual(fs, resFs);
         (resFs, resPath) = subFs.ResolvePath("/c/d");
-        Assert.Equal("/a/b/c/d", resPath);
-        Assert.NotEqual(subFs, resFs);
-        Assert.Equal(fs, resFs);
+        AssertEx.AreEqual("/a/b/c/d", resPath);
+        AssertEx.AreNotEqual(subFs, resFs);
+        AssertEx.AreEqual(fs, resFs);
 
         var subFs2 = subFs.GetOrCreateSubFileSystem("/q");
         (resFs, resPath) = subFs2.ResolvePath("/c");
-        Assert.Equal("/a/b/q/c", resPath);
-        Assert.NotEqual(subFs2, resFs);
-        Assert.Equal(fs, resFs);
+        AssertEx.AreEqual("/a/b/q/c", resPath);
+        AssertEx.AreNotEqual(subFs2, resFs);
+        AssertEx.AreEqual(fs, resFs);
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestDirectorySymlink()
     {
 #if NETCOREAPP
@@ -159,32 +160,32 @@ public class TestSubFileSystem : TestFileSystemBase
         try
         {
             // CreateDirectory
-            Assert.False(Directory.Exists(systemPathSource));
+            Assert.IsFalse(Directory.Exists(systemPathSource));
             fs.CreateDirectory(pathSource);
-            Assert.True(Directory.Exists(systemPathSource));
+            Assert.IsTrue(Directory.Exists(systemPathSource));
 
             // CreateFile / OpenFile
             var fileStream = fs.CreateFile(filePathSource);
             var buffer = Encoding.UTF8.GetBytes("This is a test");
             fileStream.Write(buffer, 0, buffer.Length);
             fileStream.Dispose();
-            Assert.Equal(buffer.Length, fs.GetFileLength(filePathSource));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(filePathSource));
 
             // CreateSymbolicLink
             fs.CreateSymbolicLink(pathDest, pathSource);
 
             // ResolveSymbolicLink
-            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
-            Assert.Equal(pathSource, resolvedPath);
+            Assert.IsTrue(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            AssertEx.AreEqual(pathSource, resolvedPath);
 
             // FileExists
-            Assert.True(fs.FileExists(filePathDest));
-            Assert.Equal(buffer.Length, fs.GetFileLength(filePathDest));
+            Assert.IsTrue(fs.FileExists(filePathDest));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(filePathDest));
 
             // RemoveDirectory
             fs.DeleteDirectory(pathDest, false);
-            Assert.False(Directory.Exists(systemPathDest));
-            Assert.True(Directory.Exists(systemPathSource));
+            Assert.IsFalse(Directory.Exists(systemPathDest));
+            Assert.IsTrue(Directory.Exists(systemPathSource));
         }
         finally
         {
@@ -193,3 +194,6 @@ public class TestSubFileSystem : TestFileSystemBase
         }
     }
 }
+
+
+

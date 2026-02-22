@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
@@ -9,6 +9,7 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
 
+[TestClass]
 public class TestFileSystemEntries : TestFileSystemCompactBase
 {
     public TestFileSystemEntries()
@@ -16,7 +17,7 @@ public class TestFileSystemEntries : TestFileSystemCompactBase
         fs = new FileSystemEntryRedirect();
     }
 
-    [Fact]
+    [TestMethod]
     public void TestRead()
     {
         var memfs = GetCommonMemoryFileSystem();
@@ -24,18 +25,18 @@ public class TestFileSystemEntries : TestFileSystemCompactBase
         AssertCommonRead(fsEntries);            
     }
 
-    [Fact]
+    [TestMethod]
     public void TestGetParentDirectory()
     {
         var fs = new MemoryFileSystem();
         var fileEntry = new FileEntry(fs, "/test/tata/titi.txt");
         // Shoud not throw an error
         var directory = fileEntry.Directory;
-        Assert.False(directory.Exists);
-        Assert.Equal(UPath.Root / "test/tata", directory.Path);
+        Assert.IsFalse(directory.Exists);
+        AssertEx.AreEqual(UPath.Root / "test/tata", directory.Path);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestFileEntry()
     {
         var memfs = GetCommonMemoryFileSystem();
@@ -43,22 +44,22 @@ public class TestFileSystemEntries : TestFileSystemCompactBase
         var file = new FileEntry(memfs, "/a/a/a1.txt");
         var file2 = new FileEntry(memfs, "/a/b.txt");
 
-        Assert.Equal("/a/a/a1.txt", file.ToString());
+        AssertEx.AreEqual("/a/a/a1.txt", file.ToString());
 
-        Assert.Equal("/a/a/a1.txt", file.FullName);
-        Assert.Equal("a1.txt", file.Name);
+        AssertEx.AreEqual("/a/a/a1.txt", file.FullName);
+        AssertEx.AreEqual("a1.txt", file.Name);
 
-        Assert.Equal("b", file2.NameWithoutExtension);
-        Assert.Equal(".txt", file2.ExtensionWithDot);
+        AssertEx.AreEqual("b", file2.NameWithoutExtension);
+        AssertEx.AreEqual(".txt", file2.ExtensionWithDot);
 
-        Assert.True(file.Length > 0);
-        Assert.False(file.IsReadOnly);
+        Assert.IsTrue(file.Length > 0);
+        Assert.IsFalse(file.IsReadOnly);
 
         var dir = file.Directory;
-        Assert.NotNull(dir);
-        Assert.Equal("/a/a", dir.FullName);
+        Assert.IsNotNull(dir);
+        AssertEx.AreEqual("/a/a", dir.FullName);
 
-        Assert.Null(new DirectoryEntry(memfs, "/").Parent);
+        Assert.IsNull(new DirectoryEntry(memfs, "/").Parent);
 
         var yoyo = new FileEntry(memfs, "/a/yoyo.txt");
         using (var file1 = yoyo.Create())
@@ -68,16 +69,16 @@ public class TestFileSystemEntries : TestFileSystemCompactBase
             file1.WriteByte(3);
         }
 
-        Assert.Equal(new byte[] {1, 2, 3}, memfs.ReadAllBytes("/a/yoyo.txt"));
+        AssertEx.AreEqual(new byte[] {1, 2, 3}, memfs.ReadAllBytes("/a/yoyo.txt"));
 
         Assert.Throws<FileNotFoundException>(() => memfs.GetFileSystemEntry("/wow.txt"));
 
         var file3 = memfs.GetFileEntry("/a/b.txt");
-        Assert.True(file3.Exists);
+        Assert.IsTrue(file3.Exists);
 
-        Assert.Null(memfs.TryGetFileSystemEntry("/invalid_file"));
-        Assert.IsType<FileEntry>(memfs.TryGetFileSystemEntry("/a/b.txt"));
-        Assert.IsType<DirectoryEntry>(memfs.TryGetFileSystemEntry("/a"));
+        Assert.IsNull(memfs.TryGetFileSystemEntry("/invalid_file"));
+        Assert.IsInstanceOfType<FileEntry>(memfs.TryGetFileSystemEntry("/a/b.txt"));
+        Assert.IsInstanceOfType<DirectoryEntry>(memfs.TryGetFileSystemEntry("/a"));
 
         Assert.Throws<FileNotFoundException>(() => memfs.GetFileEntry("/invalid"));
         Assert.Throws<DirectoryNotFoundException>(() => memfs.GetDirectoryEntry("/invalid"));
@@ -88,42 +89,45 @@ public class TestFileSystemEntries : TestFileSystemCompactBase
         Assert.Throws<ArgumentException>(() => mydir.CreateSubdirectory("/sub"));
 
         var subFolder = mydir.CreateSubdirectory("sub");
-        Assert.True(subFolder.Exists);
+        Assert.IsTrue(subFolder.Exists);
 
-        Assert.Empty(mydir.EnumerateFiles());
+        AssertEx.Empty(mydir.EnumerateFiles());
 
         var subDirs = mydir.EnumerateDirectories().ToList();
-        Assert.Single(subDirs);
-        Assert.Equal("/yoyo/sub", subDirs[0].FullName);
+        AssertEx.Single(subDirs);
+        AssertEx.AreEqual("/yoyo/sub", subDirs[0].FullName);
 
         mydir.Delete();
 
-        Assert.False(mydir.Exists);
-        Assert.False(subFolder.Exists);
+        Assert.IsFalse(mydir.Exists);
+        Assert.IsFalse(subFolder.Exists);
 
         // Test ReadAllText/WriteAllText/AppendAllText/ReadAllBytes/WriteAllBytes
-        Assert.True(file.ReadAllText().Length > 0);
-        Assert.True(file.ReadAllText(Encoding.UTF8).Length > 0);
+        Assert.IsTrue(file.ReadAllText().Length > 0);
+        Assert.IsTrue(file.ReadAllText(Encoding.UTF8).Length > 0);
         file.WriteAllText("abc");
-        Assert.Equal("abc", file.ReadAllText());
+        AssertEx.AreEqual("abc", file.ReadAllText());
         file.WriteAllText("abc", Encoding.UTF8);
-        Assert.Equal("abc", file.ReadAllText(Encoding.UTF8));
+        AssertEx.AreEqual("abc", file.ReadAllText(Encoding.UTF8));
 
         file.AppendAllText("def");
-        Assert.Equal("abcdef", file.ReadAllText());
+        AssertEx.AreEqual("abcdef", file.ReadAllText());
         file.AppendAllText("ghi", Encoding.UTF8);
-        Assert.Equal("abcdefghi", file.ReadAllText());
+        AssertEx.AreEqual("abcdefghi", file.ReadAllText());
 
         var lines = file.ReadAllLines();
-        Assert.Single(lines);
-        Assert.Equal("abcdefghi", lines[0]);
+        AssertEx.Single(lines);
+        AssertEx.AreEqual("abcdefghi", lines[0]);
 
         lines = file.ReadAllLines(Encoding.UTF8);
-        Assert.Single(lines);
-        Assert.Equal("abcdefghi", lines[0]);
+        AssertEx.Single(lines);
+        AssertEx.AreEqual("abcdefghi", lines[0]);
 
-        Assert.Equal(new byte[] { 1, 2, 3 }, yoyo.ReadAllBytes());
+        AssertEx.AreEqual(new byte[] { 1, 2, 3 }, yoyo.ReadAllBytes());
         yoyo.WriteAllBytes(new byte[] {1, 2, 3, 4});
-        Assert.Equal(new byte[] { 1, 2, 3, 4}, yoyo.ReadAllBytes());
+        AssertEx.AreEqual(new byte[] { 1, 2, 3, 4}, yoyo.ReadAllBytes());
     }
 }
+
+
+

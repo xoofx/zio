@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
@@ -10,16 +10,17 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
 
+[TestClass]
 public class TestPhysicalFileSystem : TestFileSystemBase
 {
-    [Fact]
+    [TestMethod]
     public void TestCommonRead()
     {
         var fs = GetCommonPhysicalFileSystem();
         AssertCommonRead(fs);
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestFileSystemInvalidDriveLetterOnWindows()
     {
         Skip.IfNot(IsWindows, "Exception is only thrown on Windows");
@@ -31,7 +32,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestRootedPathWithoutDriveOnWindows()
     {
         Skip.IfNot(IsWindows, "Testing Windows-specific behavior");
@@ -41,17 +42,17 @@ public class TestPhysicalFileSystem : TestFileSystemBase
 
         var resolvedPath = fs.ConvertPathFromInternal("/test");
 
-        Assert.Equal($"/mnt/{driveLetter}/test", resolvedPath.ToString(), StringComparer.OrdinalIgnoreCase);
+        AssertEx.AreEqual($"/mnt/{driveLetter}/test", resolvedPath.ToString(), StringComparer.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWatcher()
     {
         var fs = GetCommonPhysicalFileSystem();
         AssertFileCreatedEventDispatched(fs, "/a", "/a/watched.txt");
     }
 
-    [Fact]
+    [TestMethod]
     public void TestCopyFileCross()
     {
         // TODO: Add more tests
@@ -65,7 +66,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             outputfs.WriteAllText(outputPath, "toto");
             from.CopyFileCross("/test.txt", outputfs, outputPath, true);
             var content = outputfs.ReadAllText(outputPath);
-            Assert.Equal("test", content);
+            AssertEx.AreEqual("test", content);
         }
         finally
         {
@@ -73,7 +74,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void TestDirectory()
     {
         var fs = new PhysicalFileSystem();
@@ -85,9 +86,9 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         try
         {
             // CreateDirectory
-            Assert.False(Directory.Exists(systemPathToCreate));
+            Assert.IsFalse(Directory.Exists(systemPathToCreate));
             fs.CreateDirectory(pathToCreate);
-            Assert.True(Directory.Exists(systemPathToCreate));
+            Assert.IsTrue(Directory.Exists(systemPathToCreate));
 
             // LastAccessTime
             // LastWriteTime
@@ -96,29 +97,29 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             {
                 var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
                 fs.SetCreationTime(pathToCreate, creationTime);
-                Assert.Equal(creationTime, fs.GetCreationTime(pathToCreate));
+                AssertEx.AreEqual(creationTime, fs.GetCreationTime(pathToCreate));
             }
 
             var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetLastWriteTime(pathToCreate, lastWriteTime);
-            Assert.Equal(lastWriteTime, fs.GetLastWriteTime(pathToCreate));
+            AssertEx.AreEqual(lastWriteTime, fs.GetLastWriteTime(pathToCreate));
 
             var lastAccessTime = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetLastAccessTime(pathToCreate, lastAccessTime);
-            Assert.Equal(lastAccessTime, fs.GetLastAccessTime(pathToCreate));
+            AssertEx.AreEqual(lastAccessTime, fs.GetLastAccessTime(pathToCreate));
 
             // DirectoryExists
-            Assert.True(fs.DirectoryExists(pathToCreate));
-            Assert.False(fs.DirectoryExists(pathToCreate / "not_found"));
+            Assert.IsTrue(fs.DirectoryExists(pathToCreate));
+            Assert.IsFalse(fs.DirectoryExists(pathToCreate / "not_found"));
 
             // MoveDirectory
             fs.MoveDirectory(pathToCreate, movedDirectory);
-            Assert.False(Directory.Exists(systemPathToCreate));
-            Assert.True(fs.DirectoryExists(movedDirectory));
+            Assert.IsFalse(Directory.Exists(systemPathToCreate));
+            Assert.IsTrue(fs.DirectoryExists(movedDirectory));
 
             // Delete the directory
             fs.DeleteDirectory(movedDirectory, false);
-            Assert.False(Directory.Exists(systemMovedDirectory));
+            Assert.IsFalse(Directory.Exists(systemMovedDirectory));
         }
         finally
         {
@@ -127,40 +128,40 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void TestDirectorySpecial()
     {
         var fs = new PhysicalFileSystem();
         // CreateDirectory
-        Assert.True(fs.DirectoryExists("/"));
+        Assert.IsTrue(fs.DirectoryExists("/"));
         if (IsWindows)
         {
             var directories = fs.EnumerateDirectories("/").ToList();
-            Assert.Equal(new List<UPath>() { "/mnt" }, directories);
+            AssertEx.AreEqual(new List<UPath>() { "/mnt" }, directories);
 
             var drives = fs.EnumerateDirectories("/mnt").ToList();
-            Assert.True(drives.Count > 0);
+            Assert.IsTrue(drives.Count > 0);
 
             var allDrives = DriveInfo.GetDrives().Select(d => d.Name[0].ToString().ToLowerInvariant()).ToList();
             var driveNames = drives.Select(d => d.GetName()).ToList();
-            Assert.Equal(allDrives, driveNames);
+            AssertEx.AreEqual(allDrives, driveNames);
 
-            Assert.True(fs.DirectoryExists("/"));
-            Assert.True(fs.DirectoryExists("/mnt"));
-            Assert.True(fs.DirectoryExists(drives[0]));
+            Assert.IsTrue(fs.DirectoryExists("/"));
+            Assert.IsTrue(fs.DirectoryExists("/mnt"));
+            Assert.IsTrue(fs.DirectoryExists(drives[0]));
 
             var files = fs.EnumerateFiles("/").ToList();
-            Assert.True(files.Count == 0);
+            Assert.IsTrue(files.Count == 0);
 
             files = fs.EnumerateFiles("/mnt").ToList();
-            Assert.True(files.Count == 0);
+            Assert.IsTrue(files.Count == 0);
 
             var paths = fs.EnumeratePaths("/").ToList();
-            Assert.Equal(new List<UPath>() { "/mnt" }, paths);
+            AssertEx.AreEqual(new List<UPath>() { "/mnt" }, paths);
         }
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestDirectoryWindowsExceptions()
     {
         Skip.IfNot(IsWindows, "Exceptions are only thrown on Windows");
@@ -178,7 +179,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         Assert.Throws<UnauthorizedAccessException>(() => fs.CreateDirectory("/mnt/c"));
 
         var drives = fs.EnumerateDirectories("/mnt").ToList();
-        Assert.True(drives.Count > 0);
+        Assert.IsTrue(drives.Count > 0);
 
         Assert.Throws<UnauthorizedAccessException>(() => fs.MoveDirectory("/", drives[0] / "ShouldNotHappen"));
         Assert.Throws<UnauthorizedAccessException>(() => fs.MoveDirectory("/mnt", drives[0] / "ShouldNotHappen"));
@@ -194,7 +195,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/mnt/yoyo", false));
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestWindowsDirectoryAttributes()
     {
         Skip.IfNot(IsWindows, "Root attributes are only set on the Windows");
@@ -202,11 +203,11 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         var fs = new PhysicalFileSystem();
         var sysAttr = FileAttributes.Directory | FileAttributes.System | FileAttributes.ReadOnly;
 
-        Assert.True((fs.GetAttributes("/") & (sysAttr)) == sysAttr);
-        Assert.True((fs.GetAttributes("/mnt") & (sysAttr)) == sysAttr);
+        Assert.IsTrue((fs.GetAttributes("/") & (sysAttr)) == sysAttr);
+        Assert.IsTrue((fs.GetAttributes("/mnt") & (sysAttr)) == sysAttr);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestFile()
     {
         var fs = new PhysicalFileSystem();
@@ -227,63 +228,63 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             fileStream.Dispose();
 
             // FileLength
-            Assert.Equal(buffer.Length, fs.GetFileLength(filePath));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(filePath));
 
             // LastAccessTime
             // LastWriteTime
             // CreationTime
-            Assert.Equal(File.GetLastWriteTime(systemFilePath), fs.GetLastWriteTime(filePath));
-            Assert.Equal(File.GetLastAccessTime(systemFilePath), fs.GetLastAccessTime(filePath));
-            Assert.Equal(File.GetCreationTime(systemFilePath), fs.GetCreationTime(filePath));
+            AssertEx.AreEqual(File.GetLastWriteTime(systemFilePath), fs.GetLastWriteTime(filePath));
+            AssertEx.AreEqual(File.GetLastAccessTime(systemFilePath), fs.GetLastAccessTime(filePath));
+            AssertEx.AreEqual(File.GetCreationTime(systemFilePath), fs.GetCreationTime(filePath));
 
             if (IsWindows)
             {
                 var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
                 fs.SetCreationTime(filePath, creationTime);
-                Assert.Equal(creationTime, fs.GetCreationTime(filePath));
+                AssertEx.AreEqual(creationTime, fs.GetCreationTime(filePath));
             }
 
             var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetLastWriteTime(filePath, lastWriteTime);
-            Assert.Equal(lastWriteTime, fs.GetLastWriteTime(filePath));
+            AssertEx.AreEqual(lastWriteTime, fs.GetLastWriteTime(filePath));
 
             var lastAccessTime = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetLastAccessTime(filePath, lastAccessTime);
-            Assert.Equal(lastAccessTime, fs.GetLastAccessTime(filePath));
+            AssertEx.AreEqual(lastAccessTime, fs.GetLastAccessTime(filePath));
 
             // FileAttributes
-            Assert.Equal(File.GetAttributes(systemFilePath), fs.GetAttributes(filePath));
+            AssertEx.AreEqual(File.GetAttributes(systemFilePath), fs.GetAttributes(filePath));
 
             var attributes = fs.GetAttributes(filePath);
             attributes |= FileAttributes.ReadOnly;
             fs.SetAttributes(filePath, attributes);
 
-            Assert.Equal(File.GetAttributes(systemFilePath), fs.GetAttributes(filePath));
+            AssertEx.AreEqual(File.GetAttributes(systemFilePath), fs.GetAttributes(filePath));
 
             attributes &= ~FileAttributes.ReadOnly;
             fs.SetAttributes(filePath, attributes);
-            Assert.Equal(File.GetAttributes(systemFilePath), fs.GetAttributes(filePath));
+            AssertEx.AreEqual(File.GetAttributes(systemFilePath), fs.GetAttributes(filePath));
 
             // FileExists
-            Assert.True(File.Exists(systemFilePath));
-            Assert.True(fs.FileExists(filePath));
+            Assert.IsTrue(File.Exists(systemFilePath));
+            Assert.IsTrue(fs.FileExists(filePath));
 
             // CopyFile
             fs.CopyFile(filePath, filePathDest, true);
-            Assert.True(File.Exists(systemFilePathDest));
-            Assert.True(fs.FileExists(filePathDest));
+            Assert.IsTrue(File.Exists(systemFilePathDest));
+            Assert.IsTrue(fs.FileExists(filePathDest));
 
             // DeleteFile
             fs.DeleteFile(filePath);
-            Assert.False(File.Exists(systemFilePath));
-            Assert.False(fs.FileExists(filePath));
+            Assert.IsFalse(File.Exists(systemFilePath));
+            Assert.IsFalse(fs.FileExists(filePath));
 
             // MoveFile
             fs.MoveFile(filePathDest, filePath);
-            Assert.False(File.Exists(systemFilePathDest));
-            Assert.False(fs.FileExists(filePathDest));
-            Assert.True(File.Exists(systemFilePath));
-            Assert.True(fs.FileExists(filePath));
+            Assert.IsFalse(File.Exists(systemFilePathDest));
+            Assert.IsFalse(fs.FileExists(filePathDest));
+            Assert.IsTrue(File.Exists(systemFilePath));
+            Assert.IsTrue(fs.FileExists(filePath));
 
             // ReplaceFile
 
@@ -295,16 +296,16 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             var buffer2 = Encoding.UTF8.GetBytes("This is a test 123");
             filestream2.Write(buffer2, 0, buffer2.Length);
             filestream2.Dispose();
-            Assert.Equal(buffer2.Length, fs.GetFileLength(filePath));
+            AssertEx.AreEqual(buffer2.Length, fs.GetFileLength(filePath));
 
             // Perform ReplaceFile
             fs.ReplaceFile(filePath, filePathDest, filePathBack, true);
-            Assert.False(fs.FileExists(filePath));
-            Assert.True(fs.FileExists(filePathDest));
-            Assert.True(fs.FileExists(filePathBack));
+            Assert.IsFalse(fs.FileExists(filePath));
+            Assert.IsTrue(fs.FileExists(filePathDest));
+            Assert.IsTrue(fs.FileExists(filePathBack));
 
-            Assert.Equal(buffer2.Length, fs.GetFileLength(filePathDest));
-            Assert.Equal(buffer.Length, fs.GetFileLength(filePathBack));
+            AssertEx.AreEqual(buffer2.Length, fs.GetFileLength(filePathDest));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(filePathBack));
 
             if (IsWindows)
             {
@@ -331,7 +332,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void TestEnumerate()
     {
         var fs = new PhysicalFileSystem();
@@ -339,18 +340,18 @@ public class TestPhysicalFileSystem : TestFileSystemBase
 
         var files = fs.EnumerateFiles(path).Select(p => fs.ConvertPathToInternal(p)).ToList();
         var expectedfiles = Directory.EnumerateFiles(SystemPath).ToList();
-        Assert.Equal(expectedfiles, files);
+        AssertEx.AreEqual(expectedfiles, files);
 
         var dirs = fs.EnumerateDirectories(path / "../../..").Select(p => fs.ConvertPathToInternal(p)).ToList();
         var expecteddirs = Directory.EnumerateDirectories(Path.GetFullPath(Path.Combine(SystemPath, "../../.."))).ToList();
-        Assert.Equal(expecteddirs, dirs);
+        AssertEx.AreEqual(expecteddirs, dirs);
 
         var paths = fs.EnumeratePaths(path / "../..").Select(p => fs.ConvertPathToInternal(p)).ToList();
         var expectedPaths = Directory.EnumerateFileSystemEntries(Path.GetFullPath(Path.Combine(SystemPath, "../.."))).ToList();
-        Assert.Equal(expectedPaths, paths);
+        AssertEx.AreEqual(expectedPaths, paths);
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestFileWindowsExceptions()
     {
         Skip.IfNot(IsWindows, "Exceptions are only thrown on Windows");
@@ -426,7 +427,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestDirectorySymlink()
     {
 #if NETCOREAPP
@@ -452,32 +453,32 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         try
         {
             // CreateDirectory
-            Assert.False(Directory.Exists(systemPathSource));
+            Assert.IsFalse(Directory.Exists(systemPathSource));
             fs.CreateDirectory(pathSource);
-            Assert.True(Directory.Exists(systemPathSource));
+            Assert.IsTrue(Directory.Exists(systemPathSource));
 
             // CreateFile / OpenFile
             var fileStream = fs.CreateFile(filePathSource);
             var buffer = Encoding.UTF8.GetBytes("This is a test");
             fileStream.Write(buffer, 0, buffer.Length);
             fileStream.Dispose();
-            Assert.Equal(buffer.Length, fs.GetFileLength(filePathSource));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(filePathSource));
 
             // CreateSymbolicLink
             fs.CreateSymbolicLink(pathDest, pathSource);
 
             // ResolveSymbolicLink
-            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
-            Assert.Equal(pathSource, resolvedPath);
+            Assert.IsTrue(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            AssertEx.AreEqual(pathSource, resolvedPath);
 
             // FileExists
-            Assert.True(fs.FileExists(filePathDest));
-            Assert.Equal(buffer.Length, fs.GetFileLength(filePathDest));
+            Assert.IsTrue(fs.FileExists(filePathDest));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(filePathDest));
 
             // RemoveDirectory
             fs.DeleteDirectory(pathDest, false);
-            Assert.False(Directory.Exists(systemPathDest));
-            Assert.True(Directory.Exists(systemPathSource));
+            Assert.IsFalse(Directory.Exists(systemPathDest));
+            Assert.IsTrue(Directory.Exists(systemPathSource));
         }
         finally
         {
@@ -486,7 +487,7 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestFileSymlink()
     {
 #if NETCOREAPP
@@ -516,32 +517,32 @@ public class TestPhysicalFileSystem : TestFileSystemBase
             fs.CreateSymbolicLink(pathDest, pathSource);
 
             // ResolveSymbolicLink
-            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
-            Assert.Equal(pathSource, resolvedPath);
+            Assert.IsTrue(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            AssertEx.AreEqual(pathSource, resolvedPath);
 
             // FileExists
-            Assert.True(fs.FileExists(pathDest));
+            Assert.IsTrue(fs.FileExists(pathDest));
 
             // CreateFile / OpenFile
             var fileStream = fs.OpenFile(pathSource, FileMode.Open, FileAccess.ReadWrite);
             var buffer = Encoding.UTF8.GetBytes("This is a test");
             fileStream.Write(buffer, 0, buffer.Length);
             fileStream.Dispose();
-            Assert.Equal(buffer.Length, fs.GetFileLength(pathSource));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(pathSource));
 
             // ReadAllBytes
             // Note: we can't check the length, since on Windows the symlink length is 0
             var symlinkBuffer = fs.ReadAllBytes(pathDest);
-            Assert.Equal(buffer, symlinkBuffer);
+            AssertEx.AreEqual(buffer, symlinkBuffer);
 
             // FileEntry
             var entry = fs.GetFileSystemEntry(pathDest);
-            Assert.True(entry.Attributes.HasFlag(FileAttributes.ReparsePoint));
+            Assert.IsTrue(entry.Attributes.HasFlag(FileAttributes.ReparsePoint));
 
             // DeleteFile
             fs.DeleteFile(pathDest);
-            Assert.False(File.Exists(systemPathDest));
-            Assert.True(File.Exists(systemPathSource));
+            Assert.IsFalse(File.Exists(systemPathDest));
+            Assert.IsTrue(File.Exists(systemPathSource));
         }
         finally
         {
@@ -550,13 +551,16 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void TestResolvePath()
     {
         var fs = new PhysicalFileSystem();
         var testPath = fs.ConvertPathFromInternal(SystemPath);
         var (resFs, resPath) = fs.ResolvePath(testPath);
-        Assert.Equal(testPath, resPath);
-        Assert.Equal(fs, resFs);
+        AssertEx.AreEqual(testPath, resPath);
+        AssertEx.AreEqual(fs, resFs);
     }
 }
+
+
+

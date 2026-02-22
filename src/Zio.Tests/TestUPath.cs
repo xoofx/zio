@@ -2,354 +2,355 @@ using System.IO;
 
 namespace Zio.Tests;
 
+[TestClass]
 public class TestUPath
 {
-    [Theory]
+    [TestMethod]
     // Test empty
-    [InlineData("", "")]
+    [DataRow("", "")]
 
     // Tests with regular paths
-    [InlineData("/", "/")]
-    [InlineData("\\", "/")]
-    [InlineData("a", "a")]
-    [InlineData("a/b", "a/b")]
-    [InlineData("a\\b", "a/b")]
-    [InlineData("a/b/", "a/b")]
-    [InlineData("a\\b\\", "a/b")]
-    [InlineData("a///b/c//d", "a/b/c/d")]
-    [InlineData("///a///b/c//", "/a/b/c")]
-    [InlineData("a/b/c", "a/b/c")]
-    [InlineData("/a/b", "/a/b")]
+    [DataRow("/", "/")]
+    [DataRow("\\", "/")]
+    [DataRow("a", "a")]
+    [DataRow("a/b", "a/b")]
+    [DataRow("a\\b", "a/b")]
+    [DataRow("a/b/", "a/b")]
+    [DataRow("a\\b\\", "a/b")]
+    [DataRow("a///b/c//d", "a/b/c/d")]
+    [DataRow("///a///b/c//", "/a/b/c")]
+    [DataRow("a/b/c", "a/b/c")]
+    [DataRow("/a/b", "/a/b")]
 
     // Tests with "."
-    [InlineData(".", ".")]
-    [InlineData("/./a", "/a")]
-    [InlineData("/a/./b", "/a/b")]
-    [InlineData("./a/b", "a/b")]
+    [DataRow(".", ".")]
+    [DataRow("/./a", "/a")]
+    [DataRow("/a/./b", "/a/b")]
+    [DataRow("./a/b", "a/b")]
 
     // Tests with ".."
-    [InlineData("..", "..")]
-    [InlineData("../../a/..", "../..")]
-    [InlineData("a/../c", "c")]
-    [InlineData("a/b/..", "a")]
-    [InlineData("a/b/c/../..", "a")]
-    [InlineData("a/b/c/../../..", "")]
-    [InlineData("./..", "..")]
-    [InlineData("../.", "..")]
-    [InlineData("../..", "../..")]
-    [InlineData("../../", "../..")]
-    [InlineData(".a", ".a")]
-    [InlineData(".a/b/..", ".a")]
-    [InlineData("...a/b../", "...a/b..")]
-    [InlineData("...a/..", "")]
-    [InlineData("...a/b/..", "...a")]
-    [InlineData("..a/b", "..a/b")]
-    [InlineData("c/..d", "c/..d")]
-    [InlineData("c/d..", "c/d..")]
+    [DataRow("..", "..")]
+    [DataRow("../../a/..", "../..")]
+    [DataRow("a/../c", "c")]
+    [DataRow("a/b/..", "a")]
+    [DataRow("a/b/c/../..", "a")]
+    [DataRow("a/b/c/../../..", "")]
+    [DataRow("./..", "..")]
+    [DataRow("../.", "..")]
+    [DataRow("../..", "../..")]
+    [DataRow("../../", "../..")]
+    [DataRow(".a", ".a")]
+    [DataRow(".a/b/..", ".a")]
+    [DataRow("...a/b../", "...a/b..")]
+    [DataRow("...a/..", "")]
+    [DataRow("...a/b/..", "...a")]
+    [DataRow("..a/b", "..a/b")]
+    [DataRow("c/..d", "c/..d")]
+    [DataRow("c/d..", "c/d..")]
     public void TestNormalize(string pathAsText, string expectedResult)
     {
         var path = new UPath(pathAsText);
-        Assert.Equal(expectedResult, path.FullName);
+        AssertEx.AreEqual(expectedResult, path.FullName);
 
         // Check Equatable
         var expectedPath = new UPath(expectedResult);
-        Assert.Equal(expectedPath, path);
-        Assert.True(expectedPath.Equals((object)path));
-        Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
-        Assert.True(path == expectedPath);
-        Assert.False(path != expectedPath);
+        AssertEx.AreEqual(expectedPath, path);
+        Assert.IsTrue(expectedPath.Equals((object)path));
+        AssertEx.AreEqual(expectedPath.GetHashCode(), path.GetHashCode());
+        Assert.IsTrue(path == expectedPath);
+        Assert.IsFalse(path != expectedPath);
 
         // Check TryParse
         UPath result;
-        Assert.True(UPath.TryParse(path.FullName, out result));
+        Assert.IsTrue(UPath.TryParse(path.FullName, out result));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestEquals()
     {
         var pathInfo = new UPath("x");
-        Assert.False(pathInfo.Equals((object)"no"));
-        Assert.False(pathInfo.Equals(null));
+        Assert.IsFalse(pathInfo.Equals((object)"no"));
+        Assert.IsFalse(pathInfo.Equals(null));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestIsNullAndEmpty()
     {
-        Assert.True(default(UPath).IsNull);
-        Assert.False(default(UPath).IsEmpty);
-        Assert.True(new UPath("").IsEmpty);
-        Assert.False(new UPath("").IsNull);
-        Assert.False(new UPath("/").IsEmpty);
+        Assert.IsTrue(default(UPath).IsNull);
+        Assert.IsFalse(default(UPath).IsEmpty);
+        Assert.IsTrue(new UPath("").IsEmpty);
+        Assert.IsFalse(new UPath("").IsNull);
+        Assert.IsFalse(new UPath("/").IsEmpty);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestAbsoluteAndRelative()
     {
         var path = new UPath("x");
-        Assert.True(path.IsRelative);
-        Assert.False(path.IsAbsolute);
+        Assert.IsTrue(path.IsRelative);
+        Assert.IsFalse(path.IsAbsolute);
 
         path = new UPath("..");
-        Assert.True(path.IsRelative);
-        Assert.False(path.IsAbsolute);
+        Assert.IsTrue(path.IsRelative);
+        Assert.IsFalse(path.IsAbsolute);
 
         path = new UPath("/x");
-        Assert.False(path.IsRelative);
-        Assert.True(path.IsAbsolute);
+        Assert.IsFalse(path.IsRelative);
+        Assert.IsTrue(path.IsAbsolute);
 
-        Assert.Equal(path, path.ToAbsolute());
+        AssertEx.AreEqual(path, path.ToAbsolute());
     }
 
-    [Theory]
-    [InlineData("", "", "")]
-    [InlineData("/", "", "/")]
-    [InlineData("\\", "", "/")]
-    [InlineData("//", "", "/")]
-    [InlineData("\\\\", "", "/")]
-    [InlineData("/", "/", "/")]
-    [InlineData("\\", "\\", "/")]
-    [InlineData("//", "//", "/")]
-    [InlineData("", "/", "/")]
-    [InlineData("a", "b", "a/b")]
-    [InlineData("a/b", "c", "a/b/c")]
-    [InlineData("", "b", "b")]
-    [InlineData("a", "", "a")]
-    [InlineData("a/b", "", "a/b")]
-    [InlineData("/a", "b/", "/a/b")]
-    [InlineData("/a", "/b", "/b")]
-    [InlineData("/a", "", "/a")]
-    [InlineData("//a", "", "/a")]
-    [InlineData("a/", "", "a")]
-    [InlineData("a//", "", "a")]
-    [InlineData("a/", "b", "a/b")]
-    [InlineData("a/", "b/", "a/b")]
-    [InlineData("a//", "b//", "a/b")]
-    [InlineData("a", "../b", "b")]
-    [InlineData("a/../", "b", "b")]
-    [InlineData("/a/..", "b", "/b")]
-    [InlineData("/a/..", "", "/")]
-    [InlineData("//a//..//", "", "/")]
-    [InlineData("\\a", "", "/a")]
-    [InlineData("\\\\a", "", "/a")]
+    [TestMethod]
+    [DataRow("", "", "")]
+    [DataRow("/", "", "/")]
+    [DataRow("\\", "", "/")]
+    [DataRow("//", "", "/")]
+    [DataRow("\\\\", "", "/")]
+    [DataRow("/", "/", "/")]
+    [DataRow("\\", "\\", "/")]
+    [DataRow("//", "//", "/")]
+    [DataRow("", "/", "/")]
+    [DataRow("a", "b", "a/b")]
+    [DataRow("a/b", "c", "a/b/c")]
+    [DataRow("", "b", "b")]
+    [DataRow("a", "", "a")]
+    [DataRow("a/b", "", "a/b")]
+    [DataRow("/a", "b/", "/a/b")]
+    [DataRow("/a", "/b", "/b")]
+    [DataRow("/a", "", "/a")]
+    [DataRow("//a", "", "/a")]
+    [DataRow("a/", "", "a")]
+    [DataRow("a//", "", "a")]
+    [DataRow("a/", "b", "a/b")]
+    [DataRow("a/", "b/", "a/b")]
+    [DataRow("a//", "b//", "a/b")]
+    [DataRow("a", "../b", "b")]
+    [DataRow("a/../", "b", "b")]
+    [DataRow("/a/..", "b", "/b")]
+    [DataRow("/a/..", "", "/")]
+    [DataRow("//a//..//", "", "/")]
+    [DataRow("\\a", "", "/a")]
+    [DataRow("\\\\a", "", "/a")]
     public void TestCombine(string path1, string path2, string expectedResult)
     {
         var path = UPath.Combine(path1, path2);
-        Assert.Equal(expectedResult, (string)path);
+        AssertEx.AreEqual(expectedResult, (string)path);
 
         path = new UPath(path1) / new UPath(path2);
-        Assert.Equal(expectedResult, (string)path);
+        AssertEx.AreEqual(expectedResult, (string)path);
 
         // Compare path info directly
         var expectedPath = new UPath(expectedResult);
-        Assert.Equal(expectedPath, path);
-        Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
+        AssertEx.AreEqual(expectedPath, path);
+        AssertEx.AreEqual(expectedPath.GetHashCode(), path.GetHashCode());
     }
 
-    [Theory]
-    [InlineData("", "", "", "")]
-    [InlineData("a", "b", "c", "a/b/c")]
-    [InlineData("a/b", "c", "d", "a/b/c/d")]
-    [InlineData("", "b", "", "b")]
-    [InlineData("a", "", "", "a")]
-    [InlineData("a/b", "", "", "a/b")]
-    [InlineData("/a", "b/", "c/", "/a/b/c")]
-    [InlineData("/a", "/b", "/c", "/c")]
+    [TestMethod]
+    [DataRow("", "", "", "")]
+    [DataRow("a", "b", "c", "a/b/c")]
+    [DataRow("a/b", "c", "d", "a/b/c/d")]
+    [DataRow("", "b", "", "b")]
+    [DataRow("a", "", "", "a")]
+    [DataRow("a/b", "", "", "a/b")]
+    [DataRow("/a", "b/", "c/", "/a/b/c")]
+    [DataRow("/a", "/b", "/c", "/c")]
     public void TestCombine3(string path1, string path2, string path3, string expectedResult)
     {
         var path = UPath.Combine(path1, path2, path3);
-        Assert.Equal(expectedResult, (string)path);
+        AssertEx.AreEqual(expectedResult, (string)path);
 
         // Compare path info directly
         var expectedPath = new UPath(expectedResult);
-        Assert.Equal(expectedPath, path);
-        Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
+        AssertEx.AreEqual(expectedPath, path);
+        AssertEx.AreEqual(expectedPath.GetHashCode(), path.GetHashCode());
     }
 
-    [Theory]
-    [InlineData("", "", "", "", "")]
-    [InlineData("a", "b", "c", "d", "a/b/c/d")]
-    [InlineData("a/b", "c", "d/e", "f", "a/b/c/d/e/f")]
-    [InlineData("", "b", "", "", "b")]
-    [InlineData("a", "", "", "", "a")]
-    [InlineData("a/b", "", "", "", "a/b")]
-    [InlineData("/a", "b/", "c/", "", "/a/b/c")]
-    [InlineData("/a", "/b", "/c", "/d", "/d")]
-    [InlineData("a", "b", "..", "c", "a/c")]
+    [TestMethod]
+    [DataRow("", "", "", "", "")]
+    [DataRow("a", "b", "c", "d", "a/b/c/d")]
+    [DataRow("a/b", "c", "d/e", "f", "a/b/c/d/e/f")]
+    [DataRow("", "b", "", "", "b")]
+    [DataRow("a", "", "", "", "a")]
+    [DataRow("a/b", "", "", "", "a/b")]
+    [DataRow("/a", "b/", "c/", "", "/a/b/c")]
+    [DataRow("/a", "/b", "/c", "/d", "/d")]
+    [DataRow("a", "b", "..", "c", "a/c")]
     public void TestCombine4(string path1, string path2, string path3, string path4, string expectedResult)
     {
         var path = UPath.Combine(path1, path2, path3, path4);
-        Assert.Equal(expectedResult, (string)path);
+        AssertEx.AreEqual(expectedResult, (string)path);
 
         // Compare path info directly
         var expectedPath = new UPath(expectedResult);
-        Assert.Equal(expectedPath, path);
-        Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
+        AssertEx.AreEqual(expectedPath, path);
+        AssertEx.AreEqual(expectedPath.GetHashCode(), path.GetHashCode());
     }
 
-    [Theory]
-    [InlineData(new[] { "", "" }, "")]
-    [InlineData(new[] { "a", "b", "c", "d", "e" }, "a/b/c/d/e")]
-    [InlineData(new[] { "a", "..", "c", "..", "e" }, "e")]
-    [InlineData(new[] { "a", "b", "c", "/d", "e" }, "/d/e")]
-    [InlineData(new[] { "a", "", "", "", "e" }, "a/e")]
+    [TestMethod]
+    [DataRow(new[] { "", "" }, "")]
+    [DataRow(new[] { "a", "b", "c", "d", "e" }, "a/b/c/d/e")]
+    [DataRow(new[] { "a", "..", "c", "..", "e" }, "e")]
+    [DataRow(new[] { "a", "b", "c", "/d", "e" }, "/d/e")]
+    [DataRow(new[] { "a", "", "", "", "e" }, "a/e")]
     public void TestCombineN(string[] parts, string expectedResult)
     {
         var path = UPath.Combine(parts.Select(a => (UPath)a).ToArray());
-        Assert.Equal(expectedResult, (string)path);
+        AssertEx.AreEqual(expectedResult, (string)path);
 
         // Compare path info directly
         var expectedPath = new UPath(expectedResult);
-        Assert.Equal(expectedPath, path);
-        Assert.Equal(expectedPath.GetHashCode(), path.GetHashCode());
+        AssertEx.AreEqual(expectedPath, path);
+        AssertEx.AreEqual(expectedPath.GetHashCode(), path.GetHashCode());
     }
 
-    [Theory]
-    [InlineData("", "")]
-    [InlineData("/", "")]
-    [InlineData("/a", "a")]
-    [InlineData("/a/b", "b")]
-    [InlineData("/a/b/c.txt", "c.txt")]
-    [InlineData("a", "a")]
-    [InlineData("../a", "a")]
-    [InlineData("../../a/b", "b")]
+    [TestMethod]
+    [DataRow("", "")]
+    [DataRow("/", "")]
+    [DataRow("/a", "a")]
+    [DataRow("/a/b", "b")]
+    [DataRow("/a/b/c.txt", "c.txt")]
+    [DataRow("a", "a")]
+    [DataRow("../a", "a")]
+    [DataRow("../../a/b", "b")]
     public void TestGetName(string path1, string expectedName)
     {
         var path = (UPath) path1;
         var result = path.GetName();
-        Assert.Equal(expectedName, result);
+        AssertEx.AreEqual(expectedName, result);
     }
 
-    [Theory]
-    [InlineData("", "")]
-    [InlineData("/", "")]
-    [InlineData("/a", "a")]
-    [InlineData("/a/b", "b")]
-    [InlineData("/a/b/c.txt", "c")]
-    [InlineData("a", "a")]
-    [InlineData("../a", "a")]
-    [InlineData("../../a/b", "b")]
+    [TestMethod]
+    [DataRow("", "")]
+    [DataRow("/", "")]
+    [DataRow("/a", "a")]
+    [DataRow("/a/b", "b")]
+    [DataRow("/a/b/c.txt", "c")]
+    [DataRow("a", "a")]
+    [DataRow("../a", "a")]
+    [DataRow("../../a/b", "b")]
     public void TestGetNameWithoutExtension(string path1, string expectedName)
     {
         var path = (UPath)path1;
         var result = path.GetNameWithoutExtension();
-        Assert.Equal(expectedName, result);
+        AssertEx.AreEqual(expectedName, result);
     }
 
-    [Theory]
-    [InlineData("", "")]
-    [InlineData("/", "")]
-    [InlineData("/a.txt", ".txt")]
-    [InlineData("/a.", "")]
-    [InlineData("/a.txt.bak", ".bak")]
-    [InlineData("a.txt", ".txt")]
-    [InlineData("a.", "")]
-    [InlineData("a.txt.bak", ".bak")]
+    [TestMethod]
+    [DataRow("", "")]
+    [DataRow("/", "")]
+    [DataRow("/a.txt", ".txt")]
+    [DataRow("/a.", "")]
+    [DataRow("/a.txt.bak", ".bak")]
+    [DataRow("a.txt", ".txt")]
+    [DataRow("a.", "")]
+    [DataRow("a.txt.bak", ".bak")]
     public void TestGetExtension(string path1, string expectedName)
     {
         var path = (UPath)path1;
         var result = path.GetExtensionWithDot();
-        Assert.Equal(expectedName, result);
+        AssertEx.AreEqual(expectedName, result);
     }
 
-    [Theory]
-    [InlineData("", "")]
-    [InlineData("/", null)]
-    [InlineData("/a", "/")]
-    [InlineData("/a/b", "/a")]
-    [InlineData("/a/b/c.txt", "/a/b")]
-    [InlineData("a", "")]
-    [InlineData("../a", "..")]
-    [InlineData("../../a/b", "../../a")]
+    [TestMethod]
+    [DataRow("", "")]
+    [DataRow("/", null)]
+    [DataRow("/a", "/")]
+    [DataRow("/a/b", "/a")]
+    [DataRow("/a/b/c.txt", "/a/b")]
+    [DataRow("a", "")]
+    [DataRow("../a", "..")]
+    [DataRow("../../a/b", "../../a")]
     public void TestGetDirectory(string path1, string expectedDir)
     {
         var path = (UPath)path1;
         var result = path.GetDirectory();
-        Assert.Equal(expectedDir, result);
+        AssertEx.AreEqual(expectedDir, result);
     }
 
-    [Theory]
-    [InlineData("", "")]
-    [InlineData("/", "")]
-    [InlineData("/a", "/")]
-    [InlineData("/a/b", "/a")]
-    [InlineData("/a/b/c.txt", "/a/b")]
-    [InlineData("a", "")]
-    [InlineData("../a", "..")]
-    [InlineData("../../a/b", "../../a")]
+    [TestMethod]
+    [DataRow("", "")]
+    [DataRow("/", "")]
+    [DataRow("/a", "/")]
+    [DataRow("/a/b", "/a")]
+    [DataRow("/a/b/c.txt", "/a/b")]
+    [DataRow("a", "")]
+    [DataRow("../a", "..")]
+    [DataRow("../../a/b", "../../a")]
     public void TestGetDirectoryAsSpan(string path1, string expectedDir)
     {
         var path = (UPath)path1;
         var result = path.GetDirectoryAsSpan().ToString();
-        Assert.Equal(expectedDir, result);
+        AssertEx.AreEqual(expectedDir, result);
     }
 
-    [Theory]
-    [InlineData("", ".txt", "")]
-    [InlineData("/", ".txt", "/.txt")]
-    [InlineData("/a", ".txt", "/a.txt")]
-    [InlineData("/a/b", ".txt", "/a/b.txt")]
-    [InlineData("/a/b/c.bin", ".txt", "/a/b/c.txt")]
-    [InlineData("a", ".txt", "a.txt")]
-    [InlineData("../a", ".txt", "../a.txt")]
-    [InlineData("../../a/b", ".txt", "../../a/b.txt")]
+    [TestMethod]
+    [DataRow("", ".txt", "")]
+    [DataRow("/", ".txt", "/.txt")]
+    [DataRow("/a", ".txt", "/a.txt")]
+    [DataRow("/a/b", ".txt", "/a/b.txt")]
+    [DataRow("/a/b/c.bin", ".txt", "/a/b/c.txt")]
+    [DataRow("a", ".txt", "a.txt")]
+    [DataRow("../a", ".txt", "../a.txt")]
+    [DataRow("../../a/b", ".txt", "../../a/b.txt")]
     public void TestChangeExtension(string path1, string newExt, string expectedPath)
     {
         var path = (UPath)path1;
         var result = path.ChangeExtension(newExt);
-        Assert.Equal(expectedPath, result);
+        AssertEx.AreEqual(expectedPath, result);
     }
 
-    [Theory]
+    [TestMethod]
     // Test automatic separator insertion
-    [InlineData("/a/b/c", "/a/b", false, true)]
-    [InlineData("/a/bc", "/a/b", false, false)]
+    [DataRow("/a/b/c", "/a/b", false, true)]
+    [DataRow("/a/bc", "/a/b", false, false)]
 
     // Test trailing separator
-    [InlineData("/a/b/", "/a", false, true)]
-    [InlineData("/a/b", "/a/", false, true)]
-    [InlineData("/a/b/", "/a/", false, true)]
+    [DataRow("/a/b/", "/a", false, true)]
+    [DataRow("/a/b", "/a/", false, true)]
+    [DataRow("/a/b/", "/a/", false, true)]
 
     // Test recursive option
-    [InlineData("/a/b/c", "/a", true, true)]
-    [InlineData("/a/b/c", "/a", false, false)]
+    [DataRow("/a/b/c", "/a", true, true)]
+    [DataRow("/a/b/c", "/a", false, false)]
     
     // Test relative paths
-    [InlineData("a/b", "a", false, true)]
+    [DataRow("a/b", "a", false, true)]
     
     // Test exact match
-    [InlineData("/a/b/", "/a/b/", false, true)]
-    [InlineData("/a/b/", "/a/b/", true, true)]
-    [InlineData("/a/b", "/a/b", false, true)]
-    [InlineData("/a/b", "/a/b", true, true)]
+    [DataRow("/a/b/", "/a/b/", false, true)]
+    [DataRow("/a/b/", "/a/b/", true, true)]
+    [DataRow("/a/b", "/a/b", false, true)]
+    [DataRow("/a/b", "/a/b", true, true)]
     public void TestIsInDirectory(string path1, string directory, bool recursive, bool expected)
     {
         var path = (UPath)path1;
         var result = path.IsInDirectory(directory, recursive);
-        Assert.Equal(expected, result);
+        AssertEx.AreEqual(expected, result);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestSplit()
     {
-        Assert.Equal(new List<string>(), ((UPath)"").Split());
-        Assert.Equal(new List<string>(), ((UPath)"/").Split());
-        Assert.Equal(new List<string>() { "a" }, ((UPath)"/a").Split());
-        Assert.Equal(new List<string>() {"a", "b", "c"}, ((UPath) "/a/b/c").Split());
-        Assert.Equal(new List<string>() { "a" }, ((UPath)"a").Split());
-        Assert.Equal(new List<string>() { "a", "b" }, ((UPath)"a/b").Split());
-        Assert.Equal(new List<string>() { "a", "b", "c" }, ((UPath)"a/b/c").Split());
+        AssertEx.AreEqual(new List<string>(), ((UPath)"").Split());
+        AssertEx.AreEqual(new List<string>(), ((UPath)"/").Split());
+        AssertEx.AreEqual(new List<string>() { "a" }, ((UPath)"/a").Split());
+        AssertEx.AreEqual(new List<string>() {"a", "b", "c"}, ((UPath) "/a/b/c").Split());
+        AssertEx.AreEqual(new List<string>() { "a" }, ((UPath)"a").Split());
+        AssertEx.AreEqual(new List<string>() { "a", "b" }, ((UPath)"a/b").Split());
+        AssertEx.AreEqual(new List<string>() { "a", "b", "c" }, ((UPath)"a/b/c").Split());
     }
 
-    [Fact]
+    [TestMethod]
     public void TestSplitSpan()
     {
-        Assert.Equal(new List<string>(), ToList((UPath)""));
-        Assert.Equal(new List<string>(), ToList((UPath)"/"));
-        Assert.Equal(new List<string>() { "a" }, ToList((UPath)"/a"));
-        Assert.Equal(new List<string>() {"a", "b", "c"}, ToList((UPath) "/a/b/c"));
-        Assert.Equal(new List<string>() { "a" }, ToList((UPath)"a"));
-        Assert.Equal(new List<string>() { "a", "b" }, ToList((UPath)"a/b"));
-        Assert.Equal(new List<string>() { "a", "b", "c" }, ToList((UPath)"a/b/c"));
+        AssertEx.AreEqual(new List<string>(), ToList((UPath)""));
+        AssertEx.AreEqual(new List<string>(), ToList((UPath)"/"));
+        AssertEx.AreEqual(new List<string>() { "a" }, ToList((UPath)"/a"));
+        AssertEx.AreEqual(new List<string>() {"a", "b", "c"}, ToList((UPath) "/a/b/c"));
+        AssertEx.AreEqual(new List<string>() { "a" }, ToList((UPath)"a"));
+        AssertEx.AreEqual(new List<string>() { "a", "b" }, ToList((UPath)"a/b"));
+        AssertEx.AreEqual(new List<string>() { "a", "b", "c" }, ToList((UPath)"a/b/c"));
         return;
 
         List<string> ToList(UPath path)
@@ -362,14 +363,14 @@ public class TestUPath
                 list.Add(span.ToString());
             }
 
-            Assert.Equal(enumerator.Count, list.Count);
+            AssertEx.AreEqual(enumerator.Count, list.Count);
 
             return list;
         }
     }
 
 
-    [Fact]
+    [TestMethod]
     public void TestExpectedException()
     {
         Assert.Throws<ArgumentException>(() => new UPath("/../a"));
@@ -377,14 +378,14 @@ public class TestUPath
         Assert.Throws<ArgumentException>(() => new UPath("a/..."));
         Assert.Throws<ArgumentException>(() => new UPath(".../a"));
         Assert.Throws<ArgumentException>(() => UPath.Combine("/", ".."));
-        Assert.Equal("path1", Assert.Throws<ArgumentNullException>(() => UPath.Combine(null, "")).ParamName);
-        Assert.Equal("path2", Assert.Throws<ArgumentNullException>(() => UPath.Combine("", null)).ParamName);
+        AssertEx.AreEqual("path1", Assert.Throws<ArgumentNullException>(() => UPath.Combine(null, "")).ParamName);
+        AssertEx.AreEqual("path2", Assert.Throws<ArgumentNullException>(() => UPath.Combine("", null)).ParamName);
         Assert.Throws<ArgumentException>(() => UPathExtensions.IsInDirectory("/a", "b", true));
         Assert.Throws<ArgumentException>(() => UPathExtensions.IsInDirectory("a", "/b", true));
     }
 
 
-    [Fact]
+    [TestMethod]
     public void TestComparers()
     {
         {
@@ -396,7 +397,7 @@ public class TestUPath
                 "/A.txt",
                 "/a.txt"
             };
-            Assert.Equal(new List<UPath>()
+            AssertEx.AreEqual(new List<UPath>()
             {
                 "/A.txt",
                 "/C.txt",
@@ -416,7 +417,7 @@ public class TestUPath
                 "/a.txt"
             };
             list.Sort(UPath.DefaultComparerIgnoreCase);
-            Assert.Equal(new List<UPath>()
+            AssertEx.AreEqual(new List<UPath>()
             {
                 "/A.txt",
                 "/a.txt",
@@ -427,4 +428,8 @@ public class TestUPath
         }
     }
 }
+
+
+
+
 

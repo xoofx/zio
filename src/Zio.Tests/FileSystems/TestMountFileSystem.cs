@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
@@ -11,44 +11,45 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
 
+[TestClass]
 public class TestMountFileSystem : TestFileSystemBase
 {
-    [Fact]
+    [TestMethod]
     public void TestCommonReadWithOnlyBackup()
     {
         var fs = GetCommonMountFileSystemWithOnlyBackup();
         AssertCommonRead(fs);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestCommonReadWithMounts()
     {
         var fs = GetCommonMountFileSystemWithMounts();
         AssertCommonRead(fs);
     }
     
-    [Fact]
+    [TestMethod]
     public void TestWatcherOnRoot()
     {
         var fs = GetCommonMountFileSystemWithMounts();
         AssertFileCreatedEventDispatched(fs, "/", "/b/watched.txt");
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWatcherOnMount()
     {
         var fs = GetCommonMountFileSystemWithMounts();
         AssertFileCreatedEventDispatched(fs, "/b", "/b/watched.txt");
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWatcherWithBackupOnRoot()
     {
         var fs = GetCommonMountFileSystemWithOnlyBackup();
         AssertFileCreatedEventDispatched(fs, "/", "/b/watched.txt");
     }
 
-    [Fact]
+    [TestMethod]
     public void TestMount()
     {
         var fs = new MountFileSystem();
@@ -59,9 +60,9 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<ArgumentException>(() => fs.Mount("test", memfs));
         Assert.Throws<ArgumentException>(() => fs.Mount("/", memfs));
 
-        Assert.False(fs.IsMounted("/test"));
+        Assert.IsFalse(fs.IsMounted("/test"));
         fs.Mount("/test", memfs);
-        Assert.True(fs.IsMounted("/test"));
+        Assert.IsTrue(fs.IsMounted("/test"));
         Assert.Throws<ArgumentException>(() => fs.Mount("/test", memfs));
         Assert.Throws<ArgumentException>(() => fs.Mount("/test", fs));
 
@@ -73,31 +74,31 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<ArgumentException>(() => fs.Unmount("/test2"));
 
         fs.Mount("/test2", memfs);
-        Assert.True(fs.IsMounted("/test"));
-        Assert.True(fs.IsMounted("/test2"));
+        Assert.IsTrue(fs.IsMounted("/test"));
+        Assert.IsTrue(fs.IsMounted("/test2"));
 
-        Assert.Equal(new Dictionary<UPath, IFileSystem>()
+        AssertEx.AreEqual(new Dictionary<UPath, IFileSystem>()
         {
             {"/test", memfs},
             {"/test2", memfs},
         }, fs.GetMounts());
 
         fs.Unmount("/test");
-        Assert.False(fs.IsMounted("/test"));
-        Assert.True(fs.IsMounted("/test2"));
+        Assert.IsFalse(fs.IsMounted("/test"));
+        Assert.IsTrue(fs.IsMounted("/test2"));
 
         fs.Unmount("/test2");
 
-        Assert.Empty(fs.GetMounts());
+        AssertEx.Empty(fs.GetMounts());
 
         var innerFs = GetCommonMemoryFileSystem();
         fs.Mount("/x/y", innerFs);
         fs.Mount("/x/y/b", innerFs);
-        Assert.True(fs.FileExists("/x/y/A.txt"));
-        Assert.True(fs.FileExists("/x/y/b/A.txt"));
+        Assert.IsTrue(fs.FileExists("/x/y/A.txt"));
+        Assert.IsTrue(fs.FileExists("/x/y/b/A.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestWatcherRemovedWhenDisposed()
     {
         var fs = GetCommonMountFileSystemWithMounts();
@@ -111,20 +112,20 @@ public class TestMountFileSystem : TestFileSystemBase
 
         var watchersField = typeof(MountFileSystem).GetTypeInfo()
             .GetField("_watchers", BindingFlags.NonPublic | BindingFlags.Instance);
-        Assert.NotNull(watchersField);
+        Assert.IsNotNull(watchersField);
 
         var watchers = (IList)watchersField.GetValue(fs);
-        Assert.NotNull(watchers);
-        Assert.Empty(watchers);
+        Assert.IsNotNull(watchers);
+        AssertEx.Empty(watchers);
     }
 
-    [Fact]
+    [TestMethod]
     public void EnumerateDeepMount()
     {
         var fs = GetCommonMemoryFileSystem();
         var mountFs = new MountFileSystem();
         mountFs.Mount("/x/y/z", fs);
-        Assert.True(mountFs.FileExists("/x/y/z/A.txt"));
+        Assert.IsTrue(mountFs.FileExists("/x/y/z/A.txt"));
 
         var expected = new List<UPath>
         {
@@ -137,16 +138,16 @@ public class TestMountFileSystem : TestFileSystemBase
 
         // only concerned with the first few because it should list the mount parts first
         var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories).Take(5).ToList();
-        Assert.Equal(expected, actual);
+        AssertEx.AreEqual(expected, actual);
     }
 
-    [Fact]
+    [TestMethod]
     public void EnumerateDeepMountPartial()
     {
         var fs = GetCommonMemoryFileSystem();
         var mountFs = new MountFileSystem();
         mountFs.Mount("/x/y/z", fs);
-        Assert.True(mountFs.FileExists("/x/y/z/A.txt"));
+        Assert.IsTrue(mountFs.FileExists("/x/y/z/A.txt"));
 
         var expected = new List<UPath>
         {
@@ -158,10 +159,10 @@ public class TestMountFileSystem : TestFileSystemBase
 
         // only concerned with the first few because it should list the mount parts first
         var actual = mountFs.EnumeratePaths("/x", "*", SearchOption.AllDirectories).Take(4).ToList();
-        Assert.Equal(expected, actual);
+        AssertEx.AreEqual(expected, actual);
     }
 
-    [Fact]
+    [TestMethod]
     public void EnumerateMountsOverride()
     {
         var baseFs = new MemoryFileSystem();
@@ -190,19 +191,19 @@ public class TestMountFileSystem : TestFileSystemBase
         };
 
         var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories).ToList();
-        Assert.Equal(expected, actual);
+        AssertEx.AreEqual(expected, actual);
     }
 
-    [Fact]
+    [TestMethod]
     public void EnumerateEmptyOnRoot()
     {
         var mountFs = new MountFileSystem();
         var expected = Array.Empty<UPath>();
         var actual = mountFs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList();
-        Assert.Equal(expected, actual);
+        AssertEx.AreEqual(expected, actual);
     }
 
-    [Fact]
+    [TestMethod]
     public void EnumerateDoesntExist()
     {
         var mountFs = new MountFileSystem();
@@ -210,27 +211,27 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<DirectoryNotFoundException>(() => mountFs.EnumeratePaths("/y", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList());
     }
 
-    [Fact]
+    [TestMethod]
     public void EnumerateBackupDoesntExist()
     {
         var mountFs = new MountFileSystem(new MemoryFileSystem());            
         Assert.Throws<DirectoryNotFoundException>(() => mountFs.EnumeratePaths("/y", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList());
     }
 
-    [Fact]
+    [TestMethod]
     public void DirectoryExistsPartialMountName()
     {
         var fs = new MemoryFileSystem();
         var mountFs = new MountFileSystem();
         mountFs.Mount("/x/y/z", fs);
 
-        Assert.True(mountFs.DirectoryExists("/x"));
-        Assert.True(mountFs.DirectoryExists("/x/y"));
-        Assert.True(mountFs.DirectoryExists("/x/y/z"));
-        Assert.False(mountFs.DirectoryExists("/z"));
+        Assert.IsTrue(mountFs.DirectoryExists("/x"));
+        Assert.IsTrue(mountFs.DirectoryExists("/x/y"));
+        Assert.IsTrue(mountFs.DirectoryExists("/x/y/z"));
+        Assert.IsFalse(mountFs.DirectoryExists("/z"));
     }
 
-    [Fact]
+    [TestMethod]
     public void DirectoryEntryPartialMountName()
     {
         var fs = new MemoryFileSystem();
@@ -239,20 +240,20 @@ public class TestMountFileSystem : TestFileSystemBase
         var mountFs = new MountFileSystem();
         mountFs.Mount("/x/y/z", fs);
 
-        Assert.NotNull(mountFs.GetDirectoryEntry("/x"));
-        Assert.NotNull(mountFs.GetDirectoryEntry("/x/y"));
-        Assert.NotNull(mountFs.GetDirectoryEntry("/x/y/z"));
-        Assert.NotNull(mountFs.GetDirectoryEntry("/x/y/z/w"));
+        Assert.IsNotNull(mountFs.GetDirectoryEntry("/x"));
+        Assert.IsNotNull(mountFs.GetDirectoryEntry("/x/y"));
+        Assert.IsNotNull(mountFs.GetDirectoryEntry("/x/y/z"));
+        Assert.IsNotNull(mountFs.GetDirectoryEntry("/x/y/z/w"));
     }
 
-    [Fact]
+    [TestMethod]
     public void CreateDirectoryFail()
     {
         var mountfs = new MountFileSystem();
         Assert.Throws<UnauthorizedAccessException>(() => mountfs.CreateDirectory("/test"));
     }
 
-    [Fact]
+    [TestMethod]
     public void MoveDirectoryFail()
     {
         var mountfs = new MountFileSystem();
@@ -264,7 +265,7 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<NotSupportedException>(() => mountfs.MoveDirectory("/dir1/xxx", "/dir2/yyy"));
     }
 
-    [Fact]
+    [TestMethod]
     public void DeleteDirectoryFail()
     {
         var mountfs = new MountFileSystem();
@@ -275,7 +276,7 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<DirectoryNotFoundException>(() => mountfs.DeleteDirectory("/dir2", false));
     }
 
-    [Fact]
+    [TestMethod]
     public void CopyFileFail()
     {
         var mountfs = new MountFileSystem();
@@ -284,7 +285,7 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<DirectoryNotFoundException>(() => mountfs.CopyFile("/dir1/test.txt", "/test2", true));
     }
 
-    [Fact]
+    [TestMethod]
     public void ReplaceFileFail()
     {
         var mountfs = new MountFileSystem();
@@ -301,14 +302,14 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<NotSupportedException>(() => mountfs.ReplaceFile("/dir1/file.txt", "/dir2/file2.txt", null, true));
     }
 
-    [Fact]
+    [TestMethod]
     public void GetFileLengthFail()
     {
         var mountfs = new MountFileSystem();
         Assert.Throws<FileNotFoundException>(() => mountfs.GetFileLength("/toto.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void MoveFileFail()
     {
         var mountfs = new MountFileSystem();
@@ -326,7 +327,7 @@ public class TestMountFileSystem : TestFileSystemBase
     }
 
 
-    [Fact]
+    [TestMethod]
     public void OpenFileFail()
     {
         var mountfs = new MountFileSystem();
@@ -334,7 +335,7 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<UnauthorizedAccessException>(() => mountfs.OpenFile("/toto.txt", FileMode.Create, FileAccess.Read));
     }
 
-    [Fact]
+    [TestMethod]
     public void AttributesFail()
     {
         var mountfs = new MountFileSystem();
@@ -342,7 +343,7 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<FileNotFoundException>(() => mountfs.SetAttributes("/toto.txt", FileAttributes.Normal));
     }
 
-    [Fact]
+    [TestMethod]
     public void TimesFail()
     {
         var mountfs = new MountFileSystem();
@@ -351,14 +352,14 @@ public class TestMountFileSystem : TestFileSystemBase
         Assert.Throws<FileNotFoundException>(() => mountfs.SetLastWriteTime("/toto.txt", DateTime.Now));
     }
 
-    [Fact]
+    [TestMethod]
     public void EnumerateFail()
     {
         var mountfs = new MountFileSystem();
         Assert.Throws<DirectoryNotFoundException>(() => mountfs.EnumeratePaths("/dir").ToList());
     }
 
-    [Fact]
+    [TestMethod]
     public void CopyAndMoveFileCross()
     {
         var mountfs = new MountFileSystem();
@@ -371,17 +372,17 @@ public class TestMountFileSystem : TestFileSystemBase
 
         mountfs.CopyFile("/dir1/file1.txt", "/dir2/file2.txt", true);
 
-        Assert.True(memfs2.FileExists("/file2.txt"));
-        Assert.Equal("content1", memfs2.ReadAllText("/file2.txt"));
+        Assert.IsTrue(memfs2.FileExists("/file2.txt"));
+        AssertEx.AreEqual("content1", memfs2.ReadAllText("/file2.txt"));
 
         mountfs.MoveFile("/dir1/file1.txt", "/dir2/file1.txt");
 
-        Assert.False(memfs1.FileExists("/file1.txt"));
-        Assert.True(memfs2.FileExists("/file1.txt"));
-        Assert.Equal("content1", memfs2.ReadAllText("/file1.txt"));
+        Assert.IsFalse(memfs1.FileExists("/file1.txt"));
+        Assert.IsTrue(memfs2.FileExists("/file1.txt"));
+        AssertEx.AreEqual("content1", memfs2.ReadAllText("/file1.txt"));
     }
 
-    [SkippableFact]
+    [TestMethod]
     public void TestDirectorySymlink()
     {
 #if NETCOREAPP
@@ -413,33 +414,33 @@ public class TestMountFileSystem : TestFileSystemBase
         try
         {
             // CreateDirectory
-            Assert.False(Directory.Exists(systemPathSource));
+            Assert.IsFalse(Directory.Exists(systemPathSource));
             fs.CreateDirectory(pathSource);
-            Assert.True(Directory.Exists(systemPathSource));
+            Assert.IsTrue(Directory.Exists(systemPathSource));
 
             // CreateFile / OpenFile
             var fileStream = fs.CreateFile(filePathSource);
             var buffer = Encoding.UTF8.GetBytes("This is a test");
             fileStream.Write(buffer, 0, buffer.Length);
             fileStream.Dispose();
-            Assert.Equal(buffer.Length, fs.GetFileLength(filePathSource));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(filePathSource));
 
             // CreateSymbolicLink
             fs.CreateSymbolicLink(pathDest, pathSource);
             Assert.Throws<InvalidOperationException>(() => fs.CreateSymbolicLink("/memory/invalid", pathSource));
 
             // ResolveSymbolicLink
-            Assert.True(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
-            Assert.Equal(pathSource, resolvedPath);
+            Assert.IsTrue(fs.TryResolveLinkTarget(pathDest, out var resolvedPath));
+            AssertEx.AreEqual(pathSource, resolvedPath);
 
             // FileExists
-            Assert.True(fs.FileExists(filePathDest));
-            Assert.Equal(buffer.Length, fs.GetFileLength(filePathDest));
+            Assert.IsTrue(fs.FileExists(filePathDest));
+            AssertEx.AreEqual(buffer.Length, fs.GetFileLength(filePathDest));
 
             // RemoveDirectory
             fs.DeleteDirectory(pathDest, false);
-            Assert.False(Directory.Exists(systemPathDest));
-            Assert.True(Directory.Exists(systemPathSource));
+            Assert.IsFalse(Directory.Exists(systemPathDest));
+            Assert.IsTrue(Directory.Exists(systemPathSource));
         }
         finally
         {
@@ -448,3 +449,6 @@ public class TestMountFileSystem : TestFileSystemBase
         }
     }
 }
+
+
+

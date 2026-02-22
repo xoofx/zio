@@ -17,55 +17,55 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
     {
     }
 
-    [Fact]
+    [TestMethod]
     public void TestDirectory()
     {
-        Assert.True(fs.DirectoryExists("/"));
-        Assert.False(fs.DirectoryExists(null));
+        Assert.IsTrue(fs.DirectoryExists("/"));
+        Assert.IsFalse(fs.DirectoryExists(null));
 
         // Test CreateDirectory
         fs.CreateDirectory("/test");
-        Assert.True(fs.DirectoryExists("/test"));
-        Assert.False(fs.DirectoryExists("/test2"));
+        Assert.IsTrue(fs.DirectoryExists("/test"));
+        Assert.IsFalse(fs.DirectoryExists("/test2"));
 
         // Test CreateDirectory (sub folders)
         fs.CreateDirectory("/test/test1/test2/test3");
-        Assert.True(fs.DirectoryExists("/test/test1/test2/test3"));
-        Assert.True(fs.DirectoryExists("/test/test1/test2"));
-        Assert.True(fs.DirectoryExists("/test/test1"));
-        Assert.True(fs.DirectoryExists("/test"));
+        Assert.IsTrue(fs.DirectoryExists("/test/test1/test2/test3"));
+        Assert.IsTrue(fs.DirectoryExists("/test/test1/test2"));
+        Assert.IsTrue(fs.DirectoryExists("/test/test1"));
+        Assert.IsTrue(fs.DirectoryExists("/test"));
 
         // Test DeleteDirectory
         fs.DeleteDirectory("/test/test1/test2/test3", false);
-        Assert.False(fs.DirectoryExists("/test/test1/test2/test3"));
-        Assert.True(fs.DirectoryExists("/test/test1/test2"));
-        Assert.True(fs.DirectoryExists("/test/test1"));
-        Assert.True(fs.DirectoryExists("/test"));
+        Assert.IsFalse(fs.DirectoryExists("/test/test1/test2/test3"));
+        Assert.IsTrue(fs.DirectoryExists("/test/test1/test2"));
+        Assert.IsTrue(fs.DirectoryExists("/test/test1"));
+        Assert.IsTrue(fs.DirectoryExists("/test"));
 
         // Test MoveDirectory
         fs.MoveDirectory("/test", "/test2");
-        Assert.True(fs.DirectoryExists("/test2/test1/test2"));
-        Assert.True(fs.DirectoryExists("/test2/test1"));
-        Assert.True(fs.DirectoryExists("/test2"));
+        Assert.IsTrue(fs.DirectoryExists("/test2/test1/test2"));
+        Assert.IsTrue(fs.DirectoryExists("/test2/test1"));
+        Assert.IsTrue(fs.DirectoryExists("/test2"));
 
         // Test MoveDirectory to sub directory
         fs.CreateDirectory("/testsub");
-        Assert.True(fs.DirectoryExists("/testsub"));
+        Assert.IsTrue(fs.DirectoryExists("/testsub"));
         fs.MoveDirectory("/test2", "/testsub/testx");
-        Assert.False(fs.DirectoryExists("/test2"));
-        Assert.True(fs.DirectoryExists("/testsub/testx/test1/test2"));
-        Assert.True(fs.DirectoryExists("/testsub/testx/test1"));
-        Assert.True(fs.DirectoryExists("/testsub/testx"));
+        Assert.IsFalse(fs.DirectoryExists("/test2"));
+        Assert.IsTrue(fs.DirectoryExists("/testsub/testx/test1/test2"));
+        Assert.IsTrue(fs.DirectoryExists("/testsub/testx/test1"));
+        Assert.IsTrue(fs.DirectoryExists("/testsub/testx"));
 
         // Test DeleteDirectory - recursive
         fs.DeleteDirectory("/testsub", true);
-        Assert.False(fs.DirectoryExists("/testsub/testx/test1/test2"));
-        Assert.False(fs.DirectoryExists("/testsub/testx/test1"));
-        Assert.False(fs.DirectoryExists("/testsub/testx"));
-        Assert.False(fs.DirectoryExists("/testsub"));
+        Assert.IsFalse(fs.DirectoryExists("/testsub/testx/test1/test2"));
+        Assert.IsFalse(fs.DirectoryExists("/testsub/testx/test1"));
+        Assert.IsFalse(fs.DirectoryExists("/testsub/testx"));
+        Assert.IsFalse(fs.DirectoryExists("/testsub"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestDirectoryExceptions()
     {
         Assert.Throws<DirectoryNotFoundException>(() => fs.DeleteDirectory("/dir", true));
@@ -97,7 +97,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void TestFile()
     {
         // Test CreateFile/OpenFile
@@ -109,83 +109,83 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         stream.Dispose();
 
         // Test FileExists
-        Assert.False(fs.FileExists(null));
-        Assert.False(fs.FileExists("/titi.txt"));
-        Assert.True(fs.FileExists("/toto.txt"));
+        Assert.IsFalse(fs.FileExists(null));
+        Assert.IsFalse(fs.FileExists("/titi.txt"));
+        Assert.IsTrue(fs.FileExists("/toto.txt"));
 
         // ReadAllText
         var content = fs.ReadAllText("/toto.txt");
-        Assert.Equal(originalContent, content);
+        AssertEx.AreEqual(originalContent, content);
 
         // sleep for creation time comparison
         Thread.Sleep(16);
 
         // Test CopyFile
         fs.CopyFile("/toto.txt", "/titi.txt", true);
-        Assert.True(fs.FileExists("/toto.txt"));
-        Assert.True(fs.FileExists("/titi.txt"));
+        Assert.IsTrue(fs.FileExists("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/titi.txt"));
         content = fs.ReadAllText("/titi.txt");
-        Assert.Equal(originalContent, content);
+        AssertEx.AreEqual(originalContent, content);
         
         // Test Attributes/Times
-        Assert.True(fs.GetFileLength("/toto.txt") > 0);
-        Assert.Equal(fs.GetFileLength("/toto.txt"), fs.GetFileLength("/titi.txt"));
-        Assert.Equal(fs.GetAttributes("/toto.txt"), fs.GetAttributes("/titi.txt"));
-        if (IsWindows) Assert.NotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
+        Assert.IsTrue(fs.GetFileLength("/toto.txt") > 0);
+        AssertEx.AreEqual(fs.GetFileLength("/toto.txt"), fs.GetFileLength("/titi.txt"));
+        AssertEx.AreEqual(fs.GetAttributes("/toto.txt"), fs.GetAttributes("/titi.txt"));
+        if (IsWindows) AssertEx.AreNotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
         // Because we read titi.txt just before, access time must be different
         // Following test is disabled as it seems unstable with NTFS?
-        // Assert.NotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
-        Assert.Equal(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
+        // AssertEx.AreNotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
+        AssertEx.AreEqual(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
 
         if (IsWindows)
         {
             var creationTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Local);
             fs.SetCreationTime("/toto.txt", creationTime);
-            Assert.Equal(creationTime, fs.GetCreationTime("/toto.txt"));
+            AssertEx.AreEqual(creationTime, fs.GetCreationTime("/toto.txt"));
         }
 
         var lastWriteTime = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Local);
         fs.SetLastWriteTime("/toto.txt", lastWriteTime);
-        Assert.Equal(lastWriteTime, fs.GetLastWriteTime("/toto.txt"));
+        AssertEx.AreEqual(lastWriteTime, fs.GetLastWriteTime("/toto.txt"));
 
         var lastAccessTime = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Local);
         fs.SetLastAccessTime("/toto.txt", lastAccessTime);
-        Assert.Equal(lastAccessTime, fs.GetLastAccessTime("/toto.txt"));
+        AssertEx.AreEqual(lastAccessTime, fs.GetLastAccessTime("/toto.txt"));
 
         if (IsWindows)
         {
-            Assert.NotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
-            Assert.NotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
-            Assert.NotEqual(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
+            AssertEx.AreNotEqual(fs.GetCreationTime("/toto.txt"), fs.GetCreationTime("/titi.txt"));
+            AssertEx.AreNotEqual(fs.GetLastAccessTime("/toto.txt"), fs.GetLastAccessTime("/titi.txt"));
+            AssertEx.AreNotEqual(fs.GetLastWriteTime("/toto.txt"), fs.GetLastWriteTime("/titi.txt"));
         }
 
         // Test MoveFile
         fs.MoveFile("/toto.txt", "/tata.txt");
-        Assert.False(fs.FileExists("/toto.txt"));
-        Assert.True(fs.FileExists("/tata.txt"));
-        Assert.True(fs.FileExists("/titi.txt"));
+        Assert.IsFalse(fs.FileExists("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/tata.txt"));
+        Assert.IsTrue(fs.FileExists("/titi.txt"));
         content = fs.ReadAllText("/tata.txt");
-        Assert.Equal(originalContent, content);
+        AssertEx.AreEqual(originalContent, content);
 
         // Test Enumerate file
         var files = fs.EnumerateFiles("/").Select(p => p.FullName).ToList();
         files.Sort();
-        Assert.Equal(new List<string>() {"/tata.txt", "/titi.txt"}, files);
+        AssertEx.AreEqual(new List<string>() {"/tata.txt", "/titi.txt"}, files);
 
         var dirs = fs.EnumerateDirectories("/").Select(p => p.FullName).ToList();
-        Assert.Empty(dirs);
+        AssertEx.Empty(dirs);
 
         // Check ReplaceFile
         var originalContent2 = "this is a content2";
         fs.WriteAllText("/tata.txt", originalContent2);
         fs.ReplaceFile("/tata.txt", "/titi.txt", "/titi.bak.txt", true);
-        Assert.False(fs.FileExists("/tata.txt"));
-        Assert.True(fs.FileExists("/titi.txt"));
-        Assert.True(fs.FileExists("/titi.bak.txt"));
+        Assert.IsFalse(fs.FileExists("/tata.txt"));
+        Assert.IsTrue(fs.FileExists("/titi.txt"));
+        Assert.IsTrue(fs.FileExists("/titi.bak.txt"));
         content = fs.ReadAllText("/titi.txt");
-        Assert.Equal(originalContent2, content);
+        AssertEx.AreEqual(originalContent2, content);
         content = fs.ReadAllText("/titi.bak.txt");
-        Assert.Equal(originalContent, content);
+        AssertEx.AreEqual(originalContent, content);
 
         // Check File ReadOnly
         if (IsWindows)
@@ -200,12 +200,12 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
 
         // Delete File
         fs.DeleteFile("/titi.txt");
-        Assert.False(fs.FileExists("/titi.txt"));
+        Assert.IsFalse(fs.FileExists("/titi.txt"));
         fs.DeleteFile("/titi.bak.txt");
-        Assert.False(fs.FileExists("/titi.bak.txt"));
+        Assert.IsFalse(fs.FileExists("/titi.bak.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestMoveFileDifferentDirectory()
     {
         fs.WriteAllText("/toto.txt", "content");
@@ -214,13 +214,13 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
 
         fs.MoveFile("/toto.txt", "/dir/titi.txt");
 
-        Assert.False(fs.FileExists("/toto.txt"));
-        Assert.True(fs.FileExists("/dir/titi.txt"));
+        Assert.IsFalse(fs.FileExists("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/dir/titi.txt"));
 
-        Assert.Equal("content", fs.ReadAllText("/dir/titi.txt"));
+        AssertEx.AreEqual("content", fs.ReadAllText("/dir/titi.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestReplaceFileDifferentDirectory()
     {
         fs.WriteAllText("/toto.txt", "content");
@@ -231,44 +231,44 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         fs.CreateDirectory("/dir2");
 
         fs.ReplaceFile("/toto.txt", "/dir/tata.txt", "/dir2/titi.txt", true);
-        Assert.True(fs.FileExists("/dir/tata.txt"));
-        Assert.True(fs.FileExists("/dir2/titi.txt"));
+        Assert.IsTrue(fs.FileExists("/dir/tata.txt"));
+        Assert.IsTrue(fs.FileExists("/dir2/titi.txt"));
 
-        Assert.Equal("content", fs.ReadAllText("/dir/tata.txt"));
-        Assert.Equal("content2", fs.ReadAllText("/dir2/titi.txt"));
+        AssertEx.AreEqual("content", fs.ReadAllText("/dir/tata.txt"));
+        AssertEx.AreEqual("content2", fs.ReadAllText("/dir2/titi.txt"));
 
         fs.ReplaceFile("/dir/tata.txt", "/dir2/titi.txt", "/titi.txt", true);
-        Assert.False(fs.FileExists("/dir/tata.txt"));
-        Assert.True(fs.FileExists("/dir2/titi.txt"));
-        Assert.True(fs.FileExists("/titi.txt"));
+        Assert.IsFalse(fs.FileExists("/dir/tata.txt"));
+        Assert.IsTrue(fs.FileExists("/dir2/titi.txt"));
+        Assert.IsTrue(fs.FileExists("/titi.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileAppend()
     {
         fs.AppendAllText("/toto.txt", "content");
-        Assert.True(fs.FileExists("/toto.txt"));
-        Assert.Equal("content", fs.ReadAllText("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/toto.txt"));
+        AssertEx.AreEqual("content", fs.ReadAllText("/toto.txt"));
 
         fs.AppendAllText("/toto.txt", "content");
-        Assert.True(fs.FileExists("/toto.txt"));
-        Assert.Equal("contentcontent", fs.ReadAllText("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/toto.txt"));
+        AssertEx.AreEqual("contentcontent", fs.ReadAllText("/toto.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileTruncate()
     {
         fs.WriteAllText("/toto.txt", "content");
-        Assert.True(fs.FileExists("/toto.txt"));
-        Assert.Equal("content", fs.ReadAllText("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/toto.txt"));
+        AssertEx.AreEqual("content", fs.ReadAllText("/toto.txt"));
 
         var stream = fs.OpenFile("/toto.txt", FileMode.Truncate, FileAccess.Write);
         stream.Dispose();
-        Assert.Equal<long>(0, fs.GetFileLength("/toto.txt"));
-        Assert.Equal("", fs.ReadAllText("/toto.txt"));
+        AssertEx.AreEqual<long>(0, fs.GetFileLength("/toto.txt"));
+        AssertEx.AreEqual("", fs.ReadAllText("/toto.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestFileExceptions()
     {
         fs.CreateDirectory("/dir1");
@@ -296,9 +296,9 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         Assert.Throws<FileNotFoundException>(() => fs.GetFileLength("/dir1"));
 
         var defaultTime = new DateTime(1601, 01, 01, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
-        Assert.Equal(defaultTime,fs.GetCreationTime("/dest"));
-        Assert.Equal(defaultTime, fs.GetLastWriteTime("/dest"));
-        Assert.Equal(defaultTime, fs.GetLastAccessTime("/dest"));
+        AssertEx.AreEqual(defaultTime,fs.GetCreationTime("/dest"));
+        AssertEx.AreEqual(defaultTime, fs.GetLastWriteTime("/dest"));
+        AssertEx.AreEqual(defaultTime, fs.GetLastAccessTime("/dest"));
 
         if (IsWindows)
         {
@@ -337,13 +337,13 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
             Assert.Throws<DirectoryNotFoundException>(() => fs.ReplaceFile("/toto.txt", "/titi.txt", "/dir/3.txt", true));
 
             fs.WriteAllText("/tata.txt", "yo3");
-            Assert.True(fs.FileExists("/tata.txt"));
+            Assert.IsTrue(fs.FileExists("/tata.txt"));
             fs.ReplaceFile("/toto.txt", "/titi.txt", "/tata.txt", true);
             // TODO: check that tata.txt was correctly removed
         }
     }
 
-    [SkippableFact]
+    [TestMethod]
     public virtual void TestDirectoryDeleteAndOpenFileOnWindows()
     {
         fs.CreateDirectory("/dir");
@@ -360,15 +360,15 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         fs.DeleteDirectory("/dir", true);
 
         var entries = fs.EnumeratePaths("/").ToList();
-        Assert.Empty(entries);
+        AssertEx.Empty(entries);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileMultipleRead()
     {
         fs.WriteAllText("/toto.txt", "content");
 
-        Assert.True(fs.FileExists("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/toto.txt"));
 
         using (var tmp = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read))
         {
@@ -379,11 +379,11 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         var stream2 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
 
         stream1.ReadByte();
-        Assert.Equal<long>(1, stream1.Position);
+        AssertEx.AreEqual<long>(1, stream1.Position);
 
         stream2.ReadByte();
         stream2.ReadByte();
-        Assert.Equal<long>(2, stream2.Position);
+        AssertEx.AreEqual<long>(2, stream2.Position);
 
         stream1.Dispose();
         stream2.Dispose();
@@ -392,29 +392,29 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         fs.WriteAllText("/toto.txt", "content2");
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileReadAndWriteFail()
     {
         fs.WriteAllText("/toto.txt", "content");
 
-        Assert.True(fs.FileExists("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/toto.txt"));
 
         var stream1 = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read);
 
         stream1.ReadByte();
-        Assert.Equal<long>(1, stream1.Position);
+        AssertEx.AreEqual<long>(1, stream1.Position);
 
         // We try to write back on the same file before closing
         Assert.Throws<IOException>(() => fs.WriteAllText("/toto.txt", "content2"));
 
         // Make sure that checking for a file exists or directory exists doesn't throw an exception "being used"
-        Assert.True(fs.FileExists("/toto.txt"));
-        Assert.False(fs.DirectoryExists("/toto.txt"));
+        Assert.IsTrue(fs.FileExists("/toto.txt"));
+        Assert.IsFalse(fs.DirectoryExists("/toto.txt"));
 
         stream1.Dispose();
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileReadAndWriteShared()
     {
         using (var stream1 = fs.OpenFile("/toto.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
@@ -431,10 +431,10 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         }
 
         var content = fs.ReadAllText("/toto.txt");
-        Assert.Equal("adc", content);
+        AssertEx.AreEqual("adc", content);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileReadAndWriteShared2()
     {
         fs.WriteAllText("/toto.txt", "content");
@@ -446,10 +446,10 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
             }
         }
         var content = fs.ReadAllText("/toto.txt");
-        Assert.Equal("content", content);
+        AssertEx.AreEqual("content", content);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestCopyFileToSameFile()
     {
         fs.WriteAllText("/toto.txt", "content");
@@ -463,7 +463,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         Assert.Throws<IOException>(() => fs.CopyFile("/dir/toto.txt", "/dir/toto.txt", false));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestEnumeratePaths()
     {
         fs.CreateDirectory("/dir1/a/b");
@@ -481,7 +481,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         var entries = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Both).ToList<UPath>();
         entries.Sort();
 
-        Assert.Equal(new List<UPath>()
+        AssertEx.AreEqual(new List<UPath>()
             {
                 "/dir1",
                 "/dir1/a",
@@ -502,7 +502,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         var folders = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.Directory).ToList<UPath>();
         folders.Sort();
 
-        Assert.Equal(new List<UPath>()
+        AssertEx.AreEqual(new List<UPath>()
             {
                 "/dir1",
                 "/dir1/a",
@@ -518,7 +518,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         var files = fs.EnumeratePaths("/", "*", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
         files.Sort();
 
-        Assert.Equal(new List<UPath>()
+        AssertEx.AreEqual(new List<UPath>()
             {
                 "/dir1/a/file10.txt",
                 "/dir1/a1/file11.txt",
@@ -531,7 +531,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
 
         folders = fs.EnumeratePaths("/dir1", "a", SearchOption.AllDirectories, SearchTarget.Directory).ToList<UPath>();
         folders.Sort();
-        Assert.Equal(new List<UPath>()
+        AssertEx.AreEqual(new List<UPath>()
             {
                 "/dir1/a",
             }
@@ -541,7 +541,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         files = fs.EnumeratePaths("/dir1", "file1?.txt", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
         files.Sort();
 
-        Assert.Equal(new List<UPath>()
+        AssertEx.AreEqual(new List<UPath>()
             {
                 "/dir1/a/file10.txt",
                 "/dir1/a1/file11.txt",
@@ -551,7 +551,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         files = fs.EnumeratePaths("/", "file?0.txt", SearchOption.AllDirectories, SearchTarget.File).ToList<UPath>();
         files.Sort();
 
-        Assert.Equal(new List<UPath>()
+        AssertEx.AreEqual(new List<UPath>()
             {
                 "/dir1/a/file10.txt",
                 "/dir2/file20.txt",
@@ -559,7 +559,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
             , files);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestMultithreaded()
     {
         fs.CreateDirectory("/dir1");
@@ -614,7 +614,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         fs.DeleteFile("/toto.txt");
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileAppendAndRead()
     {
         fs.WriteAllText("/toto.txt", "content");
@@ -627,7 +627,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileCreateNewAlreadyExist()
     {
         fs.WriteAllText("/toto.txt",  "content");
@@ -647,7 +647,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenFileCreate()
     {
         fs.WriteAllText("/toto.txt", "content");
@@ -656,10 +656,10 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         {
         }
 
-        Assert.Equal(0, fs.GetFileLength("/toto.txt"));
+        AssertEx.AreEqual(0, fs.GetFileLength("/toto.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestMoveDirectorySubFolderFail()
     {
         fs.CreateDirectory("/dir");
@@ -668,7 +668,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         Assert.Throws<IOException>(() => fs.MoveDirectory("/dir", "/dir/dir1/dir2"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestReplaceFileSameFileFail()
     {
         fs.WriteAllText("/toto.txt", "content");
@@ -679,7 +679,7 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         Assert.Throws<IOException>(() => fs.ReplaceFile("/toto.txt", "/tata.txt", "/toto.txt", true));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestStreamSeek()
     {
         //                            0123456
@@ -688,26 +688,26 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         using (var stream = fs.OpenFile("/toto.txt", FileMode.Open, FileAccess.Read))
         {
             stream.Seek(0, SeekOrigin.Begin);
-            Assert.Equal((byte) 'c', stream.ReadByte());
-            Assert.Equal((byte) 'o', stream.ReadByte());
+            AssertEx.AreEqual((byte) 'c', stream.ReadByte());
+            AssertEx.AreEqual((byte) 'o', stream.ReadByte());
 
             stream.Seek(3, SeekOrigin.Begin);
-            Assert.Equal((byte) 't', stream.ReadByte());
+            AssertEx.AreEqual((byte) 't', stream.ReadByte());
 
             stream.Seek(1, SeekOrigin.Current);
-            Assert.Equal((byte) 'n', stream.ReadByte());
+            AssertEx.AreEqual((byte) 'n', stream.ReadByte());
 
             stream.Seek(-3, SeekOrigin.End);
-            Assert.Equal((byte) 'e', stream.ReadByte());
+            AssertEx.AreEqual((byte) 'e', stream.ReadByte());
 
             Assert.Throws<IOException>(() => stream.Seek(-1, SeekOrigin.Begin));
             Assert.Throws<ArgumentOutOfRangeException>(() => stream.Position = -1);
             stream.Position = 0;
-            Assert.Equal((byte) 'c', stream.ReadByte());
+            AssertEx.AreEqual((byte) 'c', stream.ReadByte());
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void TestDispose()
     {
         fs.WriteAllText("/toto.txt", "content");
@@ -718,37 +718,38 @@ public abstract class TestFileSystemCompactBase : TestFileSystemBase
         Assert.Throws<ObjectDisposedException>(() => stream.ReadByte());
         Assert.Throws<ObjectDisposedException>(() => stream.WriteByte(1));
         Assert.Throws<ObjectDisposedException>(() => stream.Position);
-        Assert.False(stream.CanRead);
-        Assert.False(stream.CanSeek);
-        Assert.False(stream.CanWrite);
+        Assert.IsFalse(stream.CanRead);
+        Assert.IsFalse(stream.CanSeek);
+        Assert.IsFalse(stream.CanWrite);
         Assert.Throws<ObjectDisposedException>(() => stream.Flush());
         Assert.Throws<ObjectDisposedException>(() => stream.Length);
         Assert.Throws<ObjectDisposedException>(() => stream.SetLength(0));
         Assert.Throws<ObjectDisposedException>(() => stream.Seek(0, SeekOrigin.Begin));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestDeleteDirectoryNonEmpty()
     {
         fs.CreateDirectory("/dir/dir1");
         Assert.Throws<IOException>(() => fs.DeleteDirectory("/dir", false));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestInvalidCharacter()
     {
         Assert.Throws<NotSupportedException>(() => fs.CreateDirectory("/toto/ta:ta"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestFileAttributes()
     {
         fs.WriteAllText("/toto.txt", "content");
         fs.SetAttributes("/toto.txt", 0);
-        Assert.Equal(FileAttributes.Normal, fs.GetAttributes("/toto.txt"));
+        AssertEx.AreEqual(FileAttributes.Normal, fs.GetAttributes("/toto.txt"));
 
         fs.CreateDirectory("/dir");
         fs.SetAttributes("/dir", 0);
-        Assert.Equal(FileAttributes.Directory, fs.GetAttributes("/dir"));
+        AssertEx.AreEqual(FileAttributes.Directory, fs.GetAttributes("/dir"));
     }
 }
+

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
@@ -6,16 +6,17 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
 
+[TestClass]
 public class TestMemoryFileSystem : TestFileSystemBase
 {
-    [Fact]
+    [TestMethod]
     public void TestCommonRead()
     {
         var fs = GetCommonMemoryFileSystem();
         AssertCommonRead(fs);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestCopyFileSystem()
     {
         var fs = GetCommonMemoryFileSystem();
@@ -26,7 +27,7 @@ public class TestMemoryFileSystem : TestFileSystemBase
         AssertFileSystemEqual(fs, dest);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestCopyFileSystemSubFolder()
     {
         var fs = GetCommonMemoryFileSystem();
@@ -41,21 +42,21 @@ public class TestMemoryFileSystem : TestFileSystemBase
     }
 
 
-    [Fact]
+    [TestMethod]
     public void TestWatcher()
     {
         var fs = GetCommonMemoryFileSystem();
         AssertFileCreatedEventDispatched(fs, "/a", "/a/watched.txt");
     }
 
-    [Fact]
+    [TestMethod]
     public void TestCreatingTopFile()
     {
         var fs = new MemoryFileSystem();
         fs.CreateDirectory("/");
     }
 
-    [Fact]
+    [TestMethod]
     public void TestDispose()
     {
         var memfs = new MemoryFileSystem();
@@ -64,7 +65,7 @@ public class TestMemoryFileSystem : TestFileSystemBase
         Assert.Throws<ObjectDisposedException>(() => memfs.DirectoryExists("/"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestCopyFileCross()
     {
         var fs = new TriggerMemoryFileSystem();
@@ -74,11 +75,11 @@ public class TestMemoryFileSystem : TestFileSystemBase
         var sub2 = new SubFileSystem(fs, "/sub2");
         sub1.WriteAllText("/file.txt", "test");
         sub1.CopyFileCross("/file.txt", sub2, "/file.txt", overwrite: false);
-        Assert.Equal("test", sub2.ReadAllText("/file.txt"));
-        Assert.Equal(TriggerMemoryFileSystem.TriggerType.Copy, fs.Triggered);
+        AssertEx.AreEqual("test", sub2.ReadAllText("/file.txt"));
+        AssertEx.AreEqual(TriggerMemoryFileSystem.TriggerType.Copy, fs.Triggered);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestMoveFileCross()
     {
         var fs = new TriggerMemoryFileSystem();
@@ -88,12 +89,12 @@ public class TestMemoryFileSystem : TestFileSystemBase
         var sub2 = new SubFileSystem(fs, "/sub2");
         sub1.WriteAllText("/file.txt", "test");
         sub1.MoveFileCross("/file.txt", sub2, "/file.txt");
-        Assert.Equal("test", sub2.ReadAllText("/file.txt"));
-        Assert.False(sub1.FileExists("/file.txt"));
-        Assert.Equal(TriggerMemoryFileSystem.TriggerType.Move, fs.Triggered);
+        AssertEx.AreEqual("test", sub2.ReadAllText("/file.txt"));
+        Assert.IsFalse(sub1.FileExists("/file.txt"));
+        AssertEx.AreEqual(TriggerMemoryFileSystem.TriggerType.Move, fs.Triggered);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestMoveFileCrossMount()
     {
         var fs = new TriggerMemoryFileSystem();
@@ -105,9 +106,9 @@ public class TestMemoryFileSystem : TestFileSystemBase
         mount.Mount("/sub2-mount", sub2);
         sub1.WriteAllText("/file.txt", "test");
         sub1.MoveFileCross("/file.txt", mount, "/sub2-mount/file.txt");
-        Assert.Equal("test", sub2.ReadAllText("/file.txt"));
-        Assert.False(sub1.FileExists("/file.txt"));
-        Assert.Equal(TriggerMemoryFileSystem.TriggerType.Move, fs.Triggered);
+        AssertEx.AreEqual("test", sub2.ReadAllText("/file.txt"));
+        Assert.IsFalse(sub1.FileExists("/file.txt"));
+        AssertEx.AreEqual(TriggerMemoryFileSystem.TriggerType.Move, fs.Triggered);
     }
 
     private sealed class TriggerMemoryFileSystem : MemoryFileSystem
@@ -134,3 +135,6 @@ public class TestMemoryFileSystem : TestFileSystemBase
         }
     }
 }
+
+
+

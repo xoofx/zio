@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // This file is licensed under the BSD-Clause 2 license. 
 // See the license.txt file in the project root for more information.
 
@@ -10,9 +10,10 @@ using Zio.FileSystems;
 
 namespace Zio.Tests.FileSystems;
 
+[TestClass]
 public class TestZipArchiveFileSystem : TestFileSystemBase
 {
-    [Fact]
+    [TestMethod]
     public void TestCommonRead()
     {
         var fs = this.GetCommonZipArchiveFileSystem();
@@ -21,7 +22,7 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         this.AssertCommonRead(fs, isWindows: true);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestCopyFileSystem()
     {
         var fs = this.GetCommonZipArchiveFileSystem();
@@ -32,7 +33,7 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         this.AssertFileSystemEqual(fs, dest);
     }
     
-    [Fact]
+    [TestMethod]
     public void TestCopyFileSystemSubFolder()
     {
         var fs = GetCommonZipArchiveFileSystem();
@@ -46,7 +47,7 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         AssertFileSystemEqual(fs, destSubFileSystem);
     }
     
-    [Fact]
+    [TestMethod]
     public void TestWatcher()
     {
         var fs = this.GetCommonZipArchiveFileSystem();
@@ -66,10 +67,10 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
 
         fs.WriteAllText("/a/watched.txt", "test");
         Thread.Sleep(100);
-        Assert.True(gotChange);
+        Assert.IsTrue(gotChange);
     }
     
-    [Fact]
+    [TestMethod]
     public void TestFileEntry()
     {
         var fs = GetCommonZipArchiveFileSystem();
@@ -77,22 +78,22 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         var file = new FileEntry(fs, "/a/a/a1.txt");
         var file2 = new FileEntry(fs, "/a/b.txt");
 
-        Assert.Equal("/a/a/a1.txt", file.ToString());
+        AssertEx.AreEqual("/a/a/a1.txt", file.ToString());
 
-        Assert.Equal("/a/a/a1.txt", file.FullName);
-        Assert.Equal("a1.txt", file.Name);
+        AssertEx.AreEqual("/a/a/a1.txt", file.FullName);
+        AssertEx.AreEqual("a1.txt", file.Name);
 
-        Assert.Equal("b", file2.NameWithoutExtension);
-        Assert.Equal(".txt", file2.ExtensionWithDot);
+        AssertEx.AreEqual("b", file2.NameWithoutExtension);
+        AssertEx.AreEqual(".txt", file2.ExtensionWithDot);
 
-        Assert.True(file.Length > 0);
-        Assert.False(file.IsReadOnly);
+        Assert.IsTrue(file.Length > 0);
+        Assert.IsFalse(file.IsReadOnly);
 
         var dir = file.Directory;
-        Assert.NotNull(dir);
-        Assert.Equal("/a/a", dir.FullName);
+        Assert.IsNotNull(dir);
+        AssertEx.AreEqual("/a/a", dir.FullName);
 
-        Assert.Null(new DirectoryEntry(fs, "/").Parent);
+        Assert.IsNull(new DirectoryEntry(fs, "/").Parent);
 
         var yoyo = new FileEntry(fs, "/a/yoyo.txt");
         using (var file1 = yoyo.Create())
@@ -102,16 +103,16 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
             file1.WriteByte(3);
         }
 
-        Assert.Equal(new byte[] { 1, 2, 3 }, fs.ReadAllBytes("/a/yoyo.txt"));
+        AssertEx.AreEqual(new byte[] { 1, 2, 3 }, fs.ReadAllBytes("/a/yoyo.txt"));
 
         Assert.Throws<FileNotFoundException>(() => fs.GetFileSystemEntry("/wow.txt"));
 
         var file3 = fs.GetFileEntry("/a/b.txt");
-        Assert.True(file3.Exists);
+        Assert.IsTrue(file3.Exists);
 
-        Assert.Null(fs.TryGetFileSystemEntry("/invalid_file"));
-        Assert.IsType<FileEntry>(fs.TryGetFileSystemEntry("/a/b.txt"));
-        Assert.IsType<DirectoryEntry>(fs.TryGetFileSystemEntry("/a"));
+        Assert.IsNull(fs.TryGetFileSystemEntry("/invalid_file"));
+        Assert.IsInstanceOfType<FileEntry>(fs.TryGetFileSystemEntry("/a/b.txt"));
+        Assert.IsInstanceOfType<DirectoryEntry>(fs.TryGetFileSystemEntry("/a"));
 
         Assert.Throws<FileNotFoundException>(() => fs.GetFileEntry("/invalid"));
         Assert.Throws<DirectoryNotFoundException>(() => fs.GetDirectoryEntry("/invalid"));
@@ -122,78 +123,78 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         Assert.Throws<ArgumentException>(() => mydir.CreateSubdirectory("/sub"));
 
         var subFolder = mydir.CreateSubdirectory("sub");
-        Assert.True(subFolder.Exists);
+        Assert.IsTrue(subFolder.Exists);
 
-        Assert.Empty(mydir.EnumerateFiles());
+        AssertEx.Empty(mydir.EnumerateFiles());
 
         var subDirs = mydir.EnumerateDirectories();
-        Assert.Single(subDirs);
-        Assert.Equal("/yoyo/sub", subDirs.First().FullName);
+        AssertEx.Single(subDirs);
+        AssertEx.AreEqual("/yoyo/sub", subDirs.First().FullName);
 
         mydir.Delete();
 
-        Assert.False(mydir.Exists);
-        Assert.False(subFolder.Exists);
+        Assert.IsFalse(mydir.Exists);
+        Assert.IsFalse(subFolder.Exists);
 
         // Test ReadAllText/WriteAllText/AppendAllText/ReadAllBytes/WriteAllBytes
-        Assert.True(file.ReadAllText().Length > 0);
-        Assert.True(file.ReadAllText(Encoding.UTF8).Length > 0);
+        Assert.IsTrue(file.ReadAllText().Length > 0);
+        Assert.IsTrue(file.ReadAllText(Encoding.UTF8).Length > 0);
         file.WriteAllText("abc");
-        Assert.Equal("abc", file.ReadAllText());
+        AssertEx.AreEqual("abc", file.ReadAllText());
         file.WriteAllText("abc", Encoding.UTF8);
-        Assert.Equal("abc", file.ReadAllText(Encoding.UTF8));
+        AssertEx.AreEqual("abc", file.ReadAllText(Encoding.UTF8));
 
         file.AppendAllText("def");
-        Assert.Equal("abcdef", file.ReadAllText());
+        AssertEx.AreEqual("abcdef", file.ReadAllText());
         file.AppendAllText("ghi", Encoding.UTF8);
-        Assert.Equal("abcdefghi", file.ReadAllText());
+        AssertEx.AreEqual("abcdefghi", file.ReadAllText());
 
         var lines = file.ReadAllLines();
-        Assert.Single(lines);
-        Assert.Equal("abcdefghi", lines[0]);
+        AssertEx.Single(lines);
+        AssertEx.AreEqual("abcdefghi", lines[0]);
 
         lines = file.ReadAllLines(Encoding.UTF8);
-        Assert.Single(lines);
-        Assert.Equal("abcdefghi", lines[0]);
+        AssertEx.Single(lines);
+        AssertEx.AreEqual("abcdefghi", lines[0]);
 
-        Assert.Equal(new byte[] { 1, 2, 3 }, yoyo.ReadAllBytes());
+        AssertEx.AreEqual(new byte[] { 1, 2, 3 }, yoyo.ReadAllBytes());
         yoyo.WriteAllBytes(new byte[] { 1, 2, 3, 4 });
-        Assert.Equal(new byte[] { 1, 2, 3, 4 }, yoyo.ReadAllBytes());
+        AssertEx.AreEqual(new byte[] { 1, 2, 3, 4 }, yoyo.ReadAllBytes());
     }
 
-    [Fact]
+    [TestMethod]
     public void TestGetParentDirectory()
     {
         var fs = new ZipArchiveFileSystem();
         var fileEntry = new FileEntry(fs, "/test/tata/titi.txt");
         // Shoud not throw an error
         var directory = fileEntry.Directory;
-        Assert.False(directory.Exists);
-        Assert.Equal(UPath.Root / "test/tata", directory.Path);
+        Assert.IsFalse(directory.Exists);
+        AssertEx.AreEqual(UPath.Root / "test/tata", directory.Path);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestReplaceFile()
     {
         var fs = GetCommonZipArchiveFileSystem();
 
         var file = new FileEntry(fs, "/a/b.txt");
         file.WriteAllText("abc");
-        Assert.Equal("abc", file.ReadAllText());
+        AssertEx.AreEqual("abc", file.ReadAllText());
         var file2 = new FileEntry(fs, "/a/copy.txt");
         file2.WriteAllText("def");
-        Assert.Equal("def", file2.ReadAllText());
+        AssertEx.AreEqual("def", file2.ReadAllText());
 
         fs.ReplaceFile(file.Path, new UPath("/a/copy.txt"), new UPath("/b/backup.txt"), true);
-        Assert.False(file.Exists);
+        Assert.IsFalse(file.Exists);
 
         var copy = fs.GetFileEntry("/a/copy.txt");
-        Assert.True(copy.Exists);
-        Assert.Equal("abc", copy.ReadAllText());
-        Assert.Equal("def", fs.GetFileEntry("/b/backup.txt").ReadAllText());
+        Assert.IsTrue(copy.Exists);
+        AssertEx.AreEqual("abc", copy.ReadAllText());
+        AssertEx.AreEqual("def", fs.GetFileEntry("/b/backup.txt").ReadAllText());
     }
 
-    [Fact]
+    [TestMethod]
     public void TestOpenStreamsMultithreaded()
     {
         var memStream = new MemoryStream();
@@ -230,51 +231,51 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
     }
 
 
-    [Theory]
-    [InlineData("TestData/OsZips/Linux.zip")]
-    [InlineData("TestData/OsZips/Windows.zip")]
+    [TestMethod]
+    [DataRow("TestData/OsZips/Linux.zip")]
+    [DataRow("TestData/OsZips/Windows.zip")]
     public void TestCaseInSensitiveZip(string path)
     {
         using var stream = File.OpenRead(path);
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
         var fs = new ZipArchiveFileSystem(archive);
 
-        Assert.True(fs.DirectoryExists("/Folder"));
-        Assert.True(fs.DirectoryExists("/folder"));
+        Assert.IsTrue(fs.DirectoryExists("/Folder"));
+        Assert.IsTrue(fs.DirectoryExists("/folder"));
 
-        Assert.False(fs.FileExists("/Folder"));
-        Assert.False(fs.FileExists("/folder"));
+        Assert.IsFalse(fs.FileExists("/Folder"));
+        Assert.IsFalse(fs.FileExists("/folder"));
 
-        Assert.True(fs.FileExists("/Folder/File.txt"));
-        Assert.True(fs.FileExists("/folder/file.txt"));
+        Assert.IsTrue(fs.FileExists("/Folder/File.txt"));
+        Assert.IsTrue(fs.FileExists("/folder/file.txt"));
 
-        Assert.False(fs.DirectoryExists("/Folder/file.txt"));
-        Assert.False(fs.DirectoryExists("/folder/File.txt"));
+        Assert.IsFalse(fs.DirectoryExists("/Folder/file.txt"));
+        Assert.IsFalse(fs.DirectoryExists("/folder/File.txt"));
     }
 
-    [Theory]
-    [InlineData("TestData/OsZips/Linux.zip")]
-    [InlineData("TestData/OsZips/Windows.zip")]
+    [TestMethod]
+    [DataRow("TestData/OsZips/Linux.zip")]
+    [DataRow("TestData/OsZips/Windows.zip")]
     public void TestCaseSensitiveZip(string path)
     {
         using var stream = File.OpenRead(path);
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
         var fs = new ZipArchiveFileSystem(archive, true);
 
-        Assert.True(fs.DirectoryExists("/Folder"));
-        Assert.False(fs.DirectoryExists("/folder"));
+        Assert.IsTrue(fs.DirectoryExists("/Folder"));
+        Assert.IsFalse(fs.DirectoryExists("/folder"));
 
-        Assert.False(fs.FileExists("/Folder"));
-        Assert.False(fs.FileExists("/folder"));
+        Assert.IsFalse(fs.FileExists("/Folder"));
+        Assert.IsFalse(fs.FileExists("/folder"));
 
-        Assert.True(fs.FileExists("/Folder/File.txt"));
-        Assert.False(fs.FileExists("/folder/file.txt"));
+        Assert.IsTrue(fs.FileExists("/Folder/File.txt"));
+        Assert.IsFalse(fs.FileExists("/folder/file.txt"));
 
-        Assert.False(fs.DirectoryExists("/Folder/file.txt"));
-        Assert.False(fs.DirectoryExists("/folder/File.txt"));
+        Assert.IsFalse(fs.DirectoryExists("/Folder/file.txt"));
+        Assert.IsFalse(fs.DirectoryExists("/folder/File.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestSaveStream()
     {
         var stream = new MemoryStream();
@@ -288,10 +289,10 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
 
         using (var fs2 = new ZipArchiveFileSystem(stream, ZipArchiveMode.Read, leaveOpen: true))
         {
-            Assert.Equal("abc", fs2.ReadAllText("/a/b.txt"));
+            AssertEx.AreEqual("abc", fs2.ReadAllText("/a/b.txt"));
         }
 
-        Assert.Equal("abc", fs.ReadAllText("/a/b.txt"));
+        AssertEx.AreEqual("abc", fs.ReadAllText("/a/b.txt"));
         fs.WriteAllText("/a/b.txt", "def");
         fs.Save();
 
@@ -299,11 +300,11 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
 
         using (var fs2 = new ZipArchiveFileSystem(stream, ZipArchiveMode.Read, leaveOpen: true))
         {
-            Assert.Equal("def", fs2.ReadAllText("/a/b.txt"));
+            AssertEx.AreEqual("def", fs2.ReadAllText("/a/b.txt"));
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void TestSaveFile()
     {
         var path = Path.Combine(SystemPath, Guid.NewGuid().ToString("N") + ".zip");
@@ -312,13 +313,13 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         {
             using var fs = new ZipArchiveFileSystem(path);
 
-            Assert.Equal(0, new FileInfo(path).Length);
+            AssertEx.AreEqual(0, new FileInfo(path).Length);
 
             fs.WriteAllText("/a/b.txt", "abc");
             fs.Save();
 
             // We cannot check the content because the file is still open
-            Assert.NotEqual(0, new FileInfo(path).Length);
+            AssertEx.AreNotEqual(0, new FileInfo(path).Length);
 
             // Ensure we can save multiple times
             fs.WriteAllText("/a/b.txt", "def");
@@ -330,22 +331,22 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         }
     }
 
-    [Theory]
-    [InlineData("TestData/RootFiles/WithoutRootSlash.zip", false)]
-    [InlineData("TestData/RootFiles/WithRootSlash.zip", true)]
+    [TestMethod]
+    [DataRow("TestData/RootFiles/WithoutRootSlash.zip", false)]
+    [DataRow("TestData/RootFiles/WithRootSlash.zip", true)]
     public void TestReadDifferentSlash(string zipPath, bool leadingRootSlash)
     {
         using var fs = new ZipArchiveFileSystem(zipPath);
 
-        Assert.Equal(leadingRootSlash, fs.LeadingSlashInArchive);
+        AssertEx.AreEqual(leadingRootSlash, fs.LeadingSlashInArchive);
 
-        Assert.True(fs.FileExists("/Test.txt"));
-        Assert.Equal("Test", fs.ReadAllText("/Test.txt"));
+        Assert.IsTrue(fs.FileExists("/Test.txt"));
+        AssertEx.AreEqual("Test", fs.ReadAllText("/Test.txt"));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
     public void TestWriteDifferentSlash(bool leadingRootSlash)
     {
         using var memStream = new MemoryStream();
@@ -354,7 +355,7 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
         {
             fs.LeadingSlashInArchive = leadingRootSlash;
 
-            Assert.Equal(leadingRootSlash, fs.LeadingSlashInArchive);
+            AssertEx.AreEqual(leadingRootSlash, fs.LeadingSlashInArchive);
 
             fs.WriteAllText("/Test.txt", "Test");
         }
@@ -363,16 +364,19 @@ public class TestZipArchiveFileSystem : TestFileSystemBase
 
         using (var fs = new ZipArchiveFileSystem(memStream, leaveOpen: true))
         {
-            Assert.Equal(leadingRootSlash, fs.LeadingSlashInArchive);
+            AssertEx.AreEqual(leadingRootSlash, fs.LeadingSlashInArchive);
 
-            Assert.True(fs.FileExists("/Test.txt"));
-            Assert.Equal("Test", fs.ReadAllText("/Test.txt"));
+            Assert.IsTrue(fs.FileExists("/Test.txt"));
+            AssertEx.AreEqual("Test", fs.ReadAllText("/Test.txt"));
         }
 
         memStream.Seek(0, SeekOrigin.Begin);
 
         using var zipArchive = new ZipArchive(memStream, ZipArchiveMode.Read);
 
-        Assert.Equal(leadingRootSlash, zipArchive.Entries[0].FullName.StartsWith("/"));
+        AssertEx.AreEqual(leadingRootSlash, zipArchive.Entries[0].FullName.StartsWith("/"));
     }
 }
+
+
+
