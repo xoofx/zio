@@ -3,6 +3,7 @@
 // See the license.txt file in the project root for more information.
 
 using System.IO;
+using System.Reflection;
 using System.Security.Principal;
 using System.Text;
 using Zio.FileSystems;
@@ -49,6 +50,19 @@ public class TestSubFileSystem : TestFileSystemBase
         subFileSystem.WriteAllText("/test.txt", "yo");
         var text = fs.ReadAllText(subFolder + "/test.txt");
         AssertEx.AreEqual("yo", text);
+    }
+
+    [TestMethod]
+    public void TestConvertPathToDelegateRejectsEscapes()
+    {
+        var fs = new MemoryFileSystem();
+        fs.CreateDirectory("/sandbox");
+
+        var subFs = new TestableSubFileSystem(fs, "/sandbox");
+        var unsafePath = CreateUnsafePath("/..");
+
+        var exception = Assert.Throws<UnauthorizedAccessException>(() => subFs.ConvertPathToDelegateForTest(unsafePath));
+        StringAssert.Contains(exception.Message, "/sandbox");
     }
 
     [TestMethod]
@@ -192,6 +206,23 @@ public class TestSubFileSystem : TestFileSystemBase
             SafeDeleteDirectory(systemPathSource);
             SafeDeleteDirectory(systemPathDest);
         }
+    }
+
+    private static UPath CreateUnsafePath(string path)
+    {
+        var ctor = typeof(UPath).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, binder: null, new[] { typeof(string), typeof(bool) }, modifiers: null);
+        Assert.IsNotNull(ctor);
+        return (UPath)ctor.Invoke(new object[] { path, true });
+    }
+
+    private sealed class TestableSubFileSystem : SubFileSystem
+    {
+        public TestableSubFileSystem(IFileSystem fileSystem, UPath subPath)
+            : base(fileSystem, subPath, owned: false)
+        {
+        }
+
+        public UPath ConvertPathToDelegateForTest(UPath path) => base.ConvertPathToDelegate(path);
     }
 }
 

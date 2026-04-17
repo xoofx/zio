@@ -385,6 +385,7 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
         var parts = internalHelper.Slices;
         parts.Clear();
 
+        var hasTrailingDirectorySeparator = path.Length > 0 && (path[path.Length - 1] == DirectorySeparator || path[path.Length - 1] == '\\');
         var lastIndex = 0;
         var i = 0;
         var processParts = false;
@@ -407,12 +408,6 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
             }
             else if (c == DirectorySeparator || c == '\\')
             {
-                // optimization: If we don't expect to process the path
-                // and we only have a trailing / or \\, then just perform
-                // a substring on the path
-                if (!processParts && i + 1 == path.Length)
-                    return path.Substring(0, path.Length - 1);
-
                 if (c == '\\')
                     processParts = true;
 
@@ -456,7 +451,7 @@ public readonly struct UPath : IEquatable<UPath>, IComparable<UPath>
 
         // Optimized path if we don't need to compact the path
         if (!processParts)
-            return path;
+            return hasTrailingDirectorySeparator ? path.Substring(0, path.Length - 1) : path;
 
         // Slow path, we need to process the parts
         for (i = 0; i < parts.Count; i++)

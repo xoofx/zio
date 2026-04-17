@@ -73,7 +73,13 @@ public class SubFileSystem : ComposeFileSystem
     protected override UPath ConvertPathToDelegate(UPath path)
     {
         var safePath = path.ToRelative();
-        return SubPath / safePath;
+        var delegatePath = SubPath / safePath;
+        if (delegatePath != SubPath && !delegatePath.IsInDirectory(SubPath, true))
+        {
+            throw new UnauthorizedAccessException($"The path `{path}` escapes the sub filesystem root `{SubPath}`");
+        }
+
+        return delegatePath;
     }
 
     /// <inheritdoc />

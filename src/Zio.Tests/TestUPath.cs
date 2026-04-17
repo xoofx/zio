@@ -24,6 +24,7 @@ public class TestUPath
 
     // Tests with "."
     [DataRow(".", ".")]
+    [DataRow("/./", "/")]
     [DataRow("/./a", "/a")]
     [DataRow("/a/./b", "/a/b")]
     [DataRow("./a/b", "a/b")]
@@ -374,7 +375,11 @@ public class TestUPath
     public void TestExpectedException()
     {
         Assert.Throws<ArgumentException>(() => new UPath("/../a"));
+        Assert.Throws<ArgumentException>(() => new UPath("/../"));
+        Assert.Throws<ArgumentException>(() => new UPath("/..\\"));
         Assert.Throws<ArgumentException>(() => new UPath("..."));
+        Assert.Throws<ArgumentException>(() => new UPath("/.../"));
+        Assert.Throws<ArgumentException>(() => new UPath("/...\\"));
         Assert.Throws<ArgumentException>(() => new UPath("a/..."));
         Assert.Throws<ArgumentException>(() => new UPath(".../a"));
         Assert.Throws<ArgumentException>(() => UPath.Combine("/", ".."));
