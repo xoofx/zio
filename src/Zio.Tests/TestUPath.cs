@@ -331,6 +331,34 @@ public class TestUPath
     }
 
     [TestMethod]
+    // Case-insensitive matches that ordinal rejects
+    [DataRow("/A/b", "/a", true, StringComparison.OrdinalIgnoreCase, true)]
+    [DataRow("/A/b", "/a", true, StringComparison.Ordinal, false)]
+
+    // Exact match with different casing
+    [DataRow("/FOO", "/foo", true, StringComparison.OrdinalIgnoreCase, true)]
+    [DataRow("/FOO", "/foo", true, StringComparison.Ordinal, false)]
+
+    // Boundary: not a real child regardless of comparison
+    [DataRow("/foobar", "/foo", true, StringComparison.OrdinalIgnoreCase, false)]
+    [DataRow("/FOOBAR", "/foo", true, StringComparison.OrdinalIgnoreCase, false)]
+
+    // Non-recursive honors the comparison too
+    [DataRow("/A/b", "/a", false, StringComparison.OrdinalIgnoreCase, true)]
+    [DataRow("/A/b/c", "/a", false, StringComparison.OrdinalIgnoreCase, false)]
+
+    // Multi-segment case variants (dataset: /a/b/c vs /A/B/C)
+    [DataRow("/A/B/C", "/a/b/c", true, StringComparison.OrdinalIgnoreCase, true)]
+    [DataRow("/a/b/c", "/A/B/C", true, StringComparison.OrdinalIgnoreCase, true)]
+    [DataRow("/A/B/C", "/a/b/c", true, StringComparison.Ordinal, false)]
+    public void TestIsInDirectoryWithComparison(string path1, string directory, bool recursive, StringComparison comparisonType, bool expected)
+    {
+        var path = (UPath)path1;
+        var result = path.IsInDirectory(directory, recursive, comparisonType);
+        AssertEx.AreEqual(expected, result);
+    }
+
+    [TestMethod]
     public void TestSplit()
     {
         AssertEx.AreEqual(new List<string>(), ((UPath)"").Split());

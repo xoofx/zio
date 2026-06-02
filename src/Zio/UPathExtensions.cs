@@ -290,7 +290,17 @@ public static class UPathExtensions
     /// <param name="directory">The directory to check the path against.</param>
     /// <param name="recursive">True to check if it is anywhere in the directory, false to check if it is directly in the directory.</param>
     /// <returns>True when the path is in the given directory.</returns>
-    public static bool IsInDirectory(this UPath path, UPath directory, bool recursive)
+    public static bool IsInDirectory(this UPath path, UPath directory, bool recursive) => path.IsInDirectory(directory, recursive, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Checks if the path is in the given directory. Does not check if the paths exist.
+    /// </summary>
+    /// <param name="path">The path to check.</param>
+    /// <param name="directory">The directory to check the path against.</param>
+    /// <param name="recursive">True to check if it is anywhere in the directory, false to check if it is directly in the directory.</param>
+    /// <param name="comparisonType">The string comparison used to match the directory prefix (e.g. <see cref="StringComparison.Ordinal"/>, the default used by the other overload).</param>
+    /// <returns>True when the path is in the given directory.</returns>
+    public static bool IsInDirectory(this UPath path, UPath directory, bool recursive, StringComparison comparisonType)
     {
         path.AssertNotNull();
         directory.AssertNotNull(nameof(directory));
@@ -303,7 +313,7 @@ public static class UPathExtensions
         var target = path.FullName;
         var dir = directory.FullName;
 
-        if (target.Length < dir.Length || !target.StartsWith(dir, StringComparison.Ordinal))
+        if (target.Length < dir.Length || !target.StartsWith(dir, comparisonType))
         {
             return false;
         }
