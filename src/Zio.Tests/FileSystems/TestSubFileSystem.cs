@@ -66,6 +66,59 @@ public class TestSubFileSystem : TestFileSystemBase
     }
 
     [TestMethod]
+    public void TestConvertPathFromDelegateIsOrdinalByDefault()
+    {
+        var fs = new MemoryFileSystem();
+        fs.CreateDirectory("/sandbox");
+
+        var subFs = new TestableSubFileSystem(fs, "/sandbox");
+
+        // Matching casing strips the sub path prefix.
+        AssertEx.AreEqual((UPath)"/foo.txt", subFs.ConvertPathFromDelegateForTest("/sandbox/foo.txt"));
+
+        // A differently-cased prefix is not rooted under the default ordinal matching.
+        Assert.Throws<InvalidOperationException>(() => subFs.ConvertPathFromDelegateForTest("/SANDBOX/foo.txt"));
+    }
+
+    [TestMethod]
+    public void TestConvertPathFromDelegateOrdinalIgnoreCase()
+    {
+        var fs = new MemoryFileSystem();
+        fs.CreateDirectory("/sandbox");
+
+        var subFs = new TestableSubFileSystem(fs, "/sandbox", StringComparison.OrdinalIgnoreCase);
+
+        // With case-insensitive matching, a differently-cased delegate prefix is stripped correctly.
+        AssertEx.AreEqual((UPath)"/foo.txt", subFs.ConvertPathFromDelegateForTest("/SANDBOX/foo.txt"));
+    }
+
+    [TestMethod]
+    // Section 4: case-insensitive prefix strip. Assumes the delegate already resolved on-disk casing,
+    // so SubFileSystem is doing string-compare only.
+    [DataRow("/a/b", "/A/B/c.txt", "/c.txt")]
+    [DataRow("/A/B", "/a/b/c.txt", "/c.txt")]
+    [DataRow("/a/b", "/A/B/C/d.txt", "/C/d.txt")]
+    public void TestConvertPathFromDelegateOrdinalIgnoreCasePartialPaths(string subPath, string delegatePath, string expected)
+    {
+        var fs = new MemoryFileSystem();
+        fs.CreateDirectory(subPath);
+
+        var subFs = new TestableSubFileSystem(fs, subPath, StringComparison.OrdinalIgnoreCase);
+        AssertEx.AreEqual((UPath)expected, subFs.ConvertPathFromDelegateForTest(delegatePath));
+    }
+
+    [TestMethod]
+    public void TestOrdinalIgnoreCaseConstructorValidatesDirectoryExists()
+    {
+        var fs = new MemoryFileSystem();
+
+        // The comparisonType overload still requires the sub path to exist in the delegate;
+        // the comparison only affects prefix matching, not the existence check.
+        Assert.Throws<DirectoryNotFoundException>(
+            () => new SubFileSystem(fs, "/missing", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
     public void TestWatcher()
     {
         var fs = GetCommonMemoryFileSystem();
@@ -123,6 +176,61 @@ public class TestSubFileSystem : TestFileSystemBase
         physicalFs.WriteAllText($"{physicalDir}{filePath}", "test");
 
         Assert.IsTrue(waitHandle.WaitOne(100));
+    }
+
+    [TestMethod]
+    [DataRow(StringComparison.OrdinalIgnoreCase, true)]
+    [DataRow(StringComparison.Ordinal, false)]
+    public void TestWatcherOrdinalIgnoreCaseConversion(StringComparison comparisonType, bool shouldRaise)
+    {
+        var fs = new TriggerableWatchFileSystem();
+        fs.CreateDirectory("/sandbox");
+
+        var subFs = new SubFileSystem(fs, "/sandbox", comparisonType);
+        var watcher = subFs.Watch("/");
+        watcher.IncludeSubdirectories = true;
+        watcher.EnableRaisingEvents = true;
+
+        var waitHandle = new ManualResetEvent(false);
+        watcher.Created += (sender, args) =>
+        {
+            if (args.FullPath == "/foo.txt")
+            {
+                waitHandle.Set();
+            }
+        };
+
+        // The delegate emits an event with a differently-cased sub-path prefix.
+        fs.LastWatcher.TriggerCreated("/SANDBOX/foo.txt");
+
+        Assert.AreEqual(shouldRaise, waitHandle.WaitOne(100));
+    }
+
+    [TestMethod]
+    public void TestWatcherOrdinalByDefault()
+    {
+        var fs = new TriggerableWatchFileSystem();
+        fs.CreateDirectory("/sandbox");
+
+        // Default constructor - no comparisonType, so matching is ordinal (case-sensitive).
+        var subFs = new SubFileSystem(fs, "/sandbox");
+        var watcher = subFs.Watch("/");
+        watcher.IncludeSubdirectories = true;
+        watcher.EnableRaisingEvents = true;
+
+        var waitHandle = new ManualResetEvent(false);
+        watcher.Created += (sender, args) =>
+        {
+            if (args.FullPath == "/foo.txt")
+            {
+                waitHandle.Set();
+            }
+        };
+
+        // A differently-cased prefix is not rooted under the default ordinal matching, so it is dropped.
+        fs.LastWatcher.TriggerCreated("/SANDBOX/foo.txt");
+
+        Assert.IsFalse(waitHandle.WaitOne(100));
     }
 
     [TestMethod]
@@ -222,7 +330,42 @@ public class TestSubFileSystem : TestFileSystemBase
         {
         }
 
+        public TestableSubFileSystem(IFileSystem fileSystem, UPath subPath, StringComparison comparisonType)
+            : base(fileSystem, subPath, comparisonType, owned: false)
+        {
+        }
+
         public UPath ConvertPathToDelegateForTest(UPath path) => base.ConvertPathToDelegate(path);
+
+        public UPath ConvertPathFromDelegateForTest(UPath path) => base.ConvertPathFromDelegate(path);
+    }
+
+    /// <summary>
+    /// A memory filesystem whose watcher can be triggered manually with an arbitrary (e.g. differently-cased)
+    /// path, used to drive the <see cref="SubFileSystem"/> watcher conversion in isolation.
+    /// </summary>
+    private sealed class TriggerableWatchFileSystem : MemoryFileSystem
+    {
+        public TriggerableWatcher LastWatcher { get; private set; }
+
+        protected override IFileSystemWatcher WatchImpl(UPath path)
+        {
+            LastWatcher = new TriggerableWatcher(this, path);
+            return LastWatcher;
+        }
+    }
+
+    private sealed class TriggerableWatcher : Zio.FileSystems.FileSystemWatcher
+    {
+        public TriggerableWatcher(IFileSystem fileSystem, UPath path) : base(fileSystem, path)
+        {
+        }
+
+        // Skip the delegate watcher's own event filtering so the triggered event reaches the SubFileSystem watcher under test.
+        protected override bool ShouldRaiseEventImpl(FileChangedEventArgs args) => true;
+
+        public void TriggerCreated(UPath fullPath)
+            => RaiseCreated(new FileChangedEventArgs(FileSystem, WatcherChangeTypes.Created, fullPath));
     }
 }
 

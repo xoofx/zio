@@ -15,6 +15,8 @@ namespace Zio.FileSystems;
 [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
 public class SubFileSystem : ComposeFileSystem
 {
+    private readonly StringComparison _comparisonType = StringComparison.Ordinal;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SubFileSystem"/> class.
     /// </summary>
@@ -29,6 +31,20 @@ public class SubFileSystem : ComposeFileSystem
         {
             throw NewDirectoryNotFoundException(SubPath);
         }
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubFileSystem"/> class with a case sensitivity option.
+    /// </summary>
+    /// <param name="fileSystem">The file system to create a view from.</param>
+    /// <param name="subPath">The sub path view to create filesystem.</param>
+    /// <param name="comparisonType">Specifies how the sub path prefix is matched (<see cref="StringComparison.Ordinal"/> by default)</param>
+    /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
+    /// <exception cref="DirectoryNotFoundException">If the directory subPath does not exist in the delegate FileSystem</exception>
+    public SubFileSystem(IFileSystem fileSystem, UPath subPath, StringComparison comparisonType, bool owned = true)
+    : this(fileSystem, subPath, owned)
+    {
+        _comparisonType = comparisonType;
     }
 
     /// <summary>
@@ -60,13 +76,16 @@ public class SubFileSystem : ComposeFileSystem
 
         protected override UPath? TryConvertPath(UPath pathFromEvent)
         {
-            if (!pathFromEvent.IsInDirectory(_fileSystem.SubPath, true))
+            if (!pathFromEvent.IsInDirectory(_fileSystem.SubPath, true, _fileSystem._comparisonType))
             {
                 return null;
             }
 
             return _fileSystem.ConvertPathFromDelegate(pathFromEvent);
         }
+
+        protected override bool ShouldRaiseEventImpl(FileChangedEventArgs args)
+            => args.FullPath.IsInDirectory(Path, IncludeSubdirectories, _fileSystem._comparisonType);
     }
 
     /// <inheritdoc />
@@ -74,7 +93,7 @@ public class SubFileSystem : ComposeFileSystem
     {
         var safePath = path.ToRelative();
         var delegatePath = SubPath / safePath;
-        if (delegatePath != SubPath && !delegatePath.IsInDirectory(SubPath, true))
+        if (delegatePath != SubPath && !delegatePath.IsInDirectory(SubPath, true)) // stays ordinal, casing has to match
         {
             throw new UnauthorizedAccessException($"The path `{path}` escapes the sub filesystem root `{SubPath}`");
         }
@@ -86,7 +105,7 @@ public class SubFileSystem : ComposeFileSystem
     protected override UPath ConvertPathFromDelegate(UPath path)
     {
         var fullPath = path.FullName;
-        if (!fullPath.StartsWith(SubPath.FullName, StringComparison.Ordinal) || (fullPath.Length > SubPath.FullName.Length && fullPath[SubPath.FullName.Length] != UPath.DirectorySeparator))
+        if (!fullPath.StartsWith(SubPath.FullName, _comparisonType) || (fullPath.Length > SubPath.FullName.Length && fullPath[SubPath.FullName.Length] != UPath.DirectorySeparator))
         {
             // More a safe guard, as it should never happen, but if a delegate filesystem doesn't respect its root path
             // we are throwing an exception here
