@@ -421,9 +421,9 @@ If a PhysicalFileSystem override is ever used to resolve case-sensitive filesyst
 
 ```c#
 var fs = new PhysicalFileSystem();
-var subfs = new SubFileSystem(fs, "/mnt/c/Temp", StringComparison.OrdinalIgnoreCase);
+var subfs = new SubFileSystem(fs, "/mnt/c/Temp", owned: true, isCaseSensitive: false);
 
-// With OrdinalIgnoreCase, a delegate path that differs only in the casing of the sub-path prefix
+// With isCaseSensitive: false, a delegate path that differs only in the casing of the sub-path prefix
 // still resolves instead of throwing "not rooted to the subpath": if the delegate reports
 // "/mnt/c/TEMP/Logs/today.txt", the sub filesystem exposes it as "/Logs/today.txt".
 
