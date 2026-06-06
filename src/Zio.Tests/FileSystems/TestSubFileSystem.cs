@@ -252,6 +252,33 @@ public class TestSubFileSystem : TestFileSystemBase
     }
 
     [TestMethod]
+    public void TestWatcherCaseInsensitiveRaisesDifferentlyCasedSubDirectory()
+    {
+        var fs = new TriggerableWatchFileSystem();
+        fs.CreateDirectory("/root/sub");
+
+        // Watching a sub-directory (not the root): the converted event keeps the delegate's casing for the
+        // sub-directory segment, so only ShouldRaiseEventImpl's case-insensitive compare keeps it from being dropped.
+        var subFs = new SubFileSystem(fs, "/root", owned: true, isCaseSensitive: false);
+        var watcher = subFs.Watch("/sub");
+        watcher.IncludeSubdirectories = true;
+        watcher.EnableRaisingEvents = true;
+
+        var waitHandle = new ManualResetEvent(false);
+        watcher.Created += (sender, args) =>
+        {
+            if (args.FullPath == "/Sub/foo.txt")
+            {
+                waitHandle.Set();
+            }
+        };
+
+        fs.LastWatcher.TriggerCreated("/root/Sub/foo.txt");
+
+        Assert.IsTrue(waitHandle.WaitOne(100));
+    }
+
+    [TestMethod]
     public void TestResolvePath()
     {
         var fs = GetCommonMemoryFileSystem();
