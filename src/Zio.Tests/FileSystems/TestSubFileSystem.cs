@@ -41,6 +41,25 @@ public class TestSubFileSystem : TestFileSystemBase
     }
 
     [TestMethod]
+    [DataRow("/addons", "/ADDONS/foo.txt", "/foo.txt")]  // flat:   sfs /addons  <-  pfs /ADDONS
+    [DataRow("/a/b", "/A/B/foo.txt", "/foo.txt")]         // nested:  sfs /a/b     <-  pfs /A/B
+    public void TestBasicCaseInsensitive(string sfsSubPath, string pfsDelegatePath, string expected)
+    {
+        // mirrors TestBasic but it explicitly requests a case-insensitive comparison and checks that the overload
+        // is working as intended
+        var fs = new DifferentlyCasedEnumerateFileSystem(pfsDelegatePath);
+        fs.CreateDirectory(sfsSubPath);
+
+        // Through the public EnumeratePaths surface, a differently-cased delegate (pfs) prefix maps into the sfs view.
+        var subfs = new SubFileSystem(fs, sfsSubPath, owned: true, isCaseSensitive: false);
+        AssertEx.AreEqual((UPath)expected, subfs.EnumeratePaths("/").Single());
+
+        // Without the flag the pfs-cased prefix is unrooted, so the same enumeration throws.
+        var sensitive = new SubFileSystem(fs, sfsSubPath);
+        Assert.Throws<InvalidOperationException>(() => sensitive.EnumeratePaths("/").ToList());
+    }
+
+    [TestMethod]
     public void TestGetOrCreateFileSystem()
     {
         var fs = new MemoryFileSystem();
@@ -66,56 +85,46 @@ public class TestSubFileSystem : TestFileSystemBase
     }
 
     [TestMethod]
-    public void TestConvertPathFromDelegateIsOrdinalByDefault()
+    [DataRow("/sandbox", "/sandbox/foo.txt", "/foo.txt", "/SANDBOX/foo.txt", true)]   // flat, sensitive
+    [DataRow("/sandbox", "/sandbox/foo.txt", "/foo.txt", "/SANDBOX/foo.txt", false)]  // flat, insensitive
+    [DataRow("/a/b", "/a/b/c.txt", "/c.txt", "/A/B/c.txt", true)]                     // nested, sensitive
+    [DataRow("/a/b", "/a/b/c.txt", "/c.txt", "/A/B/c.txt", false)]                    // nested, insensitive
+    [DataRow("/A/B", "/A/B/c.txt", "/c.txt", "/a/b/c.txt", false)]                    // upper-cased sub path
+    [DataRow("/a/b", "/a/b/C/d.txt", "/C/d.txt", "/A/B/C/d.txt", false)]              // deeper, child casing preserved
+    public void TestConvertPathFromDelegateRespectsCaseSensitivity(string subPath, string delegatePath, string expected, string differentlyCasedPath, bool isCaseSensitive)
     {
-        var fs = new MemoryFileSystem();
-        fs.CreateDirectory("/sandbox");
-
-        var subFs = new TestableSubFileSystem(fs, "/sandbox");
-
-        // Matching casing strips the sub path prefix.
-        AssertEx.AreEqual((UPath)"/foo.txt", subFs.ConvertPathFromDelegateForTest("/sandbox/foo.txt"));
-
-        // A differently-cased prefix is not rooted under the default ordinal matching.
-        Assert.Throws<InvalidOperationException>(() => subFs.ConvertPathFromDelegateForTest("/SANDBOX/foo.txt"));
-    }
-
-    [TestMethod]
-    public void TestConvertPathFromDelegateOrdinalIgnoreCase()
-    {
-        var fs = new MemoryFileSystem();
-        fs.CreateDirectory("/sandbox");
-
-        var subFs = new TestableSubFileSystem(fs, "/sandbox", StringComparison.OrdinalIgnoreCase);
-
-        // With case-insensitive matching, a differently-cased delegate prefix is stripped correctly.
-        AssertEx.AreEqual((UPath)"/foo.txt", subFs.ConvertPathFromDelegateForTest("/SANDBOX/foo.txt"));
-    }
-
-    [TestMethod]
-    // Section 4: case-insensitive prefix strip. Assumes the delegate already resolved on-disk casing,
-    // so SubFileSystem is doing string-compare only.
-    [DataRow("/a/b", "/A/B/c.txt", "/c.txt")]
-    [DataRow("/A/B", "/a/b/c.txt", "/c.txt")]
-    [DataRow("/a/b", "/A/B/C/d.txt", "/C/d.txt")]
-    public void TestConvertPathFromDelegateOrdinalIgnoreCasePartialPaths(string subPath, string delegatePath, string expected)
-    {
+        // this is ConvertPathFromDelegate overload test to make sure it behaves as expected
         var fs = new MemoryFileSystem();
         fs.CreateDirectory(subPath);
 
-        var subFs = new TestableSubFileSystem(fs, subPath, StringComparison.OrdinalIgnoreCase);
+        var subFs = new TestableSubFileSystem(fs, subPath, isCaseSensitive);
+
+        // Matching casing always strips the sub path prefix.
         AssertEx.AreEqual((UPath)expected, subFs.ConvertPathFromDelegateForTest(delegatePath));
+
+        // A differently-cased prefix strips only when case-insensitive, otherwise it is unrooted and throws.
+        if (isCaseSensitive)
+        {
+            Assert.Throws<InvalidOperationException>(() => subFs.ConvertPathFromDelegateForTest(differentlyCasedPath));
+        }
+        else
+        {
+            AssertEx.AreEqual((UPath)expected, subFs.ConvertPathFromDelegateForTest(differentlyCasedPath));
+        }
     }
 
     [TestMethod]
-    public void TestOrdinalIgnoreCaseConstructorValidatesDirectoryExists()
+    [DataRow("/sandbox", "/SANDBOX/foo.txt")]  // flat
+    [DataRow("/a/b", "/A/B/c.txt")]            // nested
+    public void TestConvertPathFromDelegateIsCaseSensitiveByDefault(string subPath, string differentlyCasedPath)
     {
+        // this is the base ConvertPathFromDelegate that defaults to case-sensitive without overload argument
         var fs = new MemoryFileSystem();
+        fs.CreateDirectory(subPath);
 
-        // The comparisonType overload still requires the sub path to exist in the delegate;
-        // the comparison only affects prefix matching, not the existence check.
-        Assert.Throws<DirectoryNotFoundException>(
-            () => new SubFileSystem(fs, "/missing", StringComparison.OrdinalIgnoreCase));
+        // The flag-less constructor defaults to case-sensitive, so a differently-cased prefix is unrooted and throws.
+        var subFs = new TestableSubFileSystem(fs, subPath);
+        Assert.Throws<InvalidOperationException>(() => subFs.ConvertPathFromDelegateForTest(differentlyCasedPath));
     }
 
     [TestMethod]
@@ -179,14 +188,21 @@ public class TestSubFileSystem : TestFileSystemBase
     }
 
     [TestMethod]
-    [DataRow(StringComparison.OrdinalIgnoreCase, true)]
-    [DataRow(StringComparison.Ordinal, false)]
-    public void TestWatcherOrdinalIgnoreCaseConversion(StringComparison comparisonType, bool shouldRaise)
+    [DataRow("/test", "/test", "/foo.txt")]
+    [DataRow("/test", "/test", "/~foo.txt")]
+    [DataRow("/test", "/TEST", "/foo.txt")]
+    [DataRow("/test", "/TEST", "/~foo.txt")]
+    [DataRow("/verylongname", "/VERYLONGNAME", "/foo.txt")]
+    [DataRow("/verylongname", "/VERYLONGNAME", "/~foo.txt")]
+    public void TestWatcherCaseInsensitive(string eventDir, string subDir, string filePath)
     {
+        // This mirrors TestWatcherCaseSensitive, but checks that the watcher can also make
+        // a case-insensitive comparison as well, when constructor initializes case-insensitive
         var fs = new TriggerableWatchFileSystem();
-        fs.CreateDirectory("/sandbox");
+        fs.CreateDirectory(subDir);
 
-        var subFs = new SubFileSystem(fs, "/sandbox", comparisonType);
+        // Case-insensitive: a differently-cased sub-path prefix on the delegate event still matches.
+        var subFs = new SubFileSystem(fs, subDir, owned: true, isCaseSensitive: false);
         var watcher = subFs.Watch("/");
         watcher.IncludeSubdirectories = true;
         watcher.EnableRaisingEvents = true;
@@ -194,25 +210,28 @@ public class TestSubFileSystem : TestFileSystemBase
         var waitHandle = new ManualResetEvent(false);
         watcher.Created += (sender, args) =>
         {
-            if (args.FullPath == "/foo.txt")
+            if (args.FullPath == filePath)
             {
                 waitHandle.Set();
             }
         };
 
-        // The delegate emits an event with a differently-cased sub-path prefix.
-        fs.LastWatcher.TriggerCreated("/SANDBOX/foo.txt");
+        // The delegate emits an event whose prefix casing may differ from the sub path.
+        fs.LastWatcher.TriggerCreated($"{eventDir}{filePath}");
 
-        Assert.AreEqual(shouldRaise, waitHandle.WaitOne(100));
+        Assert.IsTrue(waitHandle.WaitOne(100));
     }
 
     [TestMethod]
-    public void TestWatcherOrdinalByDefault()
+    public void TestWatcherCaseSensitiveDropsDifferentCasing()
     {
+        // Since we now have an override for ShouldRaiseEventImpl, we want to make sure a
+        // non-overloaded SubFileSystem will still behave case-sensitively
         var fs = new TriggerableWatchFileSystem();
         fs.CreateDirectory("/sandbox");
 
-        // Default constructor - no comparisonType, so matching is ordinal (case-sensitive).
+        // Default constructor is ordinal (case-sensitive): a differently-cased event prefix is out of
+        // scope, so the watcher drops it (guards the filtering / negative branch that the raise tests don't).
         var subFs = new SubFileSystem(fs, "/sandbox");
         var watcher = subFs.Watch("/");
         watcher.IncludeSubdirectories = true;
@@ -227,7 +246,6 @@ public class TestSubFileSystem : TestFileSystemBase
             }
         };
 
-        // A differently-cased prefix is not rooted under the default ordinal matching, so it is dropped.
         fs.LastWatcher.TriggerCreated("/SANDBOX/foo.txt");
 
         Assert.IsFalse(waitHandle.WaitOne(100));
@@ -330,8 +348,8 @@ public class TestSubFileSystem : TestFileSystemBase
         {
         }
 
-        public TestableSubFileSystem(IFileSystem fileSystem, UPath subPath, StringComparison comparisonType)
-            : base(fileSystem, subPath, comparisonType, owned: false)
+        public TestableSubFileSystem(IFileSystem fileSystem, UPath subPath, bool isCaseSensitive)
+            : base(fileSystem, subPath, owned: false, isCaseSensitive: isCaseSensitive)
         {
         }
 
@@ -340,10 +358,20 @@ public class TestSubFileSystem : TestFileSystemBase
         public UPath ConvertPathFromDelegateForTest(UPath path) => base.ConvertPathFromDelegate(path);
     }
 
-    /// <summary>
-    /// A memory filesystem whose watcher can be triggered manually with an arbitrary (e.g. differently-cased)
-    /// path, used to drive the <see cref="SubFileSystem"/> watcher conversion in isolation.
-    /// </summary>
+    // Fake delegate that always enumerates one caller-supplied path, so SubFileSystem's enumerate conversion sees a differently-cased prefix.
+    private sealed class DifferentlyCasedEnumerateFileSystem : MemoryFileSystem
+    {
+        private readonly UPath _delegatePath;
+
+        public DifferentlyCasedEnumerateFileSystem(UPath delegatePath) => _delegatePath = delegatePath;
+
+        protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption, SearchTarget searchTarget)
+        {
+            yield return _delegatePath;
+        }
+    }
+
+    // Fake delegate that exposes its watcher via LastWatcher, so a test can fire an arbitrary (differently-cased) event into SubFileSystem.
     private sealed class TriggerableWatchFileSystem : MemoryFileSystem
     {
         public TriggerableWatcher LastWatcher { get; private set; }
@@ -355,13 +383,13 @@ public class TestSubFileSystem : TestFileSystemBase
         }
     }
 
+    // Pokeable watcher: TriggerCreated exposes the protected RaiseCreated, and it skips its own filtering so events reach the SubFileSystem watcher under test.
     private sealed class TriggerableWatcher : Zio.FileSystems.FileSystemWatcher
     {
         public TriggerableWatcher(IFileSystem fileSystem, UPath path) : base(fileSystem, path)
         {
         }
 
-        // Skip the delegate watcher's own event filtering so the triggered event reaches the SubFileSystem watcher under test.
         protected override bool ShouldRaiseEventImpl(FileChangedEventArgs args) => true;
 
         public void TriggerCreated(UPath fullPath)
