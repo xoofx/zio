@@ -15,7 +15,7 @@ namespace Zio.FileSystems;
 [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "(),nq}")]
 public class SubFileSystem : ComposeFileSystem
 {
-    private readonly StringComparison _comparisonType = StringComparison.Ordinal;
+    private readonly StringComparison _comparisonType;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SubFileSystem"/> class.
@@ -24,13 +24,9 @@ public class SubFileSystem : ComposeFileSystem
     /// <param name="subPath">The sub path view to create filesystem.</param>
     /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
     /// <exception cref="DirectoryNotFoundException">If the directory subPath does not exist in the delegate FileSystem</exception>
-    public SubFileSystem(IFileSystem fileSystem, UPath subPath, bool owned = true) : base(fileSystem, owned)
+    public SubFileSystem(IFileSystem fileSystem, UPath subPath, bool owned = true)
+    : this(fileSystem, subPath, owned, true) // case sensitive always true by default
     {
-        SubPath = subPath.AssertAbsolute(nameof(subPath));
-        if (!fileSystem.DirectoryExists(SubPath))
-        {
-            throw NewDirectoryNotFoundException(SubPath);
-        }
     }
 
     /// <summary>
@@ -38,13 +34,18 @@ public class SubFileSystem : ComposeFileSystem
     /// </summary>
     /// <param name="fileSystem">The file system to create a view from.</param>
     /// <param name="subPath">The sub path view to create filesystem.</param>
-    /// <param name="comparisonType">Specifies how the sub path prefix is matched (<see cref="StringComparison.Ordinal"/> by default)</param>
     /// <param name="owned">True if <paramref name="fileSystem"/> should be disposed when this instance is disposed.</param>
+    /// <param name="isCaseSensitive">Specifies if paths should be compared against the sub path case-sensitively.</param>
     /// <exception cref="DirectoryNotFoundException">If the directory subPath does not exist in the delegate FileSystem</exception>
-    public SubFileSystem(IFileSystem fileSystem, UPath subPath, StringComparison comparisonType, bool owned = true)
-    : this(fileSystem, subPath, owned)
+    public SubFileSystem(IFileSystem fileSystem, UPath subPath, bool owned, bool isCaseSensitive)
+    : base(fileSystem, owned)
     {
-        _comparisonType = comparisonType;
+        SubPath = subPath.AssertAbsolute(nameof(subPath));
+        _comparisonType = isCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        if (!fileSystem.DirectoryExists(SubPath))
+        {
+            throw NewDirectoryNotFoundException(SubPath);
+        }
     }
 
     /// <summary>
@@ -93,7 +94,7 @@ public class SubFileSystem : ComposeFileSystem
     {
         var safePath = path.ToRelative();
         var delegatePath = SubPath / safePath;
-        if (delegatePath != SubPath && !delegatePath.IsInDirectory(SubPath, true)) // stays ordinal, casing has to match
+        if (delegatePath != SubPath && !delegatePath.IsInDirectory(SubPath, true)) // stays case-sensitive, casing already matches by construction
         {
             throw new UnauthorizedAccessException($"The path `{path}` escapes the sub filesystem root `{SubPath}`");
         }
