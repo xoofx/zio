@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/build/">
     <File Path="../.github/workflows/ci.yml" />
+    <File Path="../AGENTS.md" />
     <File Path="../changelog.md" />
     <File Path="../license.txt" />
     <File Path="../readme.md" />
