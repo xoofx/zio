@@ -935,6 +935,20 @@ public class MountFileSystem : ComposeFileSystem
         return watcher;
     }
 
+    /// <inheritdoc />
+    protected override string ConvertPathToInternalImpl(UPath path)
+    {
+        var originalPath = path;
+        var mountfs = TryGetMountOrNext(ref path);
+
+        if (mountfs is null)
+        {
+            return base.ConvertPathToInternalImpl(originalPath);
+        }
+
+        return mountfs.ConvertPathToInternal(path);
+    }
+
     private class AggregateWatcher : AggregateFileSystemWatcher
     {
         private readonly MountFileSystem _fileSystem;

@@ -253,8 +253,16 @@ public abstract class TestFileSystemBase : IDisposable
 
         {
             var innerPath = fs.ConvertPathToInternal("/b");
-            var reverseInnerPath = fs.ConvertPathFromInternal(innerPath);
-            AssertEx.AreEqual("/b", reverseInnerPath);
+            if (fs is MountFileSystem mountFileSystem && mountFileSystem.TryGetMount("/b", out _, out _, out var mountedPath))
+            {
+                Assert.IsNotNull(mountedPath);
+                AssertEx.AreEqual(mountedPath.Value.FullName, innerPath);
+            }
+            else
+            {
+                var reverseInnerPath = fs.ConvertPathFromInternal(innerPath);
+                AssertEx.AreEqual("/b", reverseInnerPath);
+            }
         }
 
         Assert.IsTrue(fs.DirectoryExists("/"));

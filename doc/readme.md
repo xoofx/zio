@@ -400,6 +400,8 @@ mountfs.Mount("/fs2", fs2);
 
 An enumeration of the root folder `/` will display `/fs1` and `/fs2` as folders and they will appear as part of the same filesystem, despite being exposed by different filesystems.
 
+`MountFileSystem.ConvertPathToInternal` resolves through the matching mount. For example, converting `/fs1/file.txt` delegates to `fs1.ConvertPathToInternal("/file.txt")`.
+
 > Note that unlike a regular concrete filesystem like `MemoryFileSystem`, some operations on a `MountFileSystem` are not atomic (`File.Replace`) when they are performed across different mounts. In that case, they are emulated with standard delete/move/copy operations.
 
 Like the `AggregateFileSystem`, the `MountFileSystem` constructor allows to take a backup/failsafe `IFileSystem` that is mounted on the `/` root folder. But it allows this filesystem to be written to.

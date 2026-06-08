@@ -99,6 +99,22 @@ public class TestMountFileSystem : TestFileSystemBase
     }
 
     [TestMethod]
+    public void ConvertPathToInternalUsesMountedFileSystem()
+    {
+        using var physical = new PhysicalDirectoryHelper(SystemPath);
+        physical.PhysicalFileSystem.WriteAllText("/file.txt", "content");
+
+        var mountFs = new MountFileSystem();
+        mountFs.Mount("/physical", physical.PhysicalFileSystem);
+
+        var expected = physical.PhysicalFileSystem.ConvertPathToInternal("/file.txt");
+        var actual = mountFs.ConvertPathToInternal("/physical/file.txt");
+
+        AssertEx.AreEqual(expected, actual);
+        Assert.IsTrue(File.Exists(actual));
+    }
+
+    [TestMethod]
     public void TestWatcherRemovedWhenDisposed()
     {
         var fs = GetCommonMountFileSystemWithMounts();
