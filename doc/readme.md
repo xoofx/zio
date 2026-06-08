@@ -416,6 +416,21 @@ var subfs = new SubFileSystem(fs, "/mnt/c/Temp");
 subfs.DirectoryCreate("/Test");
 ```
 
+By default `SubFileSystem` matches its sub-path case-sensitively, but has an overload for ignoring case.
+If a PhysicalFileSystem override is ever used to resolve case-sensitive filesystems case-insensitively, the subpath can do a string compare on that PhysicalFileSystem without needing a SubFileSystem override.
+
+```c#
+var fs = new PhysicalFileSystem();
+var subfs = new SubFileSystem(fs, "/mnt/c/Temp", owned: true, isCaseSensitive: false);
+
+// With isCaseSensitive: false, a delegate path that differs only in the casing of the sub-path prefix
+// still resolves instead of throwing "not rooted to the subpath": if the delegate reports
+// "/mnt/c/TEMP/Logs/today.txt", the sub filesystem exposes it as "/Logs/today.txt".
+
+// The same case-insensitive directory compare powers that prefix check:
+bool isUnder = ((UPath)"/mnt/c/TEMP").IsInDirectory("/mnt/c/temp", recursive: true, StringComparison.OrdinalIgnoreCase); // true
+```
+
 #### `ReadOnlyFileSystem` 
 
 The readonly filesystem simply allows to expose an existing filesystem as read-only and throws a `System.IO.IOException` on any attempt to use one of the writeable `IFileSystem` methods.
