@@ -10,6 +10,7 @@ Zio provides a simple, powerful, cross-platform **filesystem abstraction for .NE
 - API providing all operations provided by the regular System.IO API (e.g File.Move, Directory.Delete... etc.)
   - Allowing atomic filesystem operations (e.g File.Replace...)
 - A simple interface abstraction [`IFileSystem`](https://github.com/xoofx/zio/blob/main/src/Zio/IFileSystem.cs)
+- `net10.0` async APIs via generated `*Async` file-system types and `IAsyncEnumerable<T>` enumeration/search helpers
 - Supports for filesystem watcher through the `IFileSystem.Watch` method and the [`IFileSystemWatcher`](https://github.com/xoofx/zio/blob/main/src/Zio/IFileSystemWatcher.cs) interface
   - For all builtin filesystems (aggregates, memory...etc.)
 - All paths are normalized through a lightweight uniform path struct [`UPath`](https://github.com/xoofx/zio/blob/main/src/Zio/UPath.cs)
@@ -56,7 +57,7 @@ if (fs.FileExists("/temp.txt"))
 }
 ```
 
-The following documentation provides more information about the API and how to use it.
+Async APIs are available when targeting `net10.0` through generated async file-system types such as `MemoryFileSystemAsync`. The following documentation provides more information about the API, generated async path, and how to use it.
 
 ## Documentation
 
@@ -68,7 +69,7 @@ Zio is available as a NuGet package: [![NuGet](https://img.shields.io/nuget/v/Zi
 
 ## Build
 
-In order to build Zio, you need to install Visual Studio 2022 with latest [.NET 9.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+In order to build Zio, you need to install Visual Studio 2022 with the latest [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) so the `net10.0` async target can compile.
 
 ## License
 

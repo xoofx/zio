@@ -5,6 +5,7 @@
     <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">$(TargetFrameworks);net472</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <LangVersion>10</LangVersion>
+    <DefineConstants>$(DefineConstants);$(AdditionalConstants)</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

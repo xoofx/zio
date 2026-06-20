@@ -7,6 +7,7 @@ Paths/commands below are relative to this directory.
 ## Orientation
 
 - Library: `src/Zio/`
+- Async CodeGen: `src/Zio.AsyncCodeGen/`
 - Tests: `src/Zio.Tests/` (MSTest)
 - Docs to keep in sync with behavior: `readme.md` and the docs under `doc/` (e.g., `doc/**/*.md`)
 
@@ -20,6 +21,22 @@ dotnet test -c Release
 ```
 
 All tests must pass and docs must be updated before submitting.
+
+## Generated Async APIs
+
+- Async APIs are generated, not hand-maintained. Do not edit files under `src/Zio/generated/` directly; change sync source or `src/Zio.AsyncCodeGen/Program.cs`, then regenerate.
+- When changing sync filesystem APIs or implementation files that feed async generation (`IFileSystem`, `FileSystemExtensions`, entry/item types, watcher types, or files under `src/Zio/FileSystems/`), run from `src`:
+  ```sh
+  dotnet run -c Release --project Zio.AsyncCodeGen --
+  dotnet run -c Release --project Zio.AsyncCodeGen -- --check
+  ```
+- Also verify both normal and sync-only builds after regeneration:
+  ```sh
+  dotnet build -c Release
+  dotnet build -c Release -p:AdditionalConstants=ZIO_NO_ASYNC
+  dotnet test -c Release
+  ```
+- The async surface is `net10.0`-only and guarded by `NET10_0_OR_GREATER && !ZIO_NO_ASYNC`. Keep `FileSystem` sync-only, keep generated async filesystems inheriting async bases, and do not reintroduce `FileSystemAsync.AsSync` or sync-over-async blocking.
 
 ## Contribution Rules (Do/Don't)
 

@@ -12,6 +12,7 @@
   <Folder Name="/doc/">
     <File Path="../doc/readme.md" />
   </Folder>
+  <Project Path="Zio.AsyncCodeGen/Zio.AsyncCodeGen.csproj" />
   <Project Path="Zio.Tests/Zio.Tests.csproj" />
   <Project Path="Zio/Zio.csproj" />
 </Solution>

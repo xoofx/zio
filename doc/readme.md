@@ -224,6 +224,40 @@ The `IFileSystem` API is mainly divided into 4 groups:
 
 Also [many extension methods](https://github.com/xoofx/zio/blob/master/src/Zio/FileSystemExtensions.cs) are provided for the `Zio.IFileSystem` (e.g `IFileSystem.ReadAllText`) to mimic some of the utility methods exposed by the `System.IO.File` API.
 
+### Generated async API on `net10.0`
+
+When targeting `net10.0`, Zio exposes a generated async surface next to the synchronous API. Use the generated async file-system types (`MemoryFileSystemAsync`, `PhysicalFileSystemAsync`, `ZipArchiveFileSystemAsync`, `ReadOnlyFileSystemAsync`, `SubFileSystemAsync`, `MountFileSystemAsync`, `AggregateFileSystemAsync`, and `ComposeFileSystemAsync`) rather than the synchronous `MemoryFileSystem`/`PhysicalFileSystem` types.
+
+```c#
+await using var fs = new MemoryFileSystemAsync();
+await fs.WriteAllTextAsync("/temp.txt", "This is a content");
+
+await foreach (var path in fs.EnumerateFilesAsync("/"))
+{
+    Console.WriteLine(path);
+}
+```
+
+The async API mirrors the synchronous file-system operations with `ValueTask`/`ValueTask<T>` methods and a trailing `CancellationToken`. Enumeration and search APIs return `IAsyncEnumerable<T>` so callers can stream results. Async file systems implement `IFileSystemAsync` and `IAsyncDisposable`; synchronous file systems remain synchronous and do not implement `IFileSystemAsync`.
+
+The async classes are entirely generated from the synchronous source by `src/Zio.AsyncCodeGen`. Generated files live under `src/Zio/generated/` and `src/Zio/generated/FileSystems/`, are guarded with `#if NET10_0_OR_GREATER && !ZIO_NO_ASYNC`, and should not be edited by hand. The generator also emits async-specific support types (`FileSystemEntryAsync`, `FileSystemItemAsync`, `FileEntryAsync`, `DirectoryEntryAsync`, `IFileSystemWatcherAsync`, async watcher event args, and `SearchPredicateAsync`) so async APIs do not depend on sync-only types or on a sync adapter.
+
+To regenerate after changing synchronous APIs or implementation logic, run from `src`:
+
+```sh
+dotnet run -c Release --project Zio.AsyncCodeGen --
+dotnet run -c Release --project Zio.AsyncCodeGen -- --check
+```
+
+The generator loads Zio as `net10.0` with `AdditionalConstants=ZIO_NO_ASYNC`, preserving other constants, so generated async output is based only on the synchronous source graph. Its check mode fails if generated files are stale, if generated async code reintroduces `AsSync`, sync-over-async blocking patterns, sync-only public API types, or sync filesystem inheritance.
+
+Current limitations:
+
+- The async surface is available only on `net10.0` and can be disabled by defining `ZIO_NO_ASYNC`; zip async output is also guarded by `HAS_ZIPARCHIVE`.
+- The generator is a Roslyn semantic/syntax rewriter over existing sync code. It intentionally maximizes generated code, but unsupported sync constructs may require extending generator rules before regeneration can succeed.
+- Async APIs preserve the sync path's validation, routing, mount/aggregate behavior, and exception shape where possible. They are async-shaped and cancellation-aware, but not every underlying storage operation is guaranteed to use non-blocking OS I/O unless an explicit safe async mapping exists.
+- There is no `FileSystemAsync.AsSync` bridge. Async-only file systems should be passed through `IFileSystemAsync` and async helper types.
+
 ## Using The FileSystems
 
 The default filesystems provided by Zio comes roughly into two kinds:
