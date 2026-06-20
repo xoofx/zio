@@ -29,7 +29,10 @@ public class FileSystemEventDispatcherAsync<T> : IDisposable where T : FileSyste
             Name = "FileSystem Event Dispatch",
             IsBackground = true
         };
-        _dispatchQueue = new BlockingCollection<Action>(16);
+        // Dispatch may be requested while filesystem locks are held. Keep the queue
+        // unbounded so event backpressure cannot block a producer that must release
+        // those locks before watcher callbacks can safely re-enter the filesystem.
+        _dispatchQueue = new BlockingCollection<Action>();
         _dispatchCts = new CancellationTokenSource();
         _watchers = new List<T>();
         _dispatchThread.Start();

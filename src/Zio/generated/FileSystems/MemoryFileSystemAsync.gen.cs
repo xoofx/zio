@@ -1761,8 +1761,6 @@ public class MemoryFileSystemAsync : FileSystemAsync
                 _stream.Position = position;
                 _stream.Write(buffer, offset, count);
             }
-
-            _fileNode.ContentChanged();
         }
 
         public void SetPosition(long position)
@@ -1789,8 +1787,6 @@ public class MemoryFileSystemAsync : FileSystemAsync
                 {
                     _stream.SetLength(value);
                 }
-
-                _fileNode.ContentChanged();
             }
         }
 
@@ -1805,6 +1801,7 @@ public class MemoryFileSystemAsync : FileSystemAsync
         private readonly bool _canWrite;
         private readonly bool _isExclusive;
         private int _isDisposed;
+        private bool _hasChanged;
         private long _position;
         public MemoryFileStream(MemoryFileSystemAsync fs, FileNode fileNode, bool canRead, bool canWrite, bool isExclusive)
         {
@@ -1863,6 +1860,7 @@ public class MemoryFileSystemAsync : FileSystemAsync
                 return;
             }
 
+            FlushContentChanged();
             if (_isExclusive)
             {
                 _fs.ExitExclusive(_fileNode);
@@ -1878,6 +1876,7 @@ public class MemoryFileSystemAsync : FileSystemAsync
         public override void Flush()
         {
             CheckNotDisposed();
+            FlushContentChanged();
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -1914,7 +1913,13 @@ public class MemoryFileSystemAsync : FileSystemAsync
         public override void SetLength(long value)
         {
             CheckNotDisposed();
+            var oldLength = _fileNode.Content.Length;
             _fileNode.Content.Length = value;
+            if (oldLength != value)
+            {
+                MarkContentChanged();
+            }
+
             var time = DateTime.Now;
             _fileNode.LastAccessTime = time;
             _fileNode.LastWriteTime = time;
@@ -1925,9 +1930,30 @@ public class MemoryFileSystemAsync : FileSystemAsync
             CheckNotDisposed();
             _fileNode.Content.Write(_position, buffer, offset, count);
             _position += count;
+            if (count > 0)
+            {
+                MarkContentChanged();
+            }
+
             var time = DateTime.Now;
             _fileNode.LastAccessTime = time;
             _fileNode.LastWriteTime = time;
+        }
+
+        private void MarkContentChanged()
+        {
+            _hasChanged = true;
+        }
+
+        private void FlushContentChanged()
+        {
+            if (!_hasChanged)
+            {
+                return;
+            }
+
+            _hasChanged = false;
+            _fileNode.ContentChanged();
         }
 
         private void CheckNotDisposed()
