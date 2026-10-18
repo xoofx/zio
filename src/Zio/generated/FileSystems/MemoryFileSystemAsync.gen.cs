@@ -860,21 +860,22 @@ public class MemoryFileSystemAsync : FileSystemAsync
                     {
                         var node = nodePair.Value;
                         var canFollowFolder = searchOption == SearchOption.AllDirectories && nodePair.Value is DirectoryNode;
-                        var fullPath = directoryPath / nodePair.Key;
+                        var fullPath = CombineChildPath(directoryPath, nodePair.Key);
                         if (canFollowFolder)
                         {
                             foldersToProcess.Insert(dirIndex++, fullPath);
                         }
 
+                        GetDateTimeOffsets(node, out var creationTime, out var lastWriteTime, out var lastAccessTime);
                         var item = new FileSystemItemAsync
                         {
                             FileSystem = this,
                             AbsolutePath = fullPath,
                             Path = fullPath,
                             Attributes = node.Attributes,
-                            CreationTime = node.CreationTime,
-                            LastWriteTime = node.LastWriteTime,
-                            LastAccessTime = node.LastAccessTime,
+                            CreationTime = creationTime,
+                            LastWriteTime = lastWriteTime,
+                            LastAccessTime = lastAccessTime,
                             Length = node is FileNode fileNode ? fileNode.Content.Length : 0,
                         };
                         if (searchPredicate == null || searchPredicate(ref item))
@@ -1072,6 +1073,45 @@ public class MemoryFileSystemAsync : FileSystemAsync
         {
             throw NewFileNotFoundException(srcPath);
         }
+    }
+
+    private static UPath CombineChildPath(UPath directoryPath, string name)
+    {
+        // The name of a child node is always a single part of a validated path (no separator, not `.` or `..`),
+        // so when the directory path is absolute (and normalized, as any UPath), the combined path is already
+        // normalized: this is equivalent to `directoryPath / name` without validating and normalizing again
+        // the name and the combined path.
+        if (!directoryPath.IsAbsolute)
+        {
+            return directoryPath / name;
+        }
+
+        var directory = directoryPath.FullName;
+        return new UPath(directory.Length == 1 ? "/" + name : directory + "/" + name, true);
+    }
+
+    private static void GetDateTimeOffsets(FileSystemNode node, out DateTimeOffset creationTime, out DateTimeOffset lastWriteTime, out DateTimeOffset lastAccessTime)
+    {
+        // Converting a local DateTime to a DateTimeOffset looks up the UTC offset of the local time zone at that
+        // time, so convert only once the times that are identical (e.g. for a directory, for a file that has not
+        // been read or written since it was created, or for a file not read since it was last written).
+        var creation = node.CreationTime;
+        var lastWrite = node.LastWriteTime;
+        var lastAccess = node.LastAccessTime;
+        creationTime = creation;
+        lastWriteTime = IsSameDateTime(lastWrite, creation) ? creationTime : lastWrite;
+        lastAccessTime = IsSameDateTime(lastAccess, lastWrite) ? lastWriteTime : IsSameDateTime(lastAccess, creation) ? creationTime : lastAccess;
+    }
+
+    private static bool IsSameDateTime(DateTime left, DateTime right)
+    {
+        // DateTime equality only compares the ticks, while the conversion to a DateTimeOffset also depends on the Kind
+        // (and, for an ambiguous local time, on whether it is a daylight saving time), so compare all the bits.
+        Span<DateTime> values = stackalloc DateTime[2];
+        values[0] = left;
+        values[1] = right;
+        var bits = System.Runtime.InteropServices.MemoryMarshal.Cast<DateTime, ulong>(values);
+        return bits[0] == bits[1];
     }
 
     private FileSystemNode? TryFindNodeSafe(UPath path)
