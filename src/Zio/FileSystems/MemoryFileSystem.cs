@@ -2087,14 +2087,22 @@ public class MemoryFileSystem : FileSystem
     /// </summary>
     private class FileSystemNodeReadWriteLock
     {
-        // _sharedCount  < 0 => This is an exclusive lock (_sharedCount == -1)
-        // _sharedCount == 0 => No lock
-        // _sharedCount  > 0 => This is a shared lock
-        private int _sharedCount;
+        // The whole lock state is packed in a single 64-bit value so that it can be updated with a single
+        // compare-and-swap, without taking the monitor of this instance when the lock is not contended:
+        // - the low 32 bits are the shared count:
+        //   count  < 0 => This is an exclusive lock (count == -1)
+        //   count == 0 => No lock
+        //   count  > 0 => This is a shared lock
+        // - the high 32 bits are the FileShare of the current shared lock (0 when count <= 0)
+        private const long ExclusiveState = 0xFFFF_FFFF;
 
-        private FileShare? _shared;
+        private long _state;
 
-        internal bool IsLocked => _sharedCount != 0;
+        // Number of threads waiting (or about to wait) on the monitor of this instance for the state to change.
+        // Releasing a lock only needs to take the monitor to wake them up when this is not 0.
+        private int _waiterCount;
+
+        internal bool IsLocked => (int)Volatile.Read(ref _state) != 0;
 
         public void EnterShared(UPath context)
         {
@@ -2105,138 +2113,174 @@ public class MemoryFileSystem : FileSystem
         {
             var locker = (FileSystemNodeReadWriteLock)MemberwiseClone();
             // Erase any locks
-            locker._sharedCount = 0;
-            locker._shared = null;
+            locker._state = 0;
+            locker._waiterCount = 0;
             return locker;
         }
 
         public void EnterShared(FileShare share, UPath context)
         {
+            if (TryEnterSharedCore(share, out var isShareIncompatible, out var currentShare))
+            {
+                return;
+            }
+
+            if (isShareIncompatible)
+            {
+                throw NewSharedAccessException(share, currentShare, context);
+            }
+
+            // The lock is taken exclusively, wait for it to be released
             Monitor.Enter(this);
+            Interlocked.Increment(ref _waiterCount);
             try
             {
-                while (_sharedCount < 0)
+                while (!TryEnterSharedCore(share, out isShareIncompatible, out currentShare))
                 {
+                    if (isShareIncompatible)
+                    {
+                        throw NewSharedAccessException(share, currentShare, context);
+                    }
+
                     Monitor.Wait(this);
                 }
-
-                if (_shared.HasValue)
-                {
-                    var currentShare = _shared.Value;
-                    // The previous share must be a superset of the shared being asked
-                    if ((share & currentShare) != share)
-                    {
-                        throw new UnauthorizedAccessException($"Cannot access shared resource path `{context}` with shared access`{share}` while current is `{currentShare}`");
-                    }
-                }
-                else
-                {
-                    _shared = share;
-                }
-
-                _sharedCount++;
-                Monitor.PulseAll(this);
             }
             finally
             {
+                Interlocked.Decrement(ref _waiterCount);
                 Monitor.Exit(this);
             }
         }
 
         public void ExitShared()
         {
-            Monitor.Enter(this);
-            try
+            while (true)
             {
-                Debug.Assert(_sharedCount > 0);
-                _sharedCount--;
-                if (_sharedCount == 0)
+                var state = Volatile.Read(ref _state);
+                var count = (int)state;
+                Debug.Assert(count > 0);
+
+                // Releasing the last shared lock also resets the FileShare
+                var newState = count == 1 ? 0 : state - 1;
+                if (Interlocked.CompareExchange(ref _state, newState, state) == state)
                 {
-                    _shared = null;
+                    if (newState == 0)
+                    {
+                        WakeUpWaiters();
+                    }
+
+                    return;
                 }
-                Monitor.PulseAll(this);
-            }
-            finally
-            {
-                Monitor.Exit(this);
             }
         }
 
         public void EnterExclusive()
         {
+            if (Interlocked.CompareExchange(ref _state, ExclusiveState, 0) == 0)
+            {
+                return;
+            }
+
+            // The lock is taken, wait for it to be released
             Monitor.Enter(this);
+            Interlocked.Increment(ref _waiterCount);
             try
             {
-                while (_sharedCount != 0)
+                while (Interlocked.CompareExchange(ref _state, ExclusiveState, 0) != 0)
                 {
                     Monitor.Wait(this);
                 }
-                _sharedCount  = -1;
-                Monitor.PulseAll(this);
             }
             finally
             {
+                Interlocked.Decrement(ref _waiterCount);
                 Monitor.Exit(this);
             }
         }
 
         public bool TryEnterShared(FileShare share)
         {
-            Monitor.Enter(this);
-            try
-            {
-                if (_sharedCount < 0)
-                {
-                    return false;
-                }
-
-                if (_shared.HasValue)
-                {
-                    var currentShare = _shared.Value;
-                    if ((share & currentShare) != share)
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    _shared = share;
-                }
-                _sharedCount++;
-                Monitor.PulseAll(this);
-            }
-            finally
-            {
-                Monitor.Exit(this);
-            }
-            return true;
+            return TryEnterSharedCore(share, out _, out _);
         }
 
         public bool TryEnterExclusive()
         {
-            Monitor.Enter(this);
-            try
-            {
-                if (_sharedCount != 0)
-                {
-                    return false;
-                }
-                _sharedCount = -1;
-                Monitor.PulseAll(this);
-            }
-            finally
-            {
-                Monitor.Exit(this);
-            }
-            return true;
+            return Interlocked.CompareExchange(ref _state, ExclusiveState, 0) == 0;
         }
+
         public void ExitExclusive()
         {
+            Debug.Assert((int)Volatile.Read(ref _state) < 0);
+            Interlocked.Exchange(ref _state, 0);
+            WakeUpWaiters();
+        }
+
+        public virtual string DebuggerDisplay()
+        {
+            var count = (int)Volatile.Read(ref _state);
+            return count < 0 ? " (exclusive lock)" : count > 0 ? $" (shared lock: {count})" : string.Empty;
+        }
+
+        private bool TryEnterSharedCore(FileShare share, out bool isShareIncompatible, out FileShare currentShare)
+        {
+            while (true)
+            {
+                var state = Volatile.Read(ref _state);
+                var count = (int)state;
+                if (count < 0)
+                {
+                    // This is an exclusive lock
+                    isShareIncompatible = false;
+                    currentShare = default;
+                    return false;
+                }
+
+                long newState;
+                if (count > 0)
+                {
+                    currentShare = (FileShare)(int)(state >> 32);
+                    // The previous share must be a superset of the shared being asked
+                    if ((share & currentShare) != share)
+                    {
+                        // Only fail on a state that really existed (a 64-bit read can tear on 32-bit platforms)
+                        if (Interlocked.CompareExchange(ref _state, state, state) != state)
+                        {
+                            continue;
+                        }
+
+                        isShareIncompatible = true;
+                        return false;
+                    }
+
+                    newState = state + 1;
+                }
+                else
+                {
+                    newState = ((long)(int)share << 32) | 1;
+                }
+
+                if (Interlocked.CompareExchange(ref _state, newState, state) == state)
+                {
+                    isShareIncompatible = false;
+                    currentShare = default;
+                    return true;
+                }
+            }
+        }
+
+        private void WakeUpWaiters()
+        {
+            // The state has just been changed with an interlocked operation (a full fence), and a waiter registers
+            // itself in _waiterCount with an interlocked operation before checking the state: so either the waiter
+            // sees the new state and doesn't wait, or it is seen here and pulsed once it waits on the monitor.
+            if (Volatile.Read(ref _waiterCount) == 0)
+            {
+                return;
+            }
+
             Monitor.Enter(this);
             try
             {
-                Debug.Assert(_sharedCount < 0);
-                _sharedCount = 0;
                 Monitor.PulseAll(this);
             }
             finally
@@ -2245,9 +2289,9 @@ public class MemoryFileSystem : FileSystem
             }
         }
 
-        public virtual string DebuggerDisplay()
+        private static UnauthorizedAccessException NewSharedAccessException(FileShare share, FileShare currentShare, UPath context)
         {
-            return _sharedCount < 0 ? " (exclusive lock)" : _sharedCount > 0 ? $" (shared lock: {_sharedCount})" : string.Empty;
+            return new UnauthorizedAccessException($"Cannot access shared resource path `{context}` with shared access`{share}` while current is `{currentShare}`");
         }
     }
 
