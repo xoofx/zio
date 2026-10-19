@@ -335,7 +335,8 @@ public class MemoryFileSystemAsync : FileSystemAsync
                         flags |= FindNodeFlags.NodeShared;
                     }
 
-                    results[pathPair.Value] = EnterFindNode(pathPair.Key, flags, results);
+                    // In the same folder, the first lookup locks the directory and the other names are looked up in it, see EnterFindChild
+                    results[pathPair.Value] = isSameFolder && i > 0 ? EnterFindChild(results[paths[0].Value].Directory, pathPair.Key, flags & ~FindNodeFlags.KeepParentNodeExclusive) : EnterFindNode(pathPair.Key, flags, results);
                 }
 
                 var srcResult = results[0];
@@ -1000,7 +1001,13 @@ public class MemoryFileSystemAsync : FileSystemAsync
             var destResult = new NodeResult();
             try
             {
-                if (isLockInverted)
+                if (isSamefolder)
+                {
+                    // Lock the directory once and look the destination up in it, see EnterFindChild
+                    srcResult = EnterFindNode(srcPath, FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.NodeExclusive);
+                    destResult = EnterFindChild(srcResult.Directory, destPath, FindNodeFlags.NodeShared);
+                }
+                else if (isLockInverted)
                 {
                     destResult = EnterFindNode(destPath, FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.NodeShared);
                     srcResult = EnterFindNode(srcPath, FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.NodeExclusive, destResult);
@@ -1371,6 +1378,45 @@ public class MemoryFileSystemAsync : FileSystemAsync
 
             parentNode = nextParent;
             isParentLockTaken = isNextParentLockTaken;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Looks up <paramref name = "path"/> directly in <paramref name = "directory"/>, its parent, which the caller already
+    /// holds locked through the lookup of another path in the same directory, and locks the node found as
+    /// <paramref name = "flags"/> ask. The result never releases <paramref name = "directory"/>.
+    /// </summary>
+    /// <remarks>
+    /// Looking the path up from the root instead would lock the ancestors of the directory while it is held, in the
+    /// opposite order to every other lookup, which takes them hand-over-hand from the root down: a concurrent lookup
+    /// below such an ancestor holds the ancestor while it waits for the directory, and the two block each other forever.
+    /// A same-directory rename locks the parent once and looks both names up in it, as in the hierarchical locking
+    /// scheme of the Unix kernel filesystems this file system follows.
+    /// </remarks>
+    private NodeResult EnterFindChild(DirectoryNode? directory, UPath path, FindNodeFlags flags)
+    {
+        Debug.Assert((flags & (FindNodeFlags.KeepParentNodeExclusive | FindNodeFlags.KeepParentNodeShared | FindNodeFlags.CreatePathIfNotExist)) == 0);
+        // The parent doesn't exist: the lookup of the other path found that too, and the validation reports it
+        if (directory is null)
+        {
+            return new NodeResult();
+        }
+
+        var name = path.GetName();
+        directory.Children.TryGetValue(name, out var node);
+        var result = new NodeResult(directory, node, name, flags);
+        if (node != null)
+        {
+            if ((flags & FindNodeFlags.NodeExclusive) != 0)
+            {
+                EnterExclusive(node, path);
+            }
+            else if ((flags & FindNodeFlags.NodeShared) != 0)
+            {
+                EnterShared(node, path, FileShare.Read);
+            }
         }
 
         return result;
