@@ -281,6 +281,33 @@ public class TestAsyncFileSystem
     }
 
     [TestMethod]
+    public async Task TestMemoryFileSystemAsyncEnumeratesNormalizedPathsAndTimes()
+    {
+        await using var fs = new MemoryFileSystemAsync();
+        await fs.CreateDirectoryAsync("/a/b");
+        await fs.WriteAllTextAsync("/root.txt", "root");
+        await fs.WriteAllTextAsync("/a/b/c.txt", "c");
+        Assert.AreEqual("c", await fs.ReadAllTextAsync("/a/b/c.txt"));
+
+        var local = new DateTime(2020, 3, 4, 5, 6, 7, DateTimeKind.Local);
+        await fs.SetLastWriteTimeAsync("/root.txt", DateTime.SpecifyKind(local, DateTimeKind.Utc));
+        await fs.SetLastAccessTimeAsync("/root.txt", local);
+
+        var expected = new UPath[] { "/a", "/a/b", "/a/b/c.txt", "/root.txt" };
+        var paths = (await ToListAsync(fs.EnumeratePathsAsync("/", "*", SearchOption.AllDirectories))).OrderBy(path => path.FullName, StringComparer.Ordinal).ToList();
+        CollectionAssert.AreEqual(expected, paths);
+
+        var items = (await ToListAsync(fs.EnumerateItemsAsync("/", SearchOption.AllDirectories))).OrderBy(item => item.Path.FullName, StringComparer.Ordinal).ToList();
+        CollectionAssert.AreEqual(expected, items.Select(item => item.Path).ToList());
+        foreach (var item in items)
+        {
+            Assert.IsTrue(new DateTimeOffset(await fs.GetCreationTimeAsync(item.Path)).EqualsExact(item.CreationTime), $"Creation time of `{item.Path}`");
+            Assert.IsTrue(new DateTimeOffset(await fs.GetLastWriteTimeAsync(item.Path)).EqualsExact(item.LastWriteTime), $"Last write time of `{item.Path}`");
+            Assert.IsTrue(new DateTimeOffset(await fs.GetLastAccessTimeAsync(item.Path)).EqualsExact(item.LastAccessTime), $"Last access time of `{item.Path}`");
+        }
+    }
+
+    [TestMethod]
     public async Task TestComposeFileSystemAsyncDelegatesOperationsAndDisposal()
     {
         var inner = new TrackingMemoryFileSystem();
