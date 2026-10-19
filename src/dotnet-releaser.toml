@@ -3,3 +3,6 @@ project = "Zio.slnx"
 [github]
 user = "xoofx"
 repo = "zio"
+[nuget]
+user = "xoofx"
+trusted_publishing = true
