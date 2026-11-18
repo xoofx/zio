@@ -2,6 +2,7 @@
 // This file is licensed under the BSD-Clause 2 license.
 // See the license.txt file in the project root for more information.
 
+using System.Globalization;
 using System.IO;
 using System.Security.Principal;
 using System.Text;
@@ -29,6 +30,24 @@ public class TestPhysicalFileSystem : TestFileSystemBase
         Assert.Throws<DirectoryNotFoundException>( () => new SubFileSystem(new PhysicalFileSystem(), $"/mnt/{driverLetter}"));
         using (var fs = new SubFileSystem(new PhysicalFileSystem(), $"/mnt/{char.ToLowerInvariant(driverLetter)}"))
         {
+        }
+    }
+
+    [TestMethod]
+    public void TestConvertPathToInternalDriveLetterIsCultureInvariant()
+    {
+        Skip.IfNot(IsWindows, "Drive letters are only converted on Windows");
+
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
+            using var fs = new PhysicalFileSystem();
+            Assert.AreEqual(@"I:\dir", fs.ConvertPathToInternal("/mnt/i/dir"));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
         }
     }
 

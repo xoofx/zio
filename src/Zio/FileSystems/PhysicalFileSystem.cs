@@ -947,7 +947,7 @@ public class PhysicalFileSystem : FileSystem
                 !IsDriveLetter(absolutePath[DrivePrefixOnWindows.Length]))
                 throw new ArgumentException($"A path on Windows must start by `{DrivePrefixOnWindows}` followed by the drive letter");
 
-            var driveLetter = char.ToUpper(absolutePath[DrivePrefixOnWindows.Length]);
+            var driveLetter = char.ToUpperInvariant(absolutePath[DrivePrefixOnWindows.Length]);
             if (absolutePath.Length != DrivePrefixOnWindows.Length + 1 &&
                 absolutePath[DrivePrefixOnWindows.Length + 1] !=
                 UPath.DirectorySeparator)
