@@ -847,7 +847,7 @@ public class PhysicalFileSystemAsync : FileSystemAsync
         {
             if (!absolutePath.StartsWith(DrivePrefixOnWindows, StringComparison.Ordinal) || absolutePath.Length == DrivePrefixOnWindows.Length || !IsDriveLetter(absolutePath[DrivePrefixOnWindows.Length]))
                 throw new ArgumentException($"A path on Windows must start by `{DrivePrefixOnWindows}` followed by the drive letter");
-            var driveLetter = char.ToUpper(absolutePath[DrivePrefixOnWindows.Length]);
+            var driveLetter = char.ToUpperInvariant(absolutePath[DrivePrefixOnWindows.Length]);
             if (absolutePath.Length != DrivePrefixOnWindows.Length + 1 && absolutePath[DrivePrefixOnWindows.Length + 1] != UPath.DirectorySeparator)
                 throw new ArgumentException($"The driver letter `/{DrivePrefixOnWindows}{absolutePath[DrivePrefixOnWindows.Length]}` must be followed by a `/` or nothing in the path -> `{absolutePath}`");
             var builder = UPath.GetSharedStringBuilder();
